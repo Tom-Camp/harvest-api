@@ -1,0 +1,74 @@
+name: Tests with Pytest and Coverage
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      MONGO_DB: testdb
+      MONGO_HOST: localhost
+      MONGO_PASS: dummy
+      MONGO_PORT: 27017
+      MONGO_USER: dummy
+      DB_USER: test_user
+      DB_PASS: dummy
+      SECRET_KEY: test_secret_key
+      HASH_ALGORITHM: HS256
+      INITIAL_USER_NAME: test_user
+      INITIAL_USER_MAIL: test@example.com
+      INITIAL_USER_PASS: Password!23
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov
+          pip install -r requirements.txt
+      - name: Lint with Ruff
+        run: |
+          pip install ruff
+          ruff check .
+          ruff format . --check
+        continue-on-error: true
+
+      - name: Run tests with pytest and coverage
+        run: |
+          pytest --cov=./ --cov-report=xml
+          coverage report > coverage.txt
+
+      - name: Generate coverage badge
+        run: |
+          coverage_pct=$(grep "TOTAL" coverage.txt | awk '{print $NF}' | sed 's/%//')
+          echo "COVERAGE=$coverage_pct" >> $GITHUB_ENV
+
+          echo "{\"schemaVersion\": 1, \"label\": \"coverage\", \"message\": \"${coverage_pct}%\", \"color\": \"$(if [ ${coverage_pct%.*} -gt 80 ]; then echo 'success'; else echo 'critical'; fi)\"}" > coverage-badge.json
+          echo "{\"schemaVersion\": 1, \"label\": \"tests\", \"message\": \"passing\", \"color\": \"success\"}" > tests-badge.json
+
+      - name: Deploy badges
+        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          keep_files: true
+          publish_branch: badges
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Update badges'
