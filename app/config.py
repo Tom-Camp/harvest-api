@@ -3,11 +3,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = "Tom.Camp"
-    mongo_db: str
-    mongo_host: str
-    mongo_pass: str
-    mongo_port: str
-    mongo_user: str
+    postgres_db: str
+    postgres_host: str
+    postgres_pass: str
+    postgres_port: str
+    postgres_user: str
     db_user: str
     db_pass: str
     secret_key: str
@@ -15,17 +15,15 @@ class Settings(BaseSettings):
     initial_user_name: str
     initial_user_mail: str
     initial_user_pass: str
-    hf_agent: str
-    hf_model: str
-    hf_token: str
+    user_secret: str
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     @property
-    def mongodb_uri(self):
+    def postgres_uri(self):
         return (
-            f"mongodb://{self.db_user}:{self.db_pass}@{self.mongo_host}:"
-            f"{self.mongo_port}/{self.mongo_db}?authSource={self.mongo_db}"
+            f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_pass}@{self.postgres_host}:"
+            f"{self.postgres_port}/{self.postgres_db}"
         )
 
 
