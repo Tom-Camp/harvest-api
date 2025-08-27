@@ -2,7 +2,8 @@ FROM ghcr.io/civicactions/pyction:latest
 
 COPY pyproject.toml uv.lock ./
 
-RUN uv venv .dockerenv
+ENV UV_PROJECT_ENVIRONMENT=/tmp/venv
+
 RUN uv sync --no-dev
 
 WORKDIR /app
