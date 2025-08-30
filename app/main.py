@@ -6,13 +6,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlmodel import select
 
-# from app.models.garden import Plant
 from app.models.users import User
 from app.utils.config import settings
 from app.utils.database import AsyncSessionLocal, async_engine, create_db_and_tables
 from app.utils.initialize import initial_user
-
-# from app.routes import garden_routes
 
 
 @asynccontextmanager
@@ -53,30 +50,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# app.include_router(garden_routes.router, prefix="/api")
-
-# app.include_router(
-#     fastapi_users.get_auth_router(auth_backend),
-#     prefix="/auth/jwt",
-#     tags=["auth"],
-# )
-# app.include_router(
-#     fastapi_users.get_register_router(UserRead, UserCreate),
-#     prefix="/auth",
-#     tags=["auth"],
-# )
-# app.include_router(
-#     fastapi_users.get_verify_router(UserRead),
-#     prefix="/auth",
-#     tags=["auth"],
-# )
-#
-# app.include_router(
-#     fastapi_users.get_users_router(UserRead, UserUpdate),
-#     prefix="/users",
-#     tags=["users"],
-# )
 
 
 @app.get("/", include_in_schema=False)
