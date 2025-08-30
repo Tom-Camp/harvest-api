@@ -1,33 +1,23 @@
-import uuid
+from typing import List, Optional
 
-from fastapi import Depends
-from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
-from fastapi_users.schemas import BaseUser, BaseUserCreate
-from fastapi_users_db_sqlalchemy.access_token import SQLAlchemyBaseAccessTokenTableUUID
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import Field, Relationship
 
-from app.database import Base, get_async_session
+from app.models.model_base import ModelBase
 
 
-class User(SQLAlchemyBaseUserTableUUID, Base):
-    pass
+class Role(ModelBase, table=True):  # type: ignore
+    name: str = Field(index=True, unique=True)
+    description: str | None = None
+    users: List["User"] = Relationship(back_populates="role")
 
 
-class UserCreate(BaseUserCreate):
-    pass
+class User(ModelBase, table=True):  # type: ignore
+    __tablename__ = "users"
 
-
-class UserRead(BaseUser[uuid.UUID]):
-    pass
-
-
-class UserUpdate(BaseUserCreate):
-    pass
-
-
-class AccessToken(SQLAlchemyBaseAccessTokenTableUUID, Base):
-    pass
-
-
-async def get_user_db(session: AsyncSession = Depends(get_async_session)):
-    yield SQLAlchemyUserDatabase(session, User)
+    email: str = Field(unique=True, index=True)
+    hashed_password: str
+    username: str = Field(unique=True, index=True)
+    full_name: Optional[str] = None
+    is_active: bool = Field(default=True)
+    role_id: str = Field(foreign_key="role.id")
+    role: Role = Relationship(back_populates="users")

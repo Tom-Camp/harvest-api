@@ -2,12 +2,11 @@ from datetime import datetime
 from enum import Enum
 from typing import List
 
-from beanie import Link, PydanticObjectId
 from pydantic import BaseModel, Field
 
-from app.models.base import AutoTimestampedDocument
+from app.models.helper_models import Note
+from app.models.model_base import ModelBase
 from app.models.users import User
-from app.models.utils import Note
 
 
 class LifeCycle(str, Enum):
@@ -24,14 +23,14 @@ class PlantingWindow(BaseModel):
         name = "planting_window"
 
 
-class CareInstructions(BaseModel):
+class CareInstructions(ModelBase):
     watering_frequency: str = Field(description="How often to water")
     sunlight_needs: str = Field(description="Sun exposure requirements")
     soil_type: str = Field(description="Preferred soil conditions")
     spacing: str = Field(description="Recommended plant spacing")
 
 
-class PlantInfo(BaseModel):
+class PlantInfo(ModelBase):
     planting_window: PlantingWindow
     care_instructions: CareInstructions
     days_to_harvest: int | None = Field(
@@ -43,11 +42,11 @@ class PlantInfo(BaseModel):
     growing_tips: List[str] = Field(description="Additional growing advice", default=[])
 
 
-class Harvest(AutoTimestampedDocument):
+class Harvest(ModelBase, table=True):  # type: ignore
     weight: float
 
 
-class Plant(AutoTimestampedDocument):
+class Plant(ModelBase, table=True):  # type: ignore
     species: str = Field(description="Plant type or family")
     variety: str | None = Field(
         description="The plant variety, for example Roma tomato", default=None
@@ -64,25 +63,19 @@ class Plant(AutoTimestampedDocument):
     recommendations: PlantInfo | None = None
 
 
-class PlantCreate(BaseModel):
-    species: str
-    variety: str | None = Field(
-        description="The plant variety, for example Roma tomato", default=None
-    )
-    life_cycle: LifeCycle
-    notes: List[Note] | None = None
-    recommendations: PlantInfo | None = None
+class PlantCreate(Plant):
+    pass
 
 
-class Bed(AutoTimestampedDocument):
+class Bed(ModelBase, table=True):  # type: ignore
     name: str
     description: str | None = None
     plants: List[Plant] | None = None
 
 
-class Garden(AutoTimestampedDocument):
+class Garden(ModelBase, table=True):  # type: ignore
     name: str
-    user: Link[User]
+    user: User
     description: str | None = None
     location: str = Field(
         description="The location from which to determine the USDA zone."
@@ -91,20 +84,13 @@ class Garden(AutoTimestampedDocument):
     beds: List[Bed] | None = None
 
 
-class GardenList(AutoTimestampedDocument):
-    name: str
-    user: Link[User]
-    created_date: datetime
-    _id: PydanticObjectId
+class GardenList(Garden):
+    pass
 
 
-class GardenCreate(BaseModel):
-    name: str
-    description: str | None
-    location: str
+class GardenCreate(Garden):
+    pass
 
 
-class GardenUpdate(BaseModel):
-    name: str
-    description: str | None
-    location: str
+class GardenUpdate(Garden):
+    pass
