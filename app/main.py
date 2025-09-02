@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from sqlmodel import select
 
 from app.models.users import User
-from app.routes import auth_routes
+from app.routes import auth_routes, user_routes
 from app.utils.config import settings
 from app.utils.database import get_session, init_db
 from app.utils.initialize import initial_user
@@ -48,6 +48,7 @@ app.add_middleware(
 
 
 app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
+app.include_router(user_routes.router, prefix="/api", tags=["user"])
 
 
 @app.get("/health")

@@ -29,3 +29,11 @@ class UserRead(SQLModel):
     is_active: bool
     created_date: datetime
     updated_date: datetime
+    role: Role
+
+
+class UserPublic(SQLModel):
+    id: str
+    username: str
+    full_name: Optional[str]
+    is_active: bool
