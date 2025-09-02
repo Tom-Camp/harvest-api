@@ -1,6 +1,6 @@
 from app.models.users import Role, User
-from app.utils.auth import pwd_context
 from app.utils.config import settings
+from app.utils.security import hash_password
 
 
 def initial_user() -> tuple[Role, User]:
@@ -8,7 +8,7 @@ def initial_user() -> tuple[Role, User]:
         name="admin",
         description="Superuser role",
     )
-    hashed_password = pwd_context.hash(settings.initial_user_pass)
+    hashed_password = hash_password(settings.initial_user_pass)
     new_user = User(
         username=settings.initial_user_name,
         email=settings.initial_user_mail,

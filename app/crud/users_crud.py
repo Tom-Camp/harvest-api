@@ -3,7 +3,7 @@ from typing import List, Optional
 from sqlmodel import Session, select
 
 from app.models.users import User
-from app.schemas.users_schemas import UserCreate, UserUpdate
+from app.schemas.user_schemas import UserCreate, UserUpdate
 
 
 class UserCRUD:
