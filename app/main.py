@@ -1,78 +1,34 @@
-import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi_users import FastAPIUsers
-from fastapi_users.password import PasswordHelper
+from sqlmodel import select
 
-from app.auth import auth_backend
-from app.config import settings
-from app.database import Base, async_session, engine
-from app.models.user_manager import get_user_manager
-
-# from app.models.garden import Plant
-from app.models.users import User, UserCreate, UserRead, UserUpdate
-
-# from app.routes import garden_routes
-
-
-async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    return engine
+from app.models.users import User
+from app.routes import auth_routes, user_routes
+from app.utils.config import settings
+from app.utils.database import get_session, init_db
+from app.utils.initialize import initial_user
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    try:
-        new_engine = await init_db()
-        app.state.async_session = async_session
-        print("Connected to PostgreSQL. Database is ready.")
-
-        async def create_db_and_tables():
-            async with new_engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-
-        async with async_session() as session:
-            from sqlalchemy import select
-
-            stmt = select(User).where(User.email == settings.initial_user_mail)
-            result = await session.execute(stmt)
-            default_user = result.scalar_one_or_none()
-
-            if not default_user:
-                password_helper = PasswordHelper()
-                new_user = User(
-                    email=settings.initial_user_mail,
-                    hashed_password=password_helper.hash(settings.initial_user_pass),
-                    is_active=True,
-                    is_superuser=True,
-                    is_verified=True,
-                )
-                session.add(new_user)
-                await session.commit()
-                await session.refresh(new_user)
-                print(f"Created default user: {new_user.id}: {new_user.email}")
-            else:
-                print(f"Default user {settings.initial_user_mail} already exists")
-        yield
-    except Exception as e:
-        print(f"Error during database initialization: {e}")
-        raise
-    finally:
-        if "engine" in locals():
-            await new_engine.dispose()
-            print("Closed PostgreSQL connection")
-
-
-fastapi_users = FastAPIUsers[User, uuid.UUID](
-    get_user_manager,
-    [auth_backend],
-)
+    await init_db()
+    async for session in get_session():
+        result = await session.execute(
+            select(User).where(User.email == settings.initial_user_mail)
+        )
+        user = result.scalar_one_or_none()
+        if user is None:
+            role, user = initial_user()
+            session.add(role)
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+        break
+    yield
 
 
 app = FastAPI(
@@ -80,7 +36,7 @@ app = FastAPI(
     title=settings.app_name,
 )
 
-origins = ["http://localhost:8080", "https://tom.camp"]
+origins = ["http://localhost:5000", "https://tom.camp"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -90,30 +46,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# app.include_router(garden_routes.router, prefix="/api")
 
-app.include_router(
-    fastapi_users.get_auth_router(auth_backend),
-    prefix="/auth/jwt",
-    tags=["auth"],
-)
-app.include_router(
-    fastapi_users.get_register_router(UserRead, UserCreate),
-    prefix="/auth",
-    tags=["auth"],
-)
-app.include_router(
-    fastapi_users.get_verify_router(UserRead),
-    prefix="/auth",
-    tags=["auth"],
-)
+app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
+app.include_router(user_routes.router, prefix="/api", tags=["user"])
 
 
-app.include_router(
-    fastapi_users.get_users_router(UserRead, UserUpdate),
-    prefix="/users",
-    tags=["users"],
-)
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
 
 @app.get("/", include_in_schema=False)
