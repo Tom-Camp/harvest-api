@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
     await init_db()
     async for session in get_session():
         result = await session.execute(
-            select(User).where(User.email == settings.initial_user_mail)
+            select(User).where(User.email == settings.INITIAL_USER_MAIL)
         )
         user = result.scalar_one_or_none()
         if user is None:
@@ -33,14 +33,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     lifespan=lifespan,
-    title=settings.app_name,
+    title=settings.APP_NAME,
 )
-
-origins = ["http://localhost:5000", "https://tom.camp"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
