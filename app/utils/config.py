@@ -9,12 +9,13 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str]
     DB_USER: str
     DB_PASS: str
+    ENVIRONMENT: str
     HASH_ALGORITHM: str
     INITIAL_USER_NAME: str
     INITIAL_USER_MAIL: str
     INITIAL_USER_PASS: str
     LOG_LEVEL: str = "INFO"
-    LOG_JSON_FORMAT: int = False
+    LOG_JSON_FORMAT: bool = False
     LOG_NAME: str
     LOG_ACCESS_NAME: str
     POSTGRES_DB: str

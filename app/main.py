@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlmodel import select
 
+from app.logging.log_config import configure_structlog
+from app.logging.log_middleware import LoggingMiddleware
 from app.models.users import User
 from app.routes import auth_routes, user_routes
 from app.utils.config import settings
@@ -31,6 +33,8 @@ async def lifespan(app: FastAPI):
     yield
 
 
+configure_structlog()
+
 app = FastAPI(
     lifespan=lifespan,
     title=settings.APP_NAME,
@@ -44,6 +48,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(
+    LoggingMiddleware,
+    excluded_paths=["/health", "/metrics"],
+    include_request_body=False,
+    include_response_body=False,
+)
+
 
 app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
 app.include_router(user_routes.router, prefix="/api", tags=["user"])
@@ -51,7 +62,7 @@ app.include_router(user_routes.router, prefix="/api", tags=["user"])
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "healthy"}
 
 
 @app.get("/", include_in_schema=False)
