@@ -1,22 +1,30 @@
+from typing import List
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "Tom.Camp"
-    access_token_expire_minutes: str
-    db_user: str
-    db_pass: str
-    hash_algorithm: str
-    initial_user_name: str
-    initial_user_mail: str
-    initial_user_pass: str
-    postgres_db: str
-    postgres_host: str
-    postgres_pass: str
-    postgres_port: str
-    postgres_user: str
-    secret_key: str
-    user_secret: str
+    APP_NAME: str = "Harvesting.Food"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+    CORS_ORIGINS: List[str]
+    DB_USER: str
+    DB_PASS: str
+    ENVIRONMENT: str
+    HASH_ALGORITHM: str
+    INITIAL_USER_NAME: str
+    INITIAL_USER_MAIL: str
+    INITIAL_USER_PASS: str
+    LOG_LEVEL: str = "INFO"
+    LOG_JSON_FORMAT: bool = False
+    LOG_NAME: str
+    LOG_ACCESS_NAME: str
+    POSTGRES_DB: str
+    POSTGRES_HOST: str
+    POSTGRES_PASS: str
+    POSTGRES_PORT: str
+    POSTGRES_USER: str
+    SECRET_KEY: str
+    USER_SECRET: str
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -26,8 +34,8 @@ class Settings(BaseSettings):
     @property
     def postgres_uri(self):
         return (
-            f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_pass}@{self.postgres_host}:"
-            f"{self.postgres_port}/{self.postgres_db}"
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASS}@{self.POSTGRES_HOST}:"
+            f"{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
 

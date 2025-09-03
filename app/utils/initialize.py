@@ -8,10 +8,10 @@ def initial_user() -> tuple[Role, User]:
         name="admin",
         description="Superuser role",
     )
-    hashed_password = hash_password(settings.initial_user_pass)
+    hashed_password = hash_password(settings.INITIAL_USER_PASS)
     new_user = User(
-        username=settings.initial_user_name,
-        email=settings.initial_user_mail,
+        username=settings.INITIAL_USER_NAME,
+        email=settings.INITIAL_USER_MAIL,
         hashed_password=hashed_password,
         role=role,
     )
