@@ -291,6 +291,31 @@ wheels = [
 ]
 
 [[package]]
+name = "casbin"
+version = "1.43.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "simpleeval" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ad/df/ff2aa55cf0d7c14622ce4f9252cdc34c828c81d4213965d73207ac5434ae/casbin-1.43.0.tar.gz", hash = "sha256:d2e90ce8e72f912877851e94d37999f32c558c6ba7aba0437d483275262e86e0", size = 425727, upload-time = "2025-05-10T06:57:18.902Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/08/07/facef6abd81378e6153b757dc1848621675d971fbc88ebb5d182ebc1c37f/casbin-1.43.0-py3-none-any.whl", hash = "sha256:63a3d1228870250e859ccd94133fe478821093f71dd37f05e0baa0c6fea26623", size = 475059, upload-time = "2025-05-10T06:57:16.89Z" },
+]
+
+[[package]]
+name = "casbin-async-sqlalchemy-adapter"
+version = "1.10.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pycasbin" },
+    { name = "sqlalchemy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/bf/81/60f0cb5dc9603b9459ae99862928ca2eb48aa38ec442555f9ca0306c350b/casbin_async_sqlalchemy_adapter-1.10.0.tar.gz", hash = "sha256:fa292bd7930986f26e1b0b22eca0ffd066ae588e4ee5df65fa89affdc7febbb4", size = 13312, upload-time = "2025-08-20T05:30:54.249Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c2/ab/b31e7649a09a6f2df0a33df26ba7e71668c3e6e3f081ca67b977669f6241/casbin_async_sqlalchemy_adapter-1.10.0-py3-none-any.whl", hash = "sha256:5f6cf981ffa09ce56233e1bc169aeaba26b5d120f6d2270dcf74de229d0f74fc", size = 12815, upload-time = "2025-08-20T05:30:53.449Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2025.8.3"
 source = { registry = "https://pypi.org/simple" }
@@ -915,6 +940,8 @@ source = { virtual = "." }
 dependencies = [
     { name = "asyncpg" },
     { name = "bcrypt" },
+    { name = "casbin" },
+    { name = "casbin-async-sqlalchemy-adapter" },
     { name = "coverage" },
     { name = "email-validator" },
     { name = "fastapi", extra = ["standard"] },
@@ -936,6 +963,8 @@ dependencies = [
 requires-dist = [
     { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "bcrypt", specifier = "==4.3.0" },
+    { name = "casbin", specifier = ">=1.43.0" },
+    { name = "casbin-async-sqlalchemy-adapter", specifier = ">=1.10.0" },
     { name = "coverage", specifier = ">=7.6.10" },
     { name = "email-validator", specifier = ">=2.2.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115.8" },
@@ -1605,6 +1634,18 @@ wheels = [
 ]
 
 [[package]]
+name = "pycasbin"
+version = "2.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "simpleeval" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/74/10/3b0dba5846934d9902af88f48932be5044991beda5650a0535e388ff1f6e/pycasbin-2.2.0.tar.gz", hash = "sha256:01df7871359926948d01f383f2697674b2d0a2c6012fcd7f8da7a95627b05525", size = 427846, upload-time = "2025-08-24T02:27:11.227Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ca/95/618e6b3af2056d42116fe8a45ac908c22b87965fa7de9dc6ecd2703916ce/pycasbin-2.2.0-py3-none-any.whl", hash = "sha256:5abac262e7f9e082991d61d2bb050dfb6625de453621561fa1e8df34dc45cc77", size = 476647, upload-time = "2025-08-24T02:27:09.337Z" },
+]
+
+[[package]]
 name = "pycparser"
 version = "2.22"
 source = { registry = "https://pypi.org/simple" }
@@ -2246,6 +2287,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/58/15/8b3609fd3830ef7b27b655beb4b4e9c62313a4e8da8c676e142cc210d58e/shellingham-1.5.4.tar.gz", hash = "sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de", size = 10310, upload-time = "2023-10-24T04:13:40.426Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e0/f9/0595336914c5619e5f28a1fb793285925a8cd4b432c9da0a987836c7f822/shellingham-1.5.4-py2.py3-none-any.whl", hash = "sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686", size = 9755, upload-time = "2023-10-24T04:13:38.866Z" },
+]
+
+[[package]]
+name = "simpleeval"
+version = "1.0.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ff/6f/15be211749430f52f2c8f0c69158a6fc961c03aac93fa28d44d1a6f5ebc7/simpleeval-1.0.3.tar.gz", hash = "sha256:67bbf246040ac3b57c29cf048657b9cf31d4e7b9d6659684daa08ca8f1e45829", size = 24358, upload-time = "2024-11-02T10:29:46.912Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a0/e9/e58082fbb8cecbb6fb4133033c40cc50c248b1a331582be3a0f39138d65b/simpleeval-1.0.3-py3-none-any.whl", hash = "sha256:e3bdbb8c82c26297c9a153902d0fd1858a6c3774bf53ff4f134788c3f2035c38", size = 15762, upload-time = "2024-11-02T10:29:45.706Z" },
 ]
 
 [[package]]

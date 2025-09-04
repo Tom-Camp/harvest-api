@@ -21,6 +21,8 @@ dependencies = [
     "sqlmodel>=0.0.24",
     "bcrypt==4.3.0",
     "structlog>=25.4.0",
+    "casbin-async-sqlalchemy-adapter>=1.10.0",
+    "casbin>=1.43.0",
 ]
 
 [tool.pytest.ini_options]
