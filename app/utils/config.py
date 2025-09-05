@@ -10,9 +10,9 @@ class Settings(BaseSettings):
     DB_USER: str | None = None
     DB_PASS: str | None = None
     HASH_ALGORITHM: str | None = None
-    INITIAL_USER_NAME: str | None = None
-    INITIAL_USER_MAIL: str | None = None
-    INITIAL_USER_PASS: str | None = None
+    INITIAL_USER_NAME: str = "admin"
+    INITIAL_USER_MAIL: str = "admin@example.com"
+    INITIAL_USER_PASS: str = "Ch4ng3M3!"
     LOG_LEVEL: str = "INFO"
     LOG_NAME: str = "harvestLog"
     LOG_JSON_FORMAT: bool = False

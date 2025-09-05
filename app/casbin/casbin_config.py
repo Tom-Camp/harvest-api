@@ -17,14 +17,15 @@ class AsyncCasbinManager:
         return cls._instance
 
     async def get_enforcer(self):
-        if self._enforcer is None:
+        if self._adapter is None:
             self._adapter = Adapter(DATABASE_URL)
 
-            model_path = os.path.join(os.path.dirname(__file__), "./casbin_model.conf")
+        model_path = os.path.join(os.path.dirname(__file__), "casbin_model.conf")
+        self._enforcer = casbin.AsyncEnforcer(
+            model_path, self._adapter, enable_log=True
+        )
 
-            self._enforcer = casbin.Enforcer(model_path, self._adapter)
-
-            await self._load_initial_policies()
+        await self._enforcer.load_policy()
 
         return self._enforcer
 
@@ -48,10 +49,10 @@ class AsyncCasbinManager:
 
         # Add policies
         for policy in default_policies:
-            e.add_policy(*policy)
+            await e.add_policy(*policy)
 
         # Save policies to database
-        e.save_policy()
+        await e.save_policy()
 
     async def check_permission(self, user: str, resource: str, action: str) -> bool:
         """Check if user has permission to perform action on resource"""
@@ -61,39 +62,38 @@ class AsyncCasbinManager:
     async def add_role_for_user(self, user: str, role: str) -> bool:
         """Add role to user"""
         enforcer = await self.get_enforcer()
-        result = enforcer.add_role_for_user(user, role)
-        enforcer.save_policy()
+        result = await enforcer.add_role_for_user(user, role)
+        await enforcer.save_policy()
         return result
 
     async def remove_role_for_user(self, user: str, role: str) -> bool:
-        """Remove role from user"""
         enforcer = await self.get_enforcer()
-        result = await enforcer.remove_role_for_user(user, role)
-        enforcer.save_policy()
+        result = await enforcer.delete_role_for_user(user, role)
+        await enforcer.save_policy()
         return result
 
     async def get_roles_for_user(self, user: str) -> list:
         """Get all roles for a user"""
         enforcer = await self.get_enforcer()
-        return enforcer.get_roles_for_user(user)
+        return await enforcer.get_roles_for_user(user)
 
     async def get_users_for_role(self, role: str) -> list:
         """Get all users with a specific role"""
         enforcer = await self.get_enforcer()
-        return enforcer.get_users_for_role(role)
+        return await enforcer.get_users_for_role(role)
 
     async def add_policy(self, role: str, resource: str, action: str) -> bool:
         """Add a policy rule"""
         enforcer = await self.get_enforcer()
-        result = enforcer.add_policy(role, resource, action)
-        enforcer.save_policy()
+        result = await enforcer.add_policy(role, resource, action)
+        await enforcer.save_policy()
         return result
 
     async def remove_policy(self, role: str, resource: str, action: str) -> bool:
         """Remove a policy rule"""
         enforcer = await self.get_enforcer()
-        result = enforcer.remove_policy(role, resource, action)
-        enforcer.save_policy()
+        result = await enforcer.remove_policy(role, resource, action)
+        await enforcer.save_policy()
         return result
 
 

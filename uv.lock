@@ -969,7 +969,7 @@ requires-dist = [
     { name = "email-validator", specifier = ">=2.2.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115.8" },
     { name = "httpx", specifier = ">=0.28.1" },
-    { name = "passlib", specifier = ">=1.7.4" },
+    { name = "passlib", specifier = "==1.7.4" },
     { name = "password-validator", specifier = ">=1.0" },
     { name = "pydantic-ai", specifier = ">=0.7.2" },
     { name = "pydantic-settings", specifier = ">=2.7.1" },

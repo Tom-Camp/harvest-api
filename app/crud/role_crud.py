@@ -23,9 +23,10 @@ class RoleCRUD:
 
     @staticmethod
     async def get_role_by_name(session: AsyncSession, name: str) -> Optional[Role]:
-        statement = select(Role).where(Role.__table__.c.owner_id.name == name)
+        statement = select(Role).where(Role.__table__.c.name == name)
         result = await session.execute(statement)
-        return result.first()
+        role = result.scalars().first()
+        return role
 
     @staticmethod
     async def get_roles(
