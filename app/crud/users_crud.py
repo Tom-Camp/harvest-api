@@ -35,13 +35,13 @@ class UserCRUD:
     ) -> Optional[User]:
         statement = select(User).where(User.__table__.c.username == username)
         result = await session.execute(statement)
-        return result.first()
+        return result.scalars().first()
 
     @staticmethod
     async def get_user_by_email(session: AsyncSession, email: str) -> Optional[User]:
         statement = select(User).where(User.__table__.c.email == email)
         result = await session.execute(statement)
-        return result.first()
+        return result.scalars().first()
 
     @staticmethod
     async def get_users(
