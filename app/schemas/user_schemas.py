@@ -1,17 +1,15 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
+from uuid import UUID
 
 from sqlmodel import SQLModel
 
-from app.models.users import Role
+from app.models.model_base import ModelBase
+from app.models.users import RoleBase, UserBase
 
 
-class UserCreate(SQLModel):
-    email: str
-    username: str
-    hashed_password: str
-    full_name: Optional[str] = None
-    role: Role
+class UserCreate(UserBase):
+    password: str
 
 
 class UserUpdate(SQLModel):
@@ -21,19 +19,27 @@ class UserUpdate(SQLModel):
     is_active: Optional[bool] = None
 
 
-class UserRead(SQLModel):
-    id: str
-    email: str
-    username: str
-    full_name: Optional[str]
-    is_active: bool
-    created_date: datetime
-    updated_date: datetime
-    role: Role
+class UserRead(ModelBase, UserBase):
+    pass
 
 
-class UserPublic(SQLModel):
-    id: str
-    username: str
-    full_name: Optional[str]
-    is_active: bool
+class UserReadWithRoles(UserRead):
+    roles: List["RoleRead"] = []
+
+
+class RoleCreate(RoleBase):
+    pass
+
+
+class RoleUpdate(SQLModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+
+class RoleRead(RoleBase):
+    id: UUID
+    created_at: datetime
+
+
+class RoleReadWithUsers(RoleRead):
+    users: List["UserRead"] = []

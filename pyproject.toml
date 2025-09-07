@@ -7,7 +7,7 @@ dependencies = [
     "coverage>=7.6.10",
     "fastapi[standard]>=0.115.8",
     "httpx>=0.28.1",
-    "passlib>=1.7.4",
+    "passlib==1.7.4",
     "pydantic-settings>=2.7.1",
     "pytest-asyncio>=0.25.3",
     "pytest>=8.3.4",
@@ -21,6 +21,8 @@ dependencies = [
     "sqlmodel>=0.0.24",
     "bcrypt==4.3.0",
     "structlog>=25.4.0",
+    "casbin-async-sqlalchemy-adapter>=1.10.0",
+    "casbin>=1.43.0",
 ]
 
 [tool.pytest.ini_options]

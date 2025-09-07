@@ -1,0 +1,103 @@
+import os
+
+import casbin
+from casbin_async_sqlalchemy_adapter import Adapter
+
+from app.utils.database import DATABASE_URL
+
+
+class AsyncCasbinManager:
+    _instance = None
+    _enforcer = None
+    _adapter = None
+    _db_url: str | None = None
+
+    def __new__(cls, db_url: str | None = None):
+        if cls._instance is None:
+            if db_url is None:
+                raise RuntimeError(
+                    "AsyncCasbinManager must be initialised with a DB URL"
+                )
+            cls._instance = super().__new__(cls)
+            cls._instance._db_url = db_url
+        return cls._instance
+
+    async def get_enforcer(self):
+        if self._adapter is None:
+            self._adapter = Adapter(DATABASE_URL)
+
+        model_path = os.path.join(os.path.dirname(__file__), "casbin_model.conf")
+        self._enforcer = casbin.AsyncEnforcer(
+            model_path, self._adapter, enable_log=True
+        )
+
+        await self._enforcer.load_policy()
+
+        return self._enforcer
+
+    async def _load_initial_policies(self):
+        e = self._enforcer
+
+        # Clear existing policies (optional)
+        e.clear_policy()
+
+        # Add some default roles and permissions
+        # Format: role, page, action
+        default_policies = [
+            ("admin", "*", "*"),  # Admin can do anything
+            ("user", "page", "read"),
+            ("user", "page", "read"),
+            ("user", "page", "create"),
+            ("moderator", "page", "*"),
+            ("moderator", "user", "read"),
+            ("moderator", "user", "write"),
+        ]
+
+        # Add policies
+        for policy in default_policies:
+            await e.add_policy(*policy)
+
+        # Save policies to database
+        await e.save_policy()
+
+    async def check_permission(self, user: str, resource: str, action: str) -> bool:
+        """Check if user has permission to perform action on resource"""
+        enforcer = await self.get_enforcer()
+        return enforcer.enforce(user, resource, action)
+
+    async def add_role_for_user(self, user: str, role: str) -> bool:
+        """Add role to user"""
+        enforcer = await self.get_enforcer()
+        result = await enforcer.add_role_for_user(user, role)
+        await enforcer.save_policy()
+        return result
+
+    async def remove_role_for_user(self, user: str, role: str) -> bool:
+        enforcer = await self.get_enforcer()
+        result = await enforcer.delete_role_for_user(user, role)
+        await enforcer.save_policy()
+        return result
+
+    async def get_roles_for_user(self, user: str) -> list:
+        """Get all roles for a user"""
+        enforcer = await self.get_enforcer()
+        return await enforcer.get_roles_for_user(user)
+
+    async def get_users_for_role(self, role: str) -> list:
+        """Get all users with a specific role"""
+        enforcer = await self.get_enforcer()
+        return await enforcer.get_users_for_role(role)
+
+    async def add_policy(self, role: str, resource: str, action: str) -> bool:
+        """Add a policy rule"""
+        enforcer = await self.get_enforcer()
+        result = await enforcer.add_policy(role, resource, action)
+        await enforcer.save_policy()
+        return result
+
+    async def remove_policy(self, role: str, resource: str, action: str) -> bool:
+        """Remove a policy rule"""
+        enforcer = await self.get_enforcer()
+        result = await enforcer.remove_policy(role, resource, action)
+        await enforcer.save_policy()
+        return result

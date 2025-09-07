@@ -4,32 +4,20 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
-from sqlmodel import select
 
 from app.logging.log_config import configure_structlog
 from app.logging.log_middleware import LoggingMiddleware
 from app.models.users import User
-from app.routes import auth_routes, user_routes
+from app.casbin.casbin_config import AsyncCasbinManager
+from app.routes import admin_routes, auth_routes, page_routes, role_routes, user_routes
 from app.utils.config import settings
-from app.utils.database import get_session, init_db
-from app.utils.initialize import initial_user
+from app.utils.initialize import initialize_data
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
-    async for session in get_session():
-        result = await session.execute(
-            select(User).where(User.email == settings.INITIAL_USER_MAIL)
-        )
-        user = result.scalar_one_or_none()
-        if user is None:
-            role, user = initial_user()
-            session.add(role)
-            session.add(user)
-            await session.commit()
-            await session.refresh(user)
-        break
+    app.state.casbin_manager = AsyncCasbinManager(settings.postgres_uri)
+    await initialize_data(casbin_manager=app.state.casbin_manager)
     yield
 
 
@@ -56,8 +44,11 @@ app.add_middleware(
 )
 
 
-app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
-app.include_router(user_routes.router, prefix="/api", tags=["user"])
+app.include_router(auth_routes.auth_router, prefix="/api", tags=["authentication"])
+app.include_router(user_routes.user_router, prefix="/api", tags=["users"])
+app.include_router(role_routes.role_router, prefix="/api", tags=["roles"])
+app.include_router(admin_routes.admin_router, prefix="/api", tags=["admin"])
+app.include_router(page_routes.page_router, prefix="/api", tags=["pages"])
 
 
 @app.get("/health")
