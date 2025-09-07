@@ -2,7 +2,7 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.casbin.casbin_config import casbin_manager
+from app.casbin.casbin_config import AsyncCasbinManager
 from app.crud.role_crud import RoleCRUD
 from app.crud.users_crud import UserCRUD
 from app.schemas.user_schemas import RoleCreate, UserCreate
@@ -39,7 +39,10 @@ async def setup_initial_roles(session: AsyncSession):
     return created_roles
 
 
-async def setup_initial_admin(session: AsyncSession) -> str:
+async def setup_initial_admin(
+    session: AsyncSession,
+    casbin_manager: AsyncCasbinManager,
+) -> str:
     admin_data = {
         "username": settings.INITIAL_USER_NAME,
         "email": settings.INITIAL_USER_MAIL,
@@ -71,7 +74,7 @@ async def setup_initial_admin(session: AsyncSession) -> str:
         return existing_admin.username
 
 
-async def setup_casbin_policies():
+async def setup_casbin_policies(casbin_manager: AsyncCasbinManager):
     enforcer = await casbin_manager.get_enforcer()
 
     enforcer.clear_policy()
@@ -102,17 +105,20 @@ async def setup_casbin_policies():
     logger.info("Casbin policies saved")
 
 
-async def initialize_data():
+async def initialize_data(casbin_manager: AsyncCasbinManager):
     logger.info("Starting initial data setup...")
 
     await create_db_and_tables()
     await init_casbin_tables()
 
-    await setup_casbin_policies()
+    await setup_casbin_policies(casbin_manager=casbin_manager)
 
     async with AsyncSessionLocal() as session:
         await setup_initial_roles(session)
-        admin = await setup_initial_admin(session)
+        admin = await setup_initial_admin(
+            session=session,
+            casbin_manager=casbin_manager,
+        )
         logger.info("Initial data setup completed!")
         logger.info(f"Admin user created: username={admin}")
         await session.commit()

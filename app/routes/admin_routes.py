@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.casbin.casbin_config import casbin_manager
+from app.casbin.casbin_config import AsyncCasbinManager
 from app.casbin.permissions import RequireAdmin
 from app.crud.role_crud import RoleCRUD
 from app.crud.users_crud import UserCRUD
@@ -11,6 +11,7 @@ from app.models.users import User
 from app.schemas.permission_schemas import AssignRoleRequest, PermissionCheck
 from app.utils.auth import get_current_active_user
 from app.utils.database import get_session
+from app.utils.dependencies import get_casbin_manager
 
 admin_router = APIRouter(prefix="/admin")
 
@@ -20,6 +21,7 @@ async def assign_role(
     request: AssignRoleRequest,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(RequireAdmin),
+    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
     user = await UserCRUD.get_user(session, request.user_id)
     if not user:
@@ -47,6 +49,7 @@ async def remove_role(
     request: AssignRoleRequest,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(RequireAdmin),
+    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
     user = await UserCRUD.get_user(session, request.user_id)
     if not user:
@@ -73,7 +76,9 @@ async def remove_role(
 
 @admin_router.post("/check-permission")
 async def check_permission(
-    request: PermissionCheck, current_user: User = Depends(get_current_active_user)
+    request: PermissionCheck,
+    current_user: User = Depends(get_current_active_user),
+    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
     user_identifier = f"user:{current_user.username}"
     has_permission = casbin_manager.check_permission(
@@ -90,7 +95,11 @@ async def check_permission(
 
 
 @admin_router.get("/user-roles/{username}")
-async def get_user_roles(username: str, current_user: User = Depends(RequireAdmin)):
+async def get_user_roles(
+    username: str,
+    current_user: User = Depends(RequireAdmin),
+    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
+):
     user_identifier = f"user:{username}"
     roles = casbin_manager.get_roles_for_user(user_identifier)
     logging.info("%s listed %s role" % current_user.username, username)
@@ -98,7 +107,11 @@ async def get_user_roles(username: str, current_user: User = Depends(RequireAdmi
 
 
 @admin_router.get("/role-users/{role_name}")
-async def get_role_users(role_name: str, current_user: User = Depends(RequireAdmin)):
+async def get_role_users(
+    role_name: str,
+    current_user: User = Depends(RequireAdmin),
+    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
+):
     users = await casbin_manager.get_users_for_role(role_name)
     logging.info("%s listed the users with role" % current_user.username, role_name)
     return {"role": role_name, "users": [user.replace("user:", "") for user in users]}

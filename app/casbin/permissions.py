@@ -3,9 +3,9 @@ from typing import Callable
 
 from fastapi import Depends, HTTPException, status
 
-from app.casbin.casbin_config import casbin_manager
 from app.models.users import User
 from app.utils.auth import get_current_active_user
+from app.utils.dependencies import get_casbin_manager
 
 
 class AsyncPermissionChecker:
@@ -13,7 +13,11 @@ class AsyncPermissionChecker:
         self.page = page
         self.action = action
 
-    async def __call__(self, current_user: User = Depends(get_current_active_user)):
+    async def __call__(
+        self,
+        current_user: User = Depends(get_current_active_user),
+        casbin_manager=Depends(get_casbin_manager),
+    ):
         """Check if current user has permission"""
         user_identifier = f"user:{current_user.username}"
 
@@ -52,7 +56,10 @@ def require_role(role: str):
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def wrapper(
-            *args, current_user: User = Depends(get_current_active_user), **kwargs
+            *args,
+            current_user: User = Depends(get_current_active_user),
+            casbin_manager=Depends(get_casbin_manager),
+            **kwargs,
         ):
             user_identifier = f"user:{current_user.username}"
             user_roles = await casbin_manager.get_roles_for_user(user_identifier)
@@ -78,7 +85,11 @@ RequirePageRead = AsyncPermissionChecker("page", "read")
 RequirePageWrite = AsyncPermissionChecker("page", "write")
 
 
-async def check_page_ownership(page_owner_id: str, current_user: User) -> bool:
+async def check_page_ownership(
+    page_owner_id: str,
+    current_user: User,
+    casbin_manager=Depends(get_casbin_manager),
+) -> bool:
     """Check if user owns the page or has admin privileges"""
     user_identifier = f"user:{current_user.username}"
 
@@ -96,7 +107,10 @@ def require_ownership_or_permission(page: str, action: str):
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def wrapper(
-            *args, current_user: User = Depends(get_current_active_user), **kwargs
+            *args,
+            current_user: User = Depends(get_current_active_user),
+            casbin_manager=Depends(get_casbin_manager),
+            **kwargs,
         ):
             user_identifier = f"user:{current_user.username}"
 

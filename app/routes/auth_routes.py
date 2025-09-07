@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.casbin.casbin_config import casbin_manager
+from app.casbin.casbin_config import AsyncCasbinManager
 from app.crud.users_crud import UserCRUD
 from app.schemas.auth_schemas import Token
 from app.schemas.user_schemas import UserCreate, UserRead
@@ -14,6 +14,7 @@ from app.utils.auth import (
     create_access_token,
 )
 from app.utils.database import get_session
+from app.utils.dependencies import get_casbin_manager
 
 auth_router = APIRouter(prefix="/auth")
 
@@ -39,7 +40,11 @@ async def login_for_access_token(
 
 
 @auth_router.post("/register", response_model=UserRead)
-async def register(user: UserCreate, session: AsyncSession = Depends(get_session)):
+async def register(
+    user: UserCreate,
+    session: AsyncSession = Depends(get_session),
+    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
+):
     if UserCRUD.get_user_by_username(session, user.username):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

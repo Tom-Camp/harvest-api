@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from app.logging.log_config import configure_structlog
 from app.logging.log_middleware import LoggingMiddleware
 from app.models.users import User
+from app.casbin.casbin_config import AsyncCasbinManager
 from app.routes import admin_routes, auth_routes, page_routes, role_routes, user_routes
 from app.utils.config import settings
 from app.utils.initialize import initialize_data
@@ -15,7 +16,8 @@ from app.utils.initialize import initialize_data
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await initialize_data()
+    app.state.casbin_manager = AsyncCasbinManager(settings.postgres_uri)
+    await initialize_data(casbin_manager=app.state.casbin_manager)
     yield
 
 

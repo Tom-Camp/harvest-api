@@ -10,10 +10,16 @@ class AsyncCasbinManager:
     _instance = None
     _enforcer = None
     _adapter = None
+    _db_url: str | None = None
 
-    def __new__(cls):
+    def __new__(cls, db_url: str | None = None):
         if cls._instance is None:
-            cls._instance = super(AsyncCasbinManager, cls).__new__(cls)
+            if db_url is None:
+                raise RuntimeError(
+                    "AsyncCasbinManager must be initialised with a DB URL"
+                )
+            cls._instance = super().__new__(cls)
+            cls._instance._db_url = db_url
         return cls._instance
 
     async def get_enforcer(self):
@@ -95,7 +101,3 @@ class AsyncCasbinManager:
         result = await enforcer.remove_policy(role, resource, action)
         await enforcer.save_policy()
         return result
-
-
-# Global instance
-casbin_manager = AsyncCasbinManager()

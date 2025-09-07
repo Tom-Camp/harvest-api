@@ -5,13 +5,14 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.casbin.casbin_config import casbin_manager
+from app.casbin.casbin_config import AsyncCasbinManager
 from app.casbin.permissions import RequirePageRead, check_page_ownership
 from app.crud.page_crud import PageCRUD
 from app.models.users import User
 from app.schemas.page_schemas import PageCreate, PageRead, PageUpdate
 from app.utils.auth import get_current_active_user
 from app.utils.database import get_session
+from app.utils.dependencies import get_casbin_manager
 
 page_router = APIRouter(prefix="/pages")
 
@@ -52,6 +53,7 @@ async def read_page(
     page_id: UUID,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
+    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
     page = await PageCRUD.get_page(session, page_id)
     if not page:
@@ -75,6 +77,7 @@ async def update_page(
     page_update: PageUpdate,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
+    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
     page = await PageCRUD.get_page(session, page_id)
     if not page:
@@ -98,6 +101,7 @@ async def delete_page(
     page_id: UUID,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
+    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
     page = await PageCRUD.get_page(session, page_id)
     if not page:

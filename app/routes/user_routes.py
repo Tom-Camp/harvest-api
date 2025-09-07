@@ -5,13 +5,14 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.casbin.casbin_config import casbin_manager
+from app.casbin.casbin_config import AsyncCasbinManager
 from app.casbin.permissions import RequireUserRead, RequireUserWrite
 from app.crud.users_crud import UserCRUD
 from app.models.users import User
 from app.schemas.user_schemas import UserRead, UserReadWithRoles, UserUpdate
 from app.utils.auth import get_current_active_user
 from app.utils.database import get_session
+from app.utils.dependencies import get_casbin_manager
 
 user_router = APIRouter(prefix="/users")
 
@@ -53,6 +54,7 @@ async def update_user(
     user_update: UserUpdate,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
+    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
     if str(user_id) != str(current_user.id):
         user_identifier = f"user:{current_user.username}"
@@ -72,6 +74,7 @@ async def delete_user(
     user_id: UUID,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(RequireUserWrite),
+    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
     if not UserCRUD.delete_user(session, user_id):
         raise HTTPException(status_code=404, detail="User not found")
