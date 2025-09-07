@@ -4,6 +4,7 @@ from uuid import UUID
 
 from sqlmodel import SQLModel
 
+from app.models.model_base import ModelBase
 from app.models.users import RoleBase, UserBase
 
 
@@ -18,10 +19,8 @@ class UserUpdate(SQLModel):
     is_active: Optional[bool] = None
 
 
-class UserRead(UserBase):
-    id: str
-    created_date: datetime
-    updated_date: datetime
+class UserRead(ModelBase, UserBase):
+    pass
 
 
 class UserReadWithRoles(UserRead):

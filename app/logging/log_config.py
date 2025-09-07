@@ -23,7 +23,6 @@ def get_structlog_processors(development: bool | None = None) -> List[Any]:
         structlog.processors.TimeStamper(fmt="ISO"),
         structlog.processors.add_log_level,
         structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
     ]
 
     if development:

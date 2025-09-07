@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] | None = None
     DB_USER: str | None = None
     DB_PASS: str | None = None
+    ENVIRONMENT: str | None = None
     HASH_ALGORITHM: str | None = None
     INITIAL_USER_NAME: str = "admin"
     INITIAL_USER_MAIL: str = "admin@example.com"
@@ -16,7 +17,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_NAME: str = "harvestLog"
     LOG_JSON_FORMAT: bool = False
-    LOG_ACCESS_NAME: str
+    LOG_ACCESS_NAME: str | None = None
     POSTGRES_DB: str | None = None
     POSTGRES_HOST: str | None = None
     POSTGRES_PASS: str | None = None

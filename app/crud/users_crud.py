@@ -1,12 +1,14 @@
+import logging
 from datetime import datetime, timezone
 from typing import Optional, Sequence
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from app.models.users import User
-from app.schemas.user_schemas import UserCreate, UserUpdate
+from app.schemas.user_schemas import UserCreate, UserReadWithRoles, UserUpdate
 from app.utils.auth import get_password_hash
 
 
@@ -28,6 +30,21 @@ class UserCRUD:
     @staticmethod
     async def get_user(session: AsyncSession, user_id: UUID) -> User | None:
         return await session.get(User, user_id)
+
+    @staticmethod
+    async def get_user_with_roles(
+        session: AsyncSession,
+        user_id: UUID,
+    ) -> UserReadWithRoles | None:
+        statement = (
+            select(User)
+            .where(User.__table__.c.id == user_id)
+            .options(selectinload(User.roles))
+        )
+        result = await session.execute(statement)
+        user = result.scalars().first()
+        logging.debug("User: %s" % user.username)
+        return UserReadWithRoles(**user.model_dump())
 
     @staticmethod
     async def get_user_by_username(

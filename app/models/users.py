@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List
 from uuid import UUID
 
 from sqlmodel import Field, Relationship, SQLModel
@@ -9,7 +9,7 @@ from app.models.model_base import ModelBase
 
 class RoleBase(SQLModel):
     name: str = Field(unique=True, index=True)
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class Role(ModelBase, RoleBase, table=True):  # type: ignore
@@ -19,7 +19,7 @@ class Role(ModelBase, RoleBase, table=True):  # type: ignore
 class UserBase(SQLModel):
     username: str = Field(unique=True, index=True)
     email: str = Field(unique=True, index=True)
-    full_name: Optional[str] = None
+    full_name: str | None = None
     is_active: bool = Field(default=True)
 
 

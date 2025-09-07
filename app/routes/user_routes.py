@@ -18,8 +18,15 @@ user_router = APIRouter(prefix="/users")
 
 
 @user_router.get("/me", response_model=UserReadWithRoles)
-async def read_users_me(current_user: User = Depends(get_current_active_user)):
-    return current_user
+async def read_users_me(
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_session),
+):
+    user = await UserCRUD.get_user_with_roles(
+        session=session,
+        user_id=current_user.id,
+    )
+    return user
 
 
 @user_router.get("/", response_model=List[UserRead])
