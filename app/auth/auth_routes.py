@@ -12,8 +12,8 @@ from app.auth.auth import (
 )
 from app.auth.auth_schemas import Token
 from app.casbin.casbin_config import AsyncCasbinManager
-from app.crud.users_crud import UserCRUD
-from app.schemas.user_schemas import UserCreate, UserRead
+from app.users.user_schemas import UserCreate, UserRead
+from app.users.users_crud import UserCRUD
 from app.utils.database import get_session
 from app.utils.dependencies import get_casbin_manager
 

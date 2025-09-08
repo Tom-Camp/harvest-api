@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlmodel import SQLModel
 
-from app.models.pages import PageBase
+from app.pages.page_models import PageBase
 
 
 class PageCreate(PageBase):

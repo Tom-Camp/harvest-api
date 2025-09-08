@@ -5,12 +5,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.auth import get_current_active_user
 from app.casbin.casbin_config import AsyncCasbinManager
 from app.casbin.permissions import RequirePageRead, check_page_ownership
-from app.crud.page_crud import PageCRUD
-from app.models.users import User
-from app.schemas.page_schemas import PageCreate, PageRead, PageUpdate
-from app.utils.auth import get_current_active_user
+from app.pages.page_crud import PageCRUD
+from app.pages.page_schemas import PageCreate, PageRead, PageUpdate
+from app.users.user_models import User
 from app.utils.database import get_session
 from app.utils.dependencies import get_casbin_manager
 
