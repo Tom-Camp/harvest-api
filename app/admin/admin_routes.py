@@ -7,7 +7,7 @@ from app.admin.permission_schemas import AssignRoleRequest, PermissionCheck
 from app.auth.auth import get_current_active_user
 from app.casbin.casbin_config import AsyncCasbinManager
 from app.casbin.permissions import RequireAdmin
-from app.roles.role_crud import RoleCRUD
+from app.users.role_crud import RoleCRUD
 from app.users.user_models import User
 from app.users.users_crud import UserCRUD
 from app.utils.database import get_session

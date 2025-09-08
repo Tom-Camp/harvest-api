@@ -1,10 +1,11 @@
+from datetime import datetime
 from typing import List
+from uuid import UUID
 
 from sqlmodel import SQLModel
 
 from app.helpers.model_base import ModelBase
-from app.roles.role_schemas import RoleRead
-from app.users.user_models import UserBase
+from app.users.user_models import RoleBase, UserBase
 
 
 class UserCreate(UserBase):
@@ -24,3 +25,21 @@ class UserRead(ModelBase, UserBase):
 
 class UserReadWithRoles(UserRead):
     roles: List["RoleRead"] = []
+
+
+class RoleCreate(RoleBase):
+    pass
+
+
+class RoleUpdate(SQLModel):
+    name: str | None = None
+    description: str | None = None
+
+
+class RoleRead(RoleBase):
+    id: UUID
+    created_at: datetime
+
+
+class RoleReadWithUsers(RoleRead):
+    users: List["UserRead"] = []

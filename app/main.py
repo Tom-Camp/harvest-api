@@ -11,7 +11,7 @@ from app.casbin.casbin_config import AsyncCasbinManager
 from app.logging.log_config import configure_structlog
 from app.logging.log_middleware import LoggingMiddleware
 from app.pages.page_routes import page_router
-from app.roles.role_routes import role_router
+from app.users.role_routes import role_router
 from app.users.user_routes import user_router
 from app.utils.config import settings
 from app.utils.initialize import initialize_data

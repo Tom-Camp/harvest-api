@@ -4,8 +4,8 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.roles.role_models import Role, UserRole
-from app.roles.role_schemas import RoleCreate
+from app.users.user_models import Role, UserRole
+from app.users.user_schemas import RoleCreate
 
 
 class RoleCRUD:
