@@ -7,9 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from app.models.users import User, UserRole
-from app.schemas.user_schemas import UserCreate, UserReadWithRoles, UserUpdate
-from app.utils.auth import get_password_hash
+from app.auth.auth import get_password_hash
+from app.users.user_models import User, UserRole
+from app.users.user_schemas import UserCreate, UserReadWithRoles, UserUpdate
 
 
 class UserCRUD:

@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlmodel import SQLModel
 
 from app.models.model_base import ModelBase
-from app.models.users import RoleBase, UserBase
+from app.users.user_models import RoleBase, UserBase
 
 
 class UserCreate(UserBase):

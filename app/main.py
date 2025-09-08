@@ -9,7 +9,8 @@ from app.auth.auth_routes import auth_router
 from app.casbin.casbin_config import AsyncCasbinManager
 from app.logging.log_config import configure_structlog
 from app.logging.log_middleware import LoggingMiddleware
-from app.routes import admin_routes, page_routes, role_routes, user_routes
+from app.routes import admin_routes, page_routes, role_routes
+from app.users.user_routes import user_router
 from app.utils.config import settings
 from app.utils.initialize import initialize_data
 
@@ -45,7 +46,7 @@ app.add_middleware(
 
 
 app.include_router(auth_router, prefix="/api", tags=["authentication"])
-app.include_router(user_routes.user_router, prefix="/api", tags=["users"])
+app.include_router(user_router, prefix="/api", tags=["users"])
 app.include_router(role_routes.role_router, prefix="/api", tags=["roles"])
 app.include_router(admin_routes.admin_router, prefix="/api", tags=["admin"])
 app.include_router(page_routes.page_router, prefix="/api", tags=["pages"])
