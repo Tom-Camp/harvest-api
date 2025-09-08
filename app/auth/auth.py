@@ -8,7 +8,7 @@ from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.models.users import User
+from app.helpers.users import User
 from app.utils.config import settings
 from app.utils.database import get_session
 

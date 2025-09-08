@@ -3,7 +3,7 @@ from typing import Callable
 
 from fastapi import Depends, HTTPException, status
 
-from app.models.users import User
+from app.helpers.users import User
 from app.utils.auth import get_current_active_user
 from app.utils.dependencies import get_casbin_manager
 

@@ -6,7 +6,7 @@ from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.providers.google import GoogleProvider
 
 from app.ai.prompts.new_plant import new_plant_prompt
-from app.models.garden import PlantInfo
+from app.helpers.garden import PlantInfo
 
 load_dotenv()
 
