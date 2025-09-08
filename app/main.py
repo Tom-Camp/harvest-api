@@ -5,11 +5,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 
+from app.auth.auth_routes import auth_router
+from app.casbin.casbin_config import AsyncCasbinManager
 from app.logging.log_config import configure_structlog
 from app.logging.log_middleware import LoggingMiddleware
-from app.models.users import User
-from app.casbin.casbin_config import AsyncCasbinManager
-from app.routes import admin_routes, auth_routes, page_routes, role_routes, user_routes
+from app.routes import admin_routes, page_routes, role_routes, user_routes
 from app.utils.config import settings
 from app.utils.initialize import initialize_data
 
@@ -44,7 +44,7 @@ app.add_middleware(
 )
 
 
-app.include_router(auth_routes.auth_router, prefix="/api", tags=["authentication"])
+app.include_router(auth_router, prefix="/api", tags=["authentication"])
 app.include_router(user_routes.user_router, prefix="/api", tags=["users"])
 app.include_router(role_routes.role_router, prefix="/api", tags=["roles"])
 app.include_router(admin_routes.admin_router, prefix="/api", tags=["admin"])

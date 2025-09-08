@@ -5,15 +5,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.casbin.casbin_config import AsyncCasbinManager
-from app.crud.users_crud import UserCRUD
-from app.schemas.auth_schemas import Token
-from app.schemas.user_schemas import UserCreate, UserRead
-from app.utils.auth import (
+from app.auth.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     authenticate_user,
     create_access_token,
 )
+from app.auth.auth_schemas import Token
+from app.casbin.casbin_config import AsyncCasbinManager
+from app.crud.users_crud import UserCRUD
+from app.schemas.user_schemas import UserCreate, UserRead
 from app.utils.database import get_session
 from app.utils.dependencies import get_casbin_manager
 
