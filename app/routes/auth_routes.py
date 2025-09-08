@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -45,13 +46,15 @@ async def register(
     session: AsyncSession = Depends(get_session),
     casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
-    if UserCRUD.get_user_by_username(session, user.username):
+    if username := await UserCRUD.get_user_by_username(session, user.username):
+        logging.info("Username %s already taken" % username)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already registered",
         )
 
-    if UserCRUD.get_user_by_email(session, user.email):
+    if email := await UserCRUD.get_user_by_email(session, user.email):
+        logging.info("Email %s already taken" % email)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )

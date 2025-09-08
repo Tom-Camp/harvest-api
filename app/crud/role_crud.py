@@ -59,7 +59,9 @@ class RoleCRUD:
 
     @staticmethod
     async def remove_role_from_user(
-        session: AsyncSession, user_id: UUID, role_id: UUID
+        session: AsyncSession,
+        user_id: UUID,
+        role_id: UUID,
     ) -> bool:
         statement = select(UserRole).where(
             UserRole.__table__.c.user_id == user_id,
