@@ -3,9 +3,10 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.casbin.casbin_config import AsyncCasbinManager
-from app.crud.role_crud import RoleCRUD
-from app.crud.users_crud import UserCRUD
-from app.schemas.user_schemas import RoleCreate, UserCreate
+from app.roles.role_crud import RoleCRUD
+from app.roles.role_schemas import RoleCreate
+from app.users.user_schemas import UserCreate
+from app.users.users_crud import UserCRUD
 from app.utils.config import settings
 from app.utils.database import (
     AsyncSessionLocal,

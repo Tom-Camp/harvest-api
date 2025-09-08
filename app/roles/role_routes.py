@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.casbin.permissions import RequireAdmin, RequireUserRead
-from app.crud.role_crud import RoleCRUD
-from app.helpers.users import User
-from app.schemas.user_schemas import RoleCreate, RoleRead
+from app.roles.role_crud import RoleCRUD
+from app.roles.role_schemas import RoleCreate, RoleRead
+from app.users.user_models import User
 from app.utils.database import get_session
 
 role_router = APIRouter(prefix="/users")
