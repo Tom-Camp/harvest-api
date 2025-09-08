@@ -4,8 +4,8 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.models.users import Role, UserRole
-from app.schemas.user_schemas import RoleCreate
+from app.users.user_models import Role, UserRole
+from app.users.user_schemas import RoleCreate
 
 
 class RoleCRUD:
@@ -59,7 +59,9 @@ class RoleCRUD:
 
     @staticmethod
     async def remove_role_from_user(
-        session: AsyncSession, user_id: UUID, role_id: UUID
+        session: AsyncSession,
+        user_id: UUID,
+        role_id: UUID,
     ) -> bool:
         statement = select(UserRole).where(
             UserRole.__table__.c.user_id == user_id,

@@ -1,18 +1,19 @@
+import logging
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.casbin.casbin_config import AsyncCasbinManager
-from app.crud.users_crud import UserCRUD
-from app.schemas.auth_schemas import Token
-from app.schemas.user_schemas import UserCreate, UserRead
-from app.utils.auth import (
+from app.auth.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     authenticate_user,
     create_access_token,
 )
+from app.auth.auth_schemas import Token
+from app.casbin.casbin_config import AsyncCasbinManager
+from app.users.user_schemas import UserCreate, UserRead
+from app.users.users_crud import UserCRUD
 from app.utils.database import get_session
 from app.utils.dependencies import get_casbin_manager
 
@@ -45,13 +46,15 @@ async def register(
     session: AsyncSession = Depends(get_session),
     casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
-    if UserCRUD.get_user_by_username(session, user.username):
+    if username := await UserCRUD.get_user_by_username(session, user.username):
+        logging.info("Username %s already taken" % username)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already registered",
         )
 
-    if UserCRUD.get_user_by_email(session, user.email):
+    if email := await UserCRUD.get_user_by_email(session, user.email):
+        logging.info("Email %s already taken" % email)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )

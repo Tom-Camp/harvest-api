@@ -1,6 +1,6 @@
 from pydantic import Field
 
-from app.models.model_base import ModelBase
+from app.helpers.model_base import ModelBase
 
 
 class Note(ModelBase):

@@ -1,11 +1,11 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 from uuid import UUID
 
 from sqlmodel import SQLModel
 
-from app.models.model_base import ModelBase
-from app.models.users import RoleBase, UserBase
+from app.helpers.model_base import ModelBase
+from app.users.user_models import RoleBase, UserBase
 
 
 class UserCreate(UserBase):
@@ -13,10 +13,10 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(SQLModel):
-    email: Optional[str] = None
-    username: Optional[str] = None
-    full_name: Optional[str] = None
-    is_active: Optional[bool] = None
+    email: str | None = None
+    username: str | None = None
+    full_name: str | None = None
+    is_active: bool = False
 
 
 class UserRead(ModelBase, UserBase):
@@ -32,8 +32,8 @@ class RoleCreate(RoleBase):
 
 
 class RoleUpdate(SQLModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name: str | None = None
+    description: str | None = None
 
 
 class RoleRead(RoleBase):

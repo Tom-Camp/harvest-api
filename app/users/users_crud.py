@@ -7,9 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from app.models.users import User
-from app.schemas.user_schemas import UserCreate, UserReadWithRoles, UserUpdate
-from app.utils.auth import get_password_hash
+from app.auth.auth import get_password_hash
+from app.users.user_models import User, UserRole
+from app.users.user_schemas import UserCreate, UserReadWithRoles, UserUpdate
 
 
 class UserCRUD:
@@ -38,8 +38,8 @@ class UserCRUD:
     ) -> UserReadWithRoles | None:
         statement = (
             select(User)
-            .where(User.__table__.c.id == user_id)
-            .options(selectinload(User.roles))
+            .options(selectinload(User.roles).selectinload(UserRole.role))
+            .where(User.id == user_id)
         )
         result = await session.execute(statement)
         user = result.scalars().first()

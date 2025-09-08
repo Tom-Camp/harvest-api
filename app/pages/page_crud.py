@@ -4,8 +4,8 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.models.pages import Page
-from app.schemas.page_schemas import PageCreate, PageUpdate
+from app.pages.page_models import Page
+from app.pages.page_schemas import PageCreate, PageUpdate
 
 
 class PageCRUD:

@@ -4,16 +4,7 @@ from uuid import UUID
 
 from sqlmodel import Field, Relationship, SQLModel
 
-from app.models.model_base import ModelBase
-
-
-class RoleBase(SQLModel):
-    name: str = Field(unique=True, index=True)
-    description: str | None = None
-
-
-class Role(ModelBase, RoleBase, table=True):  # type: ignore
-    users: List["UserRole"] = Relationship(back_populates="role")
+from app.helpers.model_base import ModelBase
 
 
 class UserBase(SQLModel):
@@ -26,6 +17,15 @@ class UserBase(SQLModel):
 class User(ModelBase, UserBase, table=True):  # type: ignore
     hashed_password: str
     roles: List["UserRole"] = Relationship(back_populates="user")
+
+
+class RoleBase(SQLModel):
+    name: str = Field(unique=True, index=True)
+    description: str | None = None
+
+
+class Role(ModelBase, RoleBase, table=True):  # type: ignore
+    users: List["UserRole"] = Relationship(back_populates="role")
 
 
 class UserRole(SQLModel, table=True):  # type: ignore
