@@ -3,7 +3,7 @@ import os
 import casbin
 from casbin_async_sqlalchemy_adapter import Adapter
 
-from app.utils.database import DATABASE_URL
+from app.utils.config import settings
 
 
 class AsyncCasbinManager:
@@ -24,7 +24,7 @@ class AsyncCasbinManager:
 
     async def get_enforcer(self):
         if self._adapter is None:
-            self._adapter = Adapter(DATABASE_URL)
+            self._adapter = Adapter(settings.postgres_uri)
 
         model_path = os.path.join(os.path.dirname(__file__), "casbin_model.conf")
         self._enforcer = casbin.AsyncEnforcer(

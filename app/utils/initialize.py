@@ -7,11 +7,7 @@ from app.users.role_crud import RoleCRUD
 from app.users.user_schemas import RoleCreate, UserCreate
 from app.users.users_crud import UserCRUD
 from app.utils.config import settings
-from app.utils.database import (
-    AsyncSessionLocal,
-    create_db_and_tables,
-    init_casbin_tables,
-)
+from app.utils.database import create_db_and_tables, get_session, init_casbin_tables
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -113,7 +109,8 @@ async def initialize_data(casbin_manager: AsyncCasbinManager):
 
     await setup_casbin_policies(casbin_manager=casbin_manager)
 
-    async with AsyncSessionLocal() as session:
+    session_maker = get_session()
+    async with session_maker() as session:
         await setup_initial_roles(session)
         admin = await setup_initial_admin(
             session=session,
