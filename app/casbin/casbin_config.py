@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from casbin import AsyncEnforcer
-from casbin_async_sqlalchemy_adapter import Adapter
+from casbin_async_sqlalchemy_adapter import Adapter as AsyncAdapter
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from app.utils.config import settings
@@ -25,7 +25,7 @@ class AsyncCasbinManager:
             settings.postgres_uri, echo=False, future=True
         )
 
-        self._adapter: Optional[Adapter] = None
+        self._adapter: Optional[AsyncAdapter] = None
 
         self._enforcer: Optional[AsyncEnforcer] = None
 
@@ -35,14 +35,16 @@ class AsyncCasbinManager:
         if self._ready:
             return
 
-        self._adapter = Adapter(self._engine)
+        self._adapter = AsyncAdapter(self._engine)
         await self._adapter.create_table()
 
         model_path = Path(__file__).with_name("casbin_model.conf")
         if not model_path.is_file():
             raise FileNotFoundError(f"Casbin model not found: {model_path}")
 
-        self._enforcer = AsyncEnforcer(str(model_path), self._adapter, enable_log=True)
+        self._enforcer = AsyncEnforcer(
+            model_path.as_posix(), self._adapter, enable_log=True
+        )
 
         await self._enforcer.load_policy()
         self._ready = True

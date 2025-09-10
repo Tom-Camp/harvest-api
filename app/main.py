@@ -21,8 +21,8 @@ from app.utils.initialize import initialize_data
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logging.info(">>> LIFESPAN START – creating Casbin manager")
-    app.state.casbin_manager = AsyncCasbinManager()  # singleton
-    await app.state.casbin_manager.init()  # <-- now works
+    app.state.casbin_manager = AsyncCasbinManager()
+    await app.state.casbin_manager.init()
     await initialize_data(app.state.casbin_manager)
     yield
     logging.info(">>> LIFESPAN END – closing Casbin manager")
