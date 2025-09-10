@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.auth.auth import get_current_active_user
 from app.casbin.casbin_config import AsyncCasbinManager
-from app.casbin.permissions import RequirePageRead, check_page_ownership
+from app.casbin.permissions import RequirePageRead
 from app.pages.page_crud import PageCRUD
 from app.pages.page_schemas import PageCreate, PageRead, PageUpdate
 from app.users.user_models import User
@@ -55,18 +55,19 @@ async def read_page(
     page_id: UUID,
     sessionmaker: async_sessionmaker = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
-    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
+    manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
     async with sessionmaker() as session:
         page = await PageCRUD.get_page(session, page_id)
         if not page:
             raise HTTPException(status_code=404, detail="Page not found")
 
-        user_identifier = f"user:{current_user.username}"
-        if not (
-            check_page_ownership(page.__table__.c.owner_id, current_user)
-            or casbin_manager.check_permission(user_identifier, "page", "read")
-        ):
+        allowed = await manager.enforce(
+            sub=f"user:{current_user.username}",
+            obj="page",
+            act="read",
+        )
+        if not allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied"
             )
@@ -80,18 +81,19 @@ async def update_page(
     page_update: PageUpdate,
     sessionmaker: async_sessionmaker = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
-    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
+    manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
     async with sessionmaker() as session:
         page = await PageCRUD.get_page(session, page_id)
         if not page:
             raise HTTPException(status_code=404, detail="Page not found")
 
-        user_identifier = f"user:{current_user.username}"
-        if not (
-            check_page_ownership(page.__table__.c.owner_id, current_user)
-            or casbin_manager.check_permission(user_identifier, "page", "write")
-        ):
+        allowed = await manager.enforce(
+            sub=f"user:{current_user.username}",
+            obj="page",
+            act="write",
+        )
+        if not allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied"
             )
@@ -105,18 +107,19 @@ async def delete_page(
     page_id: UUID,
     sessionmaker: async_sessionmaker = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
-    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
+    manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
     async with sessionmaker() as session:
         page = await PageCRUD.get_page(session, page_id)
         if not page:
             raise HTTPException(status_code=404, detail="Page not found")
 
-        user_identifier = f"user:{current_user.username}"
-        if not (
-            check_page_ownership(page.__table__.c.owner_id, current_user)
-            or casbin_manager.check_permission(user_identifier, "page", "write")
-        ):
+        allowed = await manager.enforce(
+            sub=f"user:{current_user.username}",
+            obj="page",
+            act="write",
+        )
+        if not allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied"
             )

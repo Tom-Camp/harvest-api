@@ -64,12 +64,16 @@ async def update_user(
     user_update: UserUpdate,
     sessionmaker: async_sessionmaker = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
-    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
+    manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
     async with sessionmaker() as session:
         if str(user_id) != str(current_user.id):
-            user_identifier = f"user:{current_user.username}"
-            if not casbin_manager.check_permission(user_identifier, "user", "write"):
+            allowed = await manager.enforce(
+                sub=f"user:{current_user.username}",
+                obj="user",
+                act="write",
+            )
+            if not allowed:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied"
                 )
@@ -85,7 +89,7 @@ async def delete_user(
     user_id: UUID,
     sessionmaker: async_sessionmaker = Depends(get_session),
     current_user: User = Depends(RequireUserWrite),
-    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
+    manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
     async with sessionmaker() as session:
         if not UserCRUD.delete_user(session, user_id):
@@ -94,9 +98,9 @@ async def delete_user(
         user = await UserCRUD.get_user(session, user_id)
         if user:
             user_identifier = f"user:{user.username}"
-            roles = await casbin_manager.get_roles_for_user(user_identifier)
+            roles = await manager.get_roles_for_user(user_identifier)
             for role in roles:
-                await casbin_manager.remove_role_for_user(user_identifier, role)
+                await manager.delete_role_for_user(user_identifier, role)
 
         logging.info("%s deleted user %s" % current_user.username, user_id)
         return {"message": "User deleted successfully"}

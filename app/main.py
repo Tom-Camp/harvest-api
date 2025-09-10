@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -19,9 +20,13 @@ from app.utils.initialize import initialize_data
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.casbin_manager = AsyncCasbinManager(settings.postgres_uri)
-    await initialize_data(casbin_manager=app.state.casbin_manager)
+    logging.info(">>> LIFESPAN START – creating Casbin manager")
+    app.state.casbin_manager = AsyncCasbinManager()  # singleton
+    await app.state.casbin_manager.init()  # <-- now works
+    await initialize_data(app.state.casbin_manager)
     yield
+    logging.info(">>> LIFESPAN END – closing Casbin manager")
+    await app.state.casbin_manager.close()
 
 
 configure_structlog()

@@ -1,4 +1,5 @@
 import logging
+from typing import List
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,7 +8,7 @@ from app.users.role_crud import RoleCRUD
 from app.users.user_schemas import RoleCreate, UserCreate
 from app.users.users_crud import UserCRUD
 from app.utils.config import settings
-from app.utils.database import create_db_and_tables, get_session, init_casbin_tables
+from app.utils.database import create_db_and_tables, get_session
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -70,52 +71,52 @@ async def setup_initial_admin(
         return existing_admin.username
 
 
-async def setup_casbin_policies(casbin_manager: AsyncCasbinManager):
-    enforcer = await casbin_manager.get_enforcer()
+async def setup_casbin_policies(casbin_manager: AsyncCasbinManager) -> None:
+    # Clear any existing policies before seeding
+    await casbin_manager.clear_policy()
 
-    enforcer.clear_policy()
-
-    user_roles = [
-        ["admin", "admin"],
+    # Optional: seed grouping/role relationships here if needed
+    # Prefer assigning real users to roles, which setup_initial_admin already does
+    # via casbin_manager.add_role_for_user("user:<username>", "admin")
+    user_roles: List[tuple] = [
+        ("user:admin", "moderator"),
     ]
+    for user, role in user_roles:
+        await casbin_manager.add_grouping_policy(user, role)
 
-    for user_role in user_roles:
-        enforcer.add_grouping_policy(*user_role)
-        logger.info(f"Added user role: {user_role}")
-
+    # Seed RBAC policies (p rules)
     policies = [
-        ["admin", "*", "*"],
-        ["moderator", "user", "read"],
-        ["moderator", "user", "write"],
-        ["moderator", "page", "*"],
-        ["moderator", "role", "read"],
-        ["user", "page", "read"],
-        ["user", "page", "create"],
+        ("admin", "*", "*"),
+        ("moderator", "user", "read"),
+        ("moderator", "user", "write"),
+        ("moderator", "page", "*"),
+        ("moderator", "role", "read"),
+        ("user", "page", "read"),
+        ("user", "page", "create"),
     ]
-
-    for policy in policies:
-        await enforcer.add_policy(*policy)
-        logger.info(f"Added policy: {policy}")
-
-    await enforcer.save_policy()
-    logger.info("Casbin policies saved")
+    for p in policies:
+        await casbin_manager.add_policy(*p)
 
 
-async def initialize_data(casbin_manager: AsyncCasbinManager):
+async def initialize_data(casbin_manager: AsyncCasbinManager) -> None:
     logger.info("Starting initial data setup...")
-
+    # 1) Create application tables
     await create_db_and_tables()
-    await init_casbin_tables()
 
+    # 2) Casbin tables + enforcer are already initialized in lifespan via casbin_manager.init()
+    #    so do NOT call init_casbin_tables() here anymore.
+
+    # 3) Seed policies
     await setup_casbin_policies(casbin_manager=casbin_manager)
 
+    # 4) Seed roles and admin user
     session_maker = get_session()
     async with session_maker() as session:
         await setup_initial_roles(session)
         admin = await setup_initial_admin(
-            session=session,
-            casbin_manager=casbin_manager,
+            session=session, casbin_manager=casbin_manager
         )
-        logger.info("Initial data setup completed!")
         logger.info(f"Admin user created: username={admin}")
         await session.commit()
+
+    logger.info("Initial data setup completed!")

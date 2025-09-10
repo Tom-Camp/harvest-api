@@ -1,103 +1,116 @@
-import os
+from pathlib import Path
+from typing import List, Optional
 
-import casbin
+from casbin import AsyncEnforcer
 from casbin_async_sqlalchemy_adapter import Adapter
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from app.utils.config import settings
 
 
 class AsyncCasbinManager:
-    _instance = None
-    _enforcer = None
-    _adapter = None
-    _db_url: str | None = None
 
-    def __new__(cls, db_url: str | None = None):
+    _instance: Optional["AsyncCasbinManager"] = None
+
+    def __new__(cls) -> "AsyncCasbinManager":
         if cls._instance is None:
-            if db_url is None:
-                raise RuntimeError(
-                    "AsyncCasbinManager must be initialised with a DB URL"
-                )
             cls._instance = super().__new__(cls)
-            cls._instance._db_url = db_url
         return cls._instance
 
-    async def get_enforcer(self):
-        if self._adapter is None:
-            self._adapter = Adapter(settings.postgres_uri)
+    def __init__(self) -> None:
+        if hasattr(self, "_engine"):
+            return
 
-        model_path = os.path.join(os.path.dirname(__file__), "casbin_model.conf")
-        self._enforcer = casbin.AsyncEnforcer(
-            model_path, self._adapter, enable_log=True
+        self._engine: AsyncEngine = create_async_engine(
+            settings.postgres_uri, echo=False, future=True
         )
 
+        self._adapter: Optional[Adapter] = None
+
+        self._enforcer: Optional[AsyncEnforcer] = None
+
+        self._ready: bool = False
+
+    async def init(self) -> None:
+        if self._ready:
+            return
+
+        self._adapter = Adapter(self._engine)
+        await self._adapter.create_table()
+
+        model_path = Path(__file__).with_name("casbin_model.conf")
+        if not model_path.is_file():
+            raise FileNotFoundError(f"Casbin model not found: {model_path}")
+
+        self._enforcer = AsyncEnforcer(str(model_path), self._adapter, enable_log=True)
+
         await self._enforcer.load_policy()
+        self._ready = True
 
-        return self._enforcer
+    async def close(self) -> None:
+        await self._engine.dispose()
+        self._ready = False
 
-    async def _load_initial_policies(self):
-        e = self._enforcer
+    async def _ensure_ready(self) -> None:
+        if not self._ready:
+            await self.init()
 
-        # Clear existing policies (optional)
-        e.clear_policy()
-
-        # Add some default roles and permissions
-        # Format: role, page, action
-        default_policies = [
-            ("admin", "*", "*"),  # Admin can do anything
-            ("user", "page", "read"),
-            ("user", "page", "read"),
-            ("user", "page", "create"),
-            ("moderator", "page", "*"),
-            ("moderator", "user", "read"),
-            ("moderator", "user", "write"),
-        ]
-
-        # Add policies
-        for policy in default_policies:
-            await e.add_policy(*policy)
-
-        # Save policies to database
-        await e.save_policy()
-
-    async def check_permission(self, user: str, resource: str, action: str) -> bool:
-        """Check if user has permission to perform action on resource"""
-        enforcer = await self.get_enforcer()
-        return enforcer.enforce(user, resource, action)
+    async def enforce(self, sub: str, obj: str, act: str) -> bool:
+        await self._ensure_ready()
+        assert self._enforcer is not None
+        return self._enforcer.enforce(sub, obj, act)
 
     async def add_role_for_user(self, user: str, role: str) -> bool:
-        """Add role to user"""
-        enforcer = await self.get_enforcer()
-        result = await enforcer.add_role_for_user(user, role)
-        await enforcer.save_policy()
-        return result
+        await self._ensure_ready()
+        assert self._enforcer is not None
+        added = await self._enforcer.add_role_for_user(user, role)
+        await self._enforcer.save_policy()
+        return added
 
-    async def remove_role_for_user(self, user: str, role: str) -> bool:
-        enforcer = await self.get_enforcer()
-        result = await enforcer.delete_role_for_user(user, role)
-        await enforcer.save_policy()
-        return result
+    async def delete_role_for_user(self, user: str, role: str) -> bool:
+        await self._ensure_ready()
+        assert self._enforcer is not None
+        removed = await self._enforcer.delete_role_for_user(user, role)
+        await self._enforcer.save_policy()
+        return removed
 
-    async def get_roles_for_user(self, user: str) -> list:
-        """Get all roles for a user"""
-        enforcer = await self.get_enforcer()
-        return await enforcer.get_roles_for_user(user)
+    async def get_roles_for_user(self, user: str) -> List[str]:
+        await self._ensure_ready()
+        assert self._enforcer is not None
+        return await self._enforcer.get_roles_for_user(user)
 
-    async def get_users_for_role(self, role: str) -> list:
-        """Get all users with a specific role"""
-        enforcer = await self.get_enforcer()
-        return await enforcer.get_users_for_role(role)
+    async def get_users_for_role(self, role: str) -> List[str]:
+        await self._ensure_ready()
+        assert self._enforcer is not None
+        return await self._enforcer.get_users_for_role(role)
 
-    async def add_policy(self, role: str, resource: str, action: str) -> bool:
-        """Add a policy rule"""
-        enforcer = await self.get_enforcer()
-        result = await enforcer.add_policy(role, resource, action)
-        await enforcer.save_policy()
-        return result
+    async def add_policy(self, *rule: str) -> bool:
+        await self._ensure_ready()
+        assert self._enforcer is not None
+        added = await self._enforcer.add_policy(*rule)
+        await self._enforcer.save_policy()
+        return added
 
-    async def remove_policy(self, role: str, resource: str, action: str) -> bool:
-        """Remove a policy rule"""
-        enforcer = await self.get_enforcer()
-        result = await enforcer.remove_policy(role, resource, action)
-        await enforcer.save_policy()
-        return result
+    async def remove_policy(self, *rule: str) -> bool:
+        await self._ensure_ready()
+        assert self._enforcer is not None
+        removed = await self._enforcer.remove_policy(*rule)
+        await self._enforcer.save_policy()
+        return removed
+
+    async def get_enforcer(self) -> AsyncEnforcer:
+        await self._ensure_ready()
+        assert self._enforcer is not None
+        return self._enforcer
+
+    async def clear_policy(self) -> None:
+        await self._ensure_ready()
+        assert self._enforcer is not None
+        self._enforcer.clear_policy()
+        await self._enforcer.save_policy()
+
+    async def add_grouping_policy(self, *rule: str) -> None:
+        await self._ensure_ready()
+        assert self._enforcer is not None
+        await self._enforcer.add_grouping_policy(*rule)
+        await self._enforcer.save_policy()

@@ -52,7 +52,7 @@ async def remove_role(
     request: AssignRoleRequest,
     sessionmaker: async_sessionmaker = Depends(get_session),
     current_user: User = Depends(RequireAdmin),
-    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
+    manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
     async with sessionmaker() as session:
         user = await UserCRUD.get_user(session, request.user_id)
@@ -66,7 +66,7 @@ async def remove_role(
         await RoleCRUD.remove_role_from_user(session, request.user_id, role.id)
 
         user_identifier = f"user:{user.username}"
-        await casbin_manager.remove_role_for_user(user_identifier, request.role_name)
+        await manager.delete_role_for_user(user_identifier, request.role_name)
         logging.info(
             "Role %s removed from user %s by %s" % request.role_name,
             user.username,
@@ -82,19 +82,20 @@ async def remove_role(
 async def check_permission(
     request: PermissionCheck,
     current_user: User = Depends(get_current_active_user),
-    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
+    manager: AsyncCasbinManager = Depends(get_casbin_manager),
 ):
-    user_identifier = f"user:{current_user.username}"
-    has_permission = casbin_manager.check_permission(
-        user_identifier, request.resource, request.action
+    user_identifier: str = f"user:{current_user.username}"
+    has_permission = await manager.enforce(
+        sub=user_identifier,
+        obj=request.resource,
+        act=request.action,
     )
-
     return {
         "user": current_user.username,
         "resource": request.resource,
         "action": request.action,
         "has_permission": has_permission,
-        "roles": casbin_manager.get_roles_for_user(user_identifier),
+        "roles": manager.get_roles_for_user(user_identifier),
     }
 
 
