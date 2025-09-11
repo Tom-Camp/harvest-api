@@ -1,4 +1,3 @@
-import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -9,6 +8,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from app.admin.admin_routes import admin_router
 from app.auth.auth_routes import auth_router
 from app.casbin.casbin_config import AsyncCasbinManager
+from app.logging import get_logger
 from app.logging.log_config import configure_structlog
 from app.logging.log_middleware import LoggingMiddleware
 from app.pages.page_routes import page_router
@@ -17,19 +17,20 @@ from app.users.user_routes import user_router
 from app.utils.config import settings
 from app.utils.initialize import initialize_data
 
+configure_structlog()
+logger = get_logger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logging.info(">>> LIFESPAN START – creating Casbin manager")
+    logger.info(">>> LIFESPAN START – creating Casbin manager")
     app.state.casbin_manager = AsyncCasbinManager()
     await app.state.casbin_manager.init()
     await initialize_data(app.state.casbin_manager)
     yield
-    logging.info(">>> LIFESPAN END – closing Casbin manager")
+    logger.info(">>> LIFESPAN END – closing Casbin manager")
     await app.state.casbin_manager.close()
 
-
-configure_structlog()
 
 app = FastAPI(
     lifespan=lifespan,

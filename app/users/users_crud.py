@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime, timezone
 from typing import Optional, Sequence
 from uuid import UUID
@@ -8,8 +7,11 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from app.auth.auth import get_password_hash
+from app.logging import get_logger
 from app.users.user_models import User, UserRole
 from app.users.user_schemas import UserCreate, UserReadWithRoles, UserUpdate
+
+logger = get_logger(__name__)
 
 
 class UserCRUD:
@@ -43,7 +45,7 @@ class UserCRUD:
         )
         result = await session.execute(statement)
         user = result.scalars().first()
-        logging.debug("User: %s" % user.username)
+        logger.debug("User: %s" % user.username)
         return UserReadWithRoles(**user.model_dump())
 
     @staticmethod

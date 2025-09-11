@@ -1,4 +1,5 @@
 # test_auth_routes.py
+import logging
 import uuid
 
 import pytest
@@ -14,12 +15,12 @@ class TestAuthRoutes:
 
     @staticmethod
     async def test_health(client):
-        resp = await client.get("/health")
-        assert resp.status_code == 200
-        assert resp.json() == {"status": "healthy"}
+        health_response = await client.get("/health")
+        assert health_response.status_code == 200
+        assert health_response.json() == {"status": "healthy"}
 
-    async def test_register_and_login(self, client):
-        r = await client.post(
+    async def test_register(self, client):
+        register_response = await client.post(
             "/api/auth/register",
             json={
                 "username": self.username,
@@ -28,11 +29,11 @@ class TestAuthRoutes:
             },
             headers=self.header,
         )
-        assert r.status_code == 200, r.text
-        assert r.json()["username"] == self.username
+        assert register_response.status_code == 200, register_response.text
+        assert register_response.json()["username"] == self.username
 
     async def test_login(self, client):
-        r2 = await client.post(
+        login_response = await client.post(
             "/api/auth/token",
             data={
                 "username": self.username,
@@ -40,15 +41,16 @@ class TestAuthRoutes:
             },
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
-        assert r2.status_code == 200, r2.text
-        token = r2.json()
+        logging.debug("LOGIN RESP: %s" % login_response)
+        assert login_response.status_code == 200, login_response.text
+        token = login_response.json()
         assert "access_token" in token
         assert token["token_type"] == "bearer"
 
     async def test_admin_login(self, client):
         from app.utils.config import settings
 
-        r = await client.post(
+        admin_response = await client.post(
             "/api/auth/token",
             data={
                 "username": settings.INITIAL_USER_NAME,
@@ -56,7 +58,8 @@ class TestAuthRoutes:
             },
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
-        assert r.status_code == 200, r.text
-        token = r.json()
+        logging.debug("ADMIN RESP: %s" % admin_response)
+        assert admin_response.status_code == 200, admin_response.text
+        token = admin_response.json()
         assert "access_token" in token
         assert token["token_type"] == "bearer"

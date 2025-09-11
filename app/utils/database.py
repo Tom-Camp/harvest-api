@@ -1,3 +1,5 @@
+from typing import AsyncGenerator
+
 from casbin_async_sqlalchemy_adapter import Adapter
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -18,6 +20,21 @@ def get_session(engine=None) -> async_sessionmaker:
     if engine is None:
         engine = get_engine()
     return async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+SessionLocal = async_sessionmaker(
+    bind=get_engine(),
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    async with SessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
 
 
 async def create_db_and_tables(engine: AsyncEngine | None = None):

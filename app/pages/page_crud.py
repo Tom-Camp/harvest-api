@@ -4,8 +4,11 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from app.logging import get_logger
 from app.pages.page_models import Page
 from app.pages.page_schemas import PageCreate, PageUpdate
+
+logger = get_logger(__name__)
 
 
 class PageCRUD:
@@ -13,6 +16,7 @@ class PageCRUD:
     async def create_page(
         session: AsyncSession, page: PageCreate, owner_id: UUID
     ) -> Page:
+        logger.debug("PAGE POST", page)
         db_page = Page(**page.model_dump(), owner_id=owner_id)
         session.add(db_page)
         await session.commit()

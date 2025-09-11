@@ -1,17 +1,16 @@
-import logging
 from typing import List
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.casbin.casbin_config import AsyncCasbinManager
+from app.logging import get_logger
 from app.users.role_crud import RoleCRUD
 from app.users.user_schemas import RoleCreate, UserCreate
 from app.users.users_crud import UserCRUD
 from app.utils.config import settings
 from app.utils.database import create_db_and_tables, get_session
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 async def setup_initial_roles(session: AsyncSession):
@@ -22,6 +21,7 @@ async def setup_initial_roles(session: AsyncSession):
     ]
 
     created_roles = []
+    logger.info("SETTING UP INITIAL ROLES")
     for role_data in roles_data:
         existing_role = await RoleCRUD.get_role_by_name(session, role_data["name"])
         if not existing_role:
@@ -53,7 +53,6 @@ async def setup_initial_admin(
     if not existing_admin:
         admin_create = UserCreate(**admin_data)
         admin_user = await UserCRUD.create_user(session, admin_create)
-        print(admin_user)
         logger.info(f"Created admin user: {admin_user.username}")
 
         admin_role = await RoleCRUD.get_role_by_name(session, "admin")
@@ -72,7 +71,6 @@ async def setup_initial_admin(
 
 
 async def setup_casbin_policies(casbin_manager: AsyncCasbinManager) -> None:
-    # Clear any existing policies before seeding
     await casbin_manager.clear_policy()
 
     # Optional: seed grouping/role relationships here if needed
@@ -100,16 +98,12 @@ async def setup_casbin_policies(casbin_manager: AsyncCasbinManager) -> None:
 
 async def initialize_data(casbin_manager: AsyncCasbinManager) -> None:
     logger.info("Starting initial data setup...")
-    # 1) Create application tables
+    logger.info("Creating database tables from models")
     await create_db_and_tables()
 
-    # 2) Casbin tables + enforcer are already initialized in lifespan via casbin_manager.init()
-    #    so do NOT call init_casbin_tables() here anymore.
-
-    # 3) Seed policies
+    logger.info("Casbin setup")
     await setup_casbin_policies(casbin_manager=casbin_manager)
 
-    # 4) Seed roles and admin user
     session_maker = get_session()
     async with session_maker() as session:
         await setup_initial_roles(session)

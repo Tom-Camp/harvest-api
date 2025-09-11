@@ -4,10 +4,10 @@ from uuid import UUID
 
 from sqlmodel import SQLModel
 
-from app.pages.page_models import PageBase
+from app.pages.page_models import Page
 
 
-class PageCreate(PageBase):
+class PageCreate(Page):
     pass
 
 
@@ -16,7 +16,7 @@ class PageUpdate(SQLModel):
     description: Optional[str] = None
 
 
-class PageRead(PageBase):
+class PageRead(Page):
     id: UUID
     owner_id: UUID
     created_at: datetime

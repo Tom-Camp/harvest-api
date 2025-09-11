@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -10,9 +9,12 @@ from jwt import InvalidTokenError, decode, encode
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from app.logging import get_logger
 from app.users.user_models import User
 from app.utils.config import settings
-from app.utils.database import get_session
+from app.utils.database import get_db
+
+logger = get_logger(__name__)
 
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = settings.HASH_ALGORITHM
@@ -28,7 +30,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         ph.verify(hashed_password, plain_password)
         return True
     except VerifyMismatchError:
-        logging.error("Password mismatch error.")
+        logger.warning("Password mismatch error.")
         return False
 
 
@@ -44,8 +46,10 @@ async def authenticate_user(
     user = result.scalars().first()
 
     if not user:
+        logger.warning("Login user empty.")
         return None
     if not verify_password(password, user.hashed_password):
+        logger.warning("Login password mismatch.")
         return None
     return user
 
@@ -63,7 +67,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme), session: AsyncSession = Depends(get_session)
+    token: str = Depends(oauth2_scheme), session: AsyncSession = Depends(get_db)
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
