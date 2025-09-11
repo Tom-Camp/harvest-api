@@ -1,22 +1,25 @@
+# conftest.py
 import asyncio
-import importlib
 import os
 import sys
 
 import httpx
 import pytest
 import pytest_asyncio
+import sqlalchemy.ext.asyncio as sa_async
 from asgi_lifespan import LifespanManager
 from testcontainers.postgres import PostgresContainer
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
+from app.logging import get_logger  # noqa: E402
+from app.utils.config import settings  # noqa: E402
+from app.utils.database import get_engine  # noqa: E402
+
+pytest_plugins = ["pytest_asyncio"]
+
+logger = get_logger(__name__)
 
 
 @pytest.fixture(scope="session")
@@ -44,16 +47,22 @@ def test_settings_env(postgres):
     yield
 
 
+@pytest_asyncio.fixture(scope="function")
+def event_loop():
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+
 @pytest_asyncio.fixture(scope="session")
 async def app(test_settings_env):
-    import app.utils.config as config
-
-    importlib.reload(config)
+    import importlib
 
     import app.main as main_module
 
     importlib.reload(main_module)
 
+    logger.debug("DATABASE: %s" % settings.postgres_uri)
     yield main_module.app
 
 
@@ -66,3 +75,11 @@ async def client(app):
             base_url="http://test",
         ) as async_client:
             yield async_client
+
+
+@pytest.fixture(scope="function")
+async def db_session():
+    engine = get_engine()
+    async with sa_async.AsyncSession(engine, expire_on_commit=False) as session:
+        async with session.begin():
+            yield session

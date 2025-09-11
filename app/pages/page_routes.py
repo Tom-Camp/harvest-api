@@ -6,10 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
 from app.casbin.casbin_config import AsyncCasbinManager
-from app.casbin.permissions import RequirePageRead
 from app.logging import get_logger
 from app.pages.page_crud import PageCRUD
-from app.pages.page_schemas import PageCreate, PageRead, PageUpdate
+from app.pages.page_models import Page
+from app.pages.page_schemas import PageList, PageRead
 from app.users.user_models import User
 from app.utils.database import get_db
 from app.utils.dependencies import get_casbin_manager
@@ -19,36 +19,34 @@ logger = get_logger(__name__)
 page_router = APIRouter(prefix="/pages")
 
 
-@page_router.post("/", response_model=PageRead)
+@page_router.post("/", response_model=Page)
 async def create_page(
-    page: PageCreate,
+    page: Page,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    logger.info("THIS IS INFO")
-    logger.debug("PAGE POST", page)
-    return PageCRUD.create_page(session, page, current_user.id)
+    return await PageCRUD.create_page(session, page, current_user.id)
 
 
-@page_router.get("/", response_model=List[PageRead])
+@page_router.get("/", response_model=List[PageList])
 async def read_pages(
     skip: int = 0,
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(RequirePageRead),
 ):
-    logger.info("%s listed all pages" % current_user.username)
-    return PageCRUD.get_pages(session, skip=skip, limit=limit)
+    return await PageCRUD.get_pages(session, skip=skip, limit=limit)
 
 
-@page_router.get("/my", response_model=List[PageRead])
+@page_router.get("/my", response_model=List[PageList])
 async def read_my_pages(
     skip: int = 0,
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    return PageCRUD.get_user_pages(session, current_user.id, skip=skip, limit=limit)
+    return await PageCRUD.get_user_pages(
+        session, current_user.id, skip=skip, limit=limit
+    )
 
 
 @page_router.get("/{page_id}", response_model=PageRead)
@@ -75,10 +73,10 @@ async def read_page(
     return page
 
 
-@page_router.put("/{page_id}", response_model=PageRead)
+@page_router.put("/{page_id}", response_model=Page)
 async def update_page(
     page_id: UUID,
-    page_update: PageUpdate,
+    page_update: Page,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     manager: AsyncCasbinManager = Depends(get_casbin_manager),

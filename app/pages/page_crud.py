@@ -6,18 +6,18 @@ from sqlmodel import select
 
 from app.logging import get_logger
 from app.pages.page_models import Page
-from app.pages.page_schemas import PageCreate, PageUpdate
 
 logger = get_logger(__name__)
 
 
 class PageCRUD:
     @staticmethod
-    async def create_page(
-        session: AsyncSession, page: PageCreate, owner_id: UUID
-    ) -> Page:
-        logger.debug("PAGE POST", page)
-        db_page = Page(**page.model_dump(), owner_id=owner_id)
+    async def create_page(session: AsyncSession, page: Page, user_id: UUID) -> Page:
+        db_page = Page(
+            title=page.title,
+            body=page.body,
+            user_id=user_id,
+        )
         session.add(db_page)
         await session.commit()
         await session.refresh(db_page)
@@ -52,7 +52,7 @@ class PageCRUD:
 
     @staticmethod
     async def update_page(
-        session: AsyncSession, page_id: UUID, page_update: PageUpdate
+        session: AsyncSession, page_id: UUID, page_update: Page
     ) -> Page | None:
         page: Page | None = await session.get(Page, page_id)
         if page:

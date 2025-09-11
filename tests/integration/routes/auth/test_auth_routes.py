@@ -1,4 +1,3 @@
-# test_auth_routes.py
 import logging
 import uuid
 
