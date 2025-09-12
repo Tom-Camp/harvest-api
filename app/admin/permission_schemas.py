@@ -1,13 +1,16 @@
 from uuid import UUID
 
-from sqlmodel import SQLModel
+from pydantic import BaseModel
 
 
-class AssignRoleRequest(SQLModel):
+class RoleRequest(BaseModel):
     user_id: UUID
+    username: str
     role_name: str
 
 
-class PermissionCheck(SQLModel):
+class PermissionCheck(BaseModel):
+    user_id: UUID
+    username: str
     resource: str
     action: str

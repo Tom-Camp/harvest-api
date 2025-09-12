@@ -1,52 +1,54 @@
-# conftest.py
+# tests/conftest.py
 import asyncio
 import os
-import sys
 
 import httpx
 import pytest
 import pytest_asyncio
-import sqlalchemy.ext.asyncio as sa_async
 from asgi_lifespan import LifespanManager
 from testcontainers.postgres import PostgresContainer
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-
-from app.logging import get_logger  # noqa: E402
-from app.utils.config import settings  # noqa: E402
-from app.utils.database import get_engine  # noqa: E402
-
-pytest_plugins = ["pytest_asyncio"]
-
-logger = get_logger(__name__)
-
-
-@pytest.fixture(scope="session")
-def postgres():
+# ----------------------------------------------------------------------
+# 1️⃣ Spin up a PostgreSQL container for the whole test session
+# ----------------------------------------------------------------------
+@pytest.fixture(scope="session", autouse=True)
+def _postgres_container():
     container = PostgresContainer("postgres:16-alpine")
     container.start()
-    try:
-        yield container
-    finally:
-        container.stop()
+    # Store the container on the pytest config object so we can read it later.
+    pytest.config = getattr(pytest, "config", None)  # noqa: B009
+    if pytest.config is not None:
+        pytest.config._store["_postgres_container"] = container  # type: ignore[attr-defined]
+    yield container
+    container.stop()
 
 
-@pytest.fixture(scope="session", autouse=True)
-def test_settings_env(postgres):
-    host = postgres.get_container_host_ip()
-    port = postgres.get_exposed_port(5432)
+# ----------------------------------------------------------------------
+# 2️⃣ Inject env‑vars **before** any app code is imported
+# ----------------------------------------------------------------------
+def pytest_configure(config):
+    container = getattr(config, "_store", {}).get("_postgres_container")  # type: ignore[attr-defined]
+    if container is None:
+        raise RuntimeError("Postgres test container not available")
+
+    host = container.get_container_host_ip()
+    port = container.get_exposed_port(5432)
+
     os.environ["POSTGRES_HOST"] = host
     os.environ["POSTGRES_PORT"] = str(port)
-    os.environ["POSTGRES_USER"] = postgres.username
-    os.environ["POSTGRES_PASS"] = postgres.password
-    os.environ["POSTGRES_DB"] = postgres.dbname
+    os.environ["POSTGRES_USER"] = container.username
+    os.environ["POSTGRES_PASSWORD"] = container.password
+    os.environ["POSTGRES_DB"] = container.dbname
 
-    os.environ.setdefault("SECRET_KEY", "test-secret-key")
+    # The Settings class reads these variables on import.
+    os.environ.setdefault("SECRET_KEY", "test-secret")
     os.environ.setdefault("HASH_ALGORITHM", "HS256")
-    yield
 
 
+# ----------------------------------------------------------------------
+# 3️⃣ Provide an asyncio event loop for pytest‑asyncio
+# ----------------------------------------------------------------------
 @pytest_asyncio.fixture(scope="function")
 def event_loop():
     loop = asyncio.new_event_loop()
@@ -54,18 +56,19 @@ def event_loop():
     loop.close()
 
 
+# ----------------------------------------------------------------------
+# 4️⃣ Import the FastAPI app **after** env‑vars are set
+# ----------------------------------------------------------------------
 @pytest_asyncio.fixture(scope="session")
-async def app(test_settings_env):
-    import importlib
+async def app():
+    import app.main as main_mod
 
-    import app.main as main_module
-
-    importlib.reload(main_module)
-
-    logger.debug("DATABASE: %s" % settings.postgres_uri)
-    yield main_module.app
+    return main_mod.app
 
 
+# ----------------------------------------------------------------------
+# 5️⃣ HTTP client wrapped in LifespanManager (starts the app)
+# ----------------------------------------------------------------------
 @pytest_asyncio.fixture
 async def client(app):
     transport = httpx.ASGITransport(app=app)
@@ -75,11 +78,3 @@ async def client(app):
             base_url="http://test",
         ) as async_client:
             yield async_client
-
-
-@pytest.fixture(scope="function")
-async def db_session():
-    engine = get_engine()
-    async with sa_async.AsyncSession(engine, expire_on_commit=False) as session:
-        async with session.begin():
-            yield session

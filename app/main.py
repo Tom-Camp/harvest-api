@@ -7,15 +7,16 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.admin.admin_routes import admin_router
 from app.auth.auth_routes import auth_router
-from app.casbin.casbin_config import AsyncCasbinManager
+from app.casbin.casbin_config import casbin_manager
+from app.casbin.casbin_helpers import casbin_subject
 from app.logging import get_logger
 from app.logging.log_config import configure_structlog
 from app.logging.log_middleware import LoggingMiddleware
 from app.pages.page_routes import page_router
-from app.users.role_routes import role_router
+from app.users.user_crud import UserCRUD
 from app.users.user_routes import user_router
+from app.utils import database as db
 from app.utils.config import settings
-from app.utils.initialize import initialize_data
 
 configure_structlog()
 logger = get_logger(__name__)
@@ -23,13 +24,25 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(">>> LIFESPAN START – creating Casbin manager")
-    app.state.casbin_manager = AsyncCasbinManager()
-    await app.state.casbin_manager.init()
-    await initialize_data(app.state.casbin_manager)
+    # ----------- CREATE TABLES ON STARTUP ----------
+    async with db.engine.begin() as conn:
+        await conn.run_sync(db.metadata.create_all)
+
+    async with db.AsyncSessionLocal() as session:
+        admin = await UserCRUD.get_user_by_username(session, "admin")
+        if admin:
+            has_role = await casbin_manager.enforcer.has_role_for_user(
+                casbin_subject(admin.id), "admin"
+            )
+            if not has_role:
+                await casbin_manager.enforcer.add_role_for_user(
+                    casbin_subject(admin.id), "admin"
+                )
+
     yield
-    logger.info(">>> LIFESPAN END – closing Casbin manager")
-    await app.state.casbin_manager.close()
+
+    # ----------- CLEANUP ----------
+    await db.engine.dispose()
 
 
 app = FastAPI(
@@ -52,10 +65,8 @@ app.add_middleware(
     include_response_body=False,
 )
 
-
 app.include_router(auth_router, prefix="/api", tags=["authentication"])
 app.include_router(user_router, prefix="/api", tags=["users"])
-app.include_router(role_router, prefix="/api", tags=["roles"])
 app.include_router(admin_router, prefix="/api", tags=["admin"])
 app.include_router(page_router, prefix="/api", tags=["pages"])
 

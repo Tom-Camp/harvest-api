@@ -1,30 +1,29 @@
-from typing import List
+from typing import List, Sequence
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
-from app.casbin.casbin_config import AsyncCasbinManager
-from app.casbin.permissions import RequireUserRead, RequireUserWrite
+from app.casbin.casbin_config import casbin_manager
+from app.casbin.casbin_helpers import casbin_object, casbin_subject
 from app.logging import get_logger, log_handler
+from app.users.user_crud import UserCRUD
 from app.users.user_models import User
-from app.users.user_schemas import UserRead, UserReadWithRoles, UserUpdate
-from app.users.users_crud import UserCRUD
+from app.users.user_schemas import UserRead, UserUpdate
 from app.utils.database import get_db
-from app.utils.dependencies import get_casbin_manager
 
 logger = get_logger(__name__)
 
 user_router = APIRouter(prefix="/users")
 
 
-@user_router.get("/me", response_model=UserReadWithRoles)
+@user_router.get("/me", response_model=UserRead)
 async def read_users_me(
     current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db),
-):
-    user = await UserCRUD.get_user_with_roles(
+) -> User | None:
+    user = await UserCRUD.get_user(
         session=session,
         user_id=current_user.id,
     )
@@ -36,10 +35,8 @@ async def read_users(
     skip: int = 0,
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(RequireUserRead),
-):
+) -> Sequence:
     users = await UserCRUD.get_users(session, skip=skip, limit=limit)
-    logger.info("%s listed all users" % current_user.username)
     return users
 
 
@@ -47,9 +44,15 @@ async def read_users(
 async def read_user(
     user_id: UUID,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(RequireUserRead),
-):
-    user = UserCRUD.get_user(session, user_id)
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    allowed = await casbin_manager.enforce(
+        casbin_subject(current_user.id), casbin_object("u", user_id), "read"
+    )
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    user = await UserCRUD.get_user(session, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -63,20 +66,14 @@ async def update_user(
     user_update: UserUpdate,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    manager: AsyncCasbinManager = Depends(get_casbin_manager),
-):
-    if str(user_id) != str(current_user.id):
-        allowed = await manager.enforce(
-            sub=f"user:{current_user.username}",
-            obj="user",
-            act="write",
-        )
-        if not allowed:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied"
-            )
+) -> User:
+    allowed = await casbin_manager.enforce(
+        casbin_subject(current_user.id), casbin_object("u", user_id), "update"
+    )
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
-    user = UserCRUD.update_user(session, user_id, user_update)
+    user = await UserCRUD.update_user(session, user_id, user_update)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
@@ -86,21 +83,28 @@ async def update_user(
 async def delete_user(
     user_id: UUID,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(RequireUserWrite),
-    manager: AsyncCasbinManager = Depends(get_casbin_manager),
-):
+    current_user: User = Depends(get_current_active_user),
+) -> dict:
+    allowed = await casbin_manager.enforce(
+        casbin_subject(current_user.id), casbin_object("u", user_id), "update"
+    )
+    user = await UserCRUD.get_user(session, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     if not UserCRUD.delete_user(session, user_id):
         raise HTTPException(status_code=404, detail="User not found")
 
-    user = await UserCRUD.get_user(session, user_id)
-    if user:
-        user_identifier = f"user:{user.username}"
-        roles = await manager.get_roles_for_user(user_identifier)
-        for role in roles:
-            await manager.delete_role_for_user(user_identifier, role)
-
     log_handler.log_security_event(
-        "User %s deleted" % current_user.username,
-        user_id=user_id,
+        "User deleted",
+        severity="medium",
+        actor_id=current_user.id,
+        actor_username=current_user.username,
+        target_user_id=user.id,
+        target_username=user.username,
+        action="user_delete",
     )
-    return {"message": "User deleted successfully"}
+    return {"message": f"User {user.username} deleted successfully"}

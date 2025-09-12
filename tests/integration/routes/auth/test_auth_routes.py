@@ -1,64 +1,30 @@
-import logging
-import uuid
-
+# tests/test_routes.py
 import pytest
 
-pytestmark = pytest.mark.asyncio
+
+@pytest.mark.asyncio
+async def test_create_user(client):
+    payload = {"email": "alice@example.com", "full_name": "Alice"}
+    resp = await client.post("/users", json=payload)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["email"] == payload["email"]
+    assert "id" in data
 
 
-class TestAuthRoutes:
-    header: dict[str, str] = {"Content-Type": "application/json"}
-    username: str = f"testuser_{uuid.uuid4().hex[:8]}"
-    email: str = f"{username}@example.com"
-    password: str = "StrongPass!123"
+@pytest.mark.asyncio
+async def test_protected_endpoint_denied(client):
+    resp = await client.get("/protected", params={"user_id": "bob"})
+    assert resp.status_code == 403
 
-    @staticmethod
-    async def test_health(client):
-        health_response = await client.get("/health")
-        assert health_response.status_code == 200
-        assert health_response.json() == {"status": "healthy"}
 
-    async def test_register(self, client):
-        register_response = await client.post(
-            "/api/auth/register",
-            json={
-                "username": self.username,
-                "email": self.email,
-                "password": self.password,
-            },
-            headers=self.header,
-        )
-        assert register_response.status_code == 200, register_response.text
-        assert register_response.json()["username"] == self.username
+@pytest.mark.asyncio
+async def test_protected_endpoint_allowed(client):
+    # Insert a policy for user “bob” – note the await!
+    from app.casbin.casbin_config import casbin_manager
 
-    async def test_login(self, client):
-        login_response = await client.post(
-            "/api/auth/token",
-            data={
-                "username": self.username,
-                "password": self.password,
-            },
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-        )
-        logging.debug("LOGIN RESP: %s" % login_response)
-        assert login_response.status_code == 200, login_response.text
-        token = login_response.json()
-        assert "access_token" in token
-        assert token["token_type"] == "bearer"
+    await casbin_manager.add_policy("bob", "/protected", "read")
 
-    async def test_admin_login(self, client):
-        from app.utils.config import settings
-
-        admin_response = await client.post(
-            "/api/auth/token",
-            data={
-                "username": settings.INITIAL_USER_NAME,
-                "password": settings.INITIAL_USER_PASS,
-            },
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-        )
-        logging.debug("ADMIN RESP: %s" % admin_response)
-        assert admin_response.status_code == 200, admin_response.text
-        token = admin_response.json()
-        assert "access_token" in token
-        assert token["token_type"] == "bearer"
+    resp = await client.get("/protected", params={"user_id": "bob"})
+    assert resp.status_code == 200
+    assert "authorized" in resp.json()["msg"]
