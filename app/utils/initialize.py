@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.casbin.casbin_config import casbin_manager
 from app.casbin.casbin_helpers import casbin_subject
-from app.logging import get_logger
+from app.logging import get_logger, log_handler
 from app.users.user_crud import UserCRUD
 from app.users.user_schemas import UserCreate
 from app.utils.config import settings
@@ -26,9 +26,19 @@ async def setup_initial_admin(session: AsyncSession = Depends(get_db)) -> str:
     if not existing_admin:
         admin_create = UserCreate(**admin_data)
         admin_user = await UserCRUD.create_user(session, admin_create)
+        log_handler.log_security_event(
+            event="Initial user created",
+            severity="low",
+            context={
+                "username": admin_user.username,
+                "user_id": admin_user.id,
+            },
+        )
 
         await casbin_manager.add_role_for_user(casbin_subject(admin_user.id), "admin")
-        logger.info("Assigned admin role to admin user in Casbin")
+        log_handler.log_security_event(
+            event="Assigned admin role to admin user in Casbin"
+        )
 
         return admin_user.username
     else:

@@ -34,10 +34,12 @@ async def login_for_access_token(
         log_handler.log_security_event(
             "user_login_failure",
             severity="moderate",
-            event_type="authentication",
-            username=form_data.username,
-            client_ip=request.client.host,
-            user_agent=request.headers.get("user-agent"),
+            context={
+                "event_type": "authentication",
+                "username": form_data.username,
+                "client_ip": request.client.host,
+                "user_agent": request.headers.get("user-agent"),
+            },
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -51,13 +53,15 @@ async def login_for_access_token(
     )
 
     log_handler.log_security_event(
-        "user_login_success",
+        event="user_login_success",
         severity="low",
-        event_type="authentication",
-        username=user.username,
-        client_ip=request.client.host,
-        user_agent=request.headers.get("user-agent"),
-        user_id=user.id,
+        context={
+            "event_type": "authentication",
+            "username": user.username,
+            "client_ip": request.client.host,
+            "user_agent": request.headers.get("user-agent"),
+            "user_id": user.id,
+        },
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -76,7 +80,7 @@ async def register(
         )
 
     if email := await UserCRUD.get_user_by_email(session, user.email):
-        logger.info("Email %s already taken" % email)
+        logger.warning("Email %s already taken" % email)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered",
@@ -88,11 +92,14 @@ async def register(
 
     log_handler.log_security_event(
         "user_login_success",
-        event_type="authentication",
-        username=user.username,
-        client_ip=request.client.host,
-        user_agent=request.headers.get("user-agent"),
-        user_id=new_user.id,
+        severity="low",
+        context={
+            "event_type": "authentication",
+            "username": user.username,
+            "client_ip": request.client.host,
+            "user_agent": request.headers.get("user-agent"),
+            "user_id": new_user.id,
+        },
     )
 
     return new_user

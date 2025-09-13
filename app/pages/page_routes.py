@@ -32,12 +32,15 @@ async def create_page(
 
     new_page = await PageCRUD.create_page(session, page, current_user.id)
     logger.info(
-        "Page create",
-        actor_id=current_user.id,
-        actor_username=current_user.username,
-        page_id=new_page.id,
-        page_title=new_page.title,
-        action="content_creation",
+        event="Page create",
+        severity="moderate",
+        context={
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "page_id": new_page.id,
+            "page_title": new_page.title,
+            "action": "content_creation",
+        },
     )
     object_id: str = casbin_object(identifier="p", object_id=new_page.id)
     await casbin_manager.add_policy(
@@ -46,12 +49,15 @@ async def create_page(
         act="update",
     )
     log_handler.log_security_event(
-        "Permission policy update",
-        actor_id=current_user.id,
-        actor_username=current_user.username,
-        page_id=new_page.id,
-        page_title=new_page.title,
-        action="page_update",
+        event="Permission policy update",
+        severity="moderate",
+        context={
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "page_id": new_page.id,
+            "page_title": new_page.title,
+            "action": "page_update",
+        },
     )
 
     await casbin_manager.add_policy(
@@ -60,12 +66,15 @@ async def create_page(
         act="delete",
     )
     log_handler.log_security_event(
-        "Permission policy delete",
-        actor_id=current_user.id,
-        actor_username=current_user.username,
-        page_id=new_page.id,
-        page_title=new_page.title,
-        action="page_delete",
+        event="Permission policy delete",
+        severity="moderate",
+        context={
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "page_id": new_page.id,
+            "page_title": new_page.title,
+            "action": "page_delete",
+        },
     )
 
     return new_page
@@ -124,12 +133,16 @@ async def update_page(
     updated_page = await PageCRUD.update_page(session, page_id, page_update)
     if updated_page:
         log_handler.log_security_event(
-            "Page updated",
-            actor_id=current_user.id,
-            actor_username=current_user.username,
-            page_id=updated_page.id,
-            page_title=updated_page.title,
-            action="page_update",
+            event="Page updated",
+            severity="low",
+            context={
+                "actor_id": current_user.id,
+                "event_type": "security",
+                "actor_username": current_user.username,
+                "page_id": updated_page.id,
+                "page_title": updated_page.title,
+                "action": "page_update",
+            },
         )
     return updated_page
 
@@ -154,12 +167,16 @@ async def delete_page(
         raise HTTPException(status_code=404, detail="Page not found")
 
     log_handler.log_security_event(
-        "Page deleted",
-        actor_id=current_user.id,
-        actor_username=current_user.username,
-        page_id=page.id,
-        page_title=page.title,
-        action="page_delete",
+        event="Page deleted",
+        severity="moderate",
+        context={
+            "event_type": "security",
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "page_id": page.id,
+            "page_title": page.title,
+            "action": "page_delete",
+        },
     )
 
     return {"message": "Page deleted successfully"}

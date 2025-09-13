@@ -30,13 +30,16 @@ async def assign_role(
     log_handler.log_security_event(
         "Role assigned to user",
         severity="medium",
-        actor_id=current_user.id,
-        actor_username=current_user.username,
-        target_user_id=request.user_id,
-        target_username=request.username,
-        action="role_assignment",
-        resource="user_role",
-        role_name=request.role_name,
+        context={
+            "event_type": "security",
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "target_user_id": request.user_id,
+            "target_username": request.username,
+            "action": "role_assignment",
+            "resource": "user_role",
+            "role_name": request.role_name,
+        },
     )
 
     return {
@@ -62,13 +65,16 @@ async def remove_role(
     log_handler.log_security_event(
         "Role removed from user",
         severity="medium",
-        actor_id=current_user.id,
-        actor_username=current_user.username,
-        target_user_id=request.user_id,
-        target_username=request.username,
-        action="role_assignment",
-        resource="user_role",
-        role_name=request.role_name,
+        context={
+            "event_type": "security",
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "target_user_id": request.user_id,
+            "target_username": request.username,
+            "action": "role_assignment",
+            "resource": "user_role",
+            "role_name": request.role_name,
+        },
     )
 
     return {
@@ -96,13 +102,16 @@ async def check_permission(
     log_handler.log_security_event(
         "Permission check",
         severity="low",
-        actor_id=current_user.id,
-        actor_username=current_user.username,
-        target_user_id=request.user_id,
-        target_username=request.username,
-        action="permission_check",
-        resource=request.resource,
-        role_name=request.action,
+        context={
+            "event_type": "security",
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "target_user_id": request.user_id,
+            "target_username": request.username,
+            "action": "permission_check",
+            "resource": request.resource,
+            "role_name": request.action,
+        },
     )
 
     return {
@@ -129,12 +138,15 @@ async def get_user_roles(
     log_handler.log_security_event(
         "List user roles",
         severity="low",
-        actor_id=current_user.id,
-        actor_username=current_user.username,
-        target_user_id=request.user_id,
-        target_username=request.username,
-        action="role_list",
-        resource="user_role",
+        context={
+            "event_type": "security",
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "target_user_id": request.user_id,
+            "target_username": request.username,
+            "action": "role_list",
+            "resource": "user_role",
+        },
     )
     return {"username": request.username, "roles": roles}
 
@@ -155,10 +167,12 @@ async def get_role_users(
     log_handler.log_security_event(
         "List user with role",
         severity="low",
-        actor_id=current_user.id,
-        actor_username=current_user.username,
-        target_role=role_name,
-        action="role_list_users",
-        resource="user_role",
+        context={
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "target_role": role_name,
+            "action": "role_list_users",
+            "resource": "user_role",
+        },
     )
     return {"role": role_name, "users": [user.replace("user:", "") for user in users]}

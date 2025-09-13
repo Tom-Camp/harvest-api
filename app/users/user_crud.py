@@ -48,7 +48,6 @@ class UserCRUD:
     async def get_users(
         session: AsyncSession, skip: int = 0, limit: int = 100
     ) -> Sequence[User]:
-        """Get users with pagination"""
         statement = select(User).offset(skip).limit(limit)
         result = await session.execute(statement)
         users = result.scalars().all()
