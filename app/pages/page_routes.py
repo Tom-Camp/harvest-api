@@ -1,11 +1,12 @@
 from typing import List, Sequence
 from uuid import UUID
 
+from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
-from app.casbin.casbin_config import casbin_manager
+from app.casbin.casbin_config import get_casbin_enforcer
 from app.casbin.casbin_helpers import casbin_object, casbin_subject
 from app.logging import get_logger, log_handler
 from app.pages.page_crud import PageCRUD
@@ -24,9 +25,10 @@ async def create_page(
     page: Page,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Page:
     subject: str = casbin_subject(current_user.id)
-    allowed = await casbin_manager.enforce(sub=subject, obj="/pages", act="write")
+    allowed = enforcer.enforce(subject, "/pages", "write")
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
 
@@ -43,11 +45,7 @@ async def create_page(
         },
     )
     object_id: str = casbin_object(identifier="p", object_id=new_page.id)
-    await casbin_manager.add_policy(
-        sub=subject,
-        obj=object_id,
-        act="update",
-    )
+    await enforcer.add_policy(subject, object_id, "update")
     log_handler.log_security_event(
         event="Permission policy update",
         severity="moderate",
@@ -60,11 +58,7 @@ async def create_page(
         },
     )
 
-    await casbin_manager.add_policy(
-        sub=subject,
-        obj=object_id,
-        act="delete",
-    )
+    await enforcer.add_policy(subject, object_id, "delete")
     log_handler.log_security_event(
         event="Permission policy delete",
         severity="moderate",
@@ -119,8 +113,9 @@ async def update_page(
     page_update: Page,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Page | None:
-    allowed = await casbin_manager.enforce(
+    allowed = enforcer.enforce(
         casbin_subject(current_user.id), casbin_object("p", page_id), "update"
     )
     if not allowed:
@@ -152,8 +147,9 @@ async def delete_page(
     page_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
-    allowed = await casbin_manager.enforce(
+    allowed = enforcer.enforce(
         casbin_subject(current_user.id), casbin_object("p", page_id), "delete"
     )
     if not allowed:

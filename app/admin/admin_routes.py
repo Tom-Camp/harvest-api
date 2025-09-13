@@ -1,8 +1,9 @@
+from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.admin.permission_schemas import PermissionCheck, RoleRequest
 from app.auth.auth import get_current_active_user
-from app.casbin.casbin_config import casbin_manager
+from app.casbin.casbin_config import get_casbin_enforcer
 from app.casbin.casbin_helpers import casbin_subject
 from app.logging import get_logger, log_handler
 from app.users.user_models import User
@@ -16,14 +17,13 @@ admin_router = APIRouter(prefix="/admin")
 async def assign_role(
     request: RoleRequest,
     current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
-    allowed = await casbin_manager.enforce(
-        casbin_subject(current_user.id), "/assign-role", "add"
-    )
+    allowed = enforcer.enforce(casbin_subject(current_user.id), "/assign-role", "add")
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    await casbin_manager.add_role_for_user(
+    await enforcer.add_role_for_user(
         user=casbin_subject(request.user_id), role=request.role_name
     )
 
@@ -51,14 +51,15 @@ async def assign_role(
 async def remove_role(
     request: RoleRequest,
     current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
-    allowed = await casbin_manager.enforce(
+    allowed = enforcer.enforce(
         casbin_subject(current_user.id), "/remove-role", "delete"
     )
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    await casbin_manager.delete_role_for_user(
+    await enforcer.delete_role_for_user(
         user=casbin_subject(current_user.id), role=request.role_name
     )
 
@@ -86,17 +87,18 @@ async def remove_role(
 async def check_permission(
     request: PermissionCheck,
     current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
-    allowed = await casbin_manager.enforce(
+    allowed = await enforcer.enforce(
         casbin_subject(current_user.id), "/check-permissions", "read"
     )
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    has_permission = await casbin_manager.enforce(
-        sub=casbin_subject(request.user_id),
-        obj=request.resource,
-        act=request.action,
+    has_permission = await enforcer.enforce(
+        casbin_subject(request.user_id),
+        request.resource,
+        request.action,
     )
 
     log_handler.log_security_event(
@@ -126,14 +128,13 @@ async def check_permission(
 async def get_user_roles(
     request: RoleRequest,
     current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
-    allowed = await casbin_manager.enforce(
-        casbin_subject(current_user.id), "/check-roles", "read"
-    )
+    allowed = enforcer.enforce(casbin_subject(current_user.id), "/check-roles", "read")
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    roles = casbin_manager.get_roles_for_user(casbin_subject(request.user_id))
+    roles = enforcer.get_roles_for_user(casbin_subject(request.user_id))
 
     log_handler.log_security_event(
         "List user roles",
@@ -155,14 +156,13 @@ async def get_user_roles(
 async def get_role_users(
     role_name: str,
     current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
-    allowed = await casbin_manager.enforce(
-        casbin_subject(current_user.id), "/role-users", "read"
-    )
+    allowed = enforcer.enforce(casbin_subject(current_user.id), "/role-users", "read")
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    users = await casbin_manager.get_users_for_role(role_name)
+    users = await enforcer.get_users_for_role(role_name)
 
     log_handler.log_security_event(
         "List user with role",

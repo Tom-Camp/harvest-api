@@ -7,13 +7,11 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.admin.admin_routes import admin_router
 from app.auth.auth_routes import auth_router
-from app.casbin.casbin_config import casbin_manager
-from app.casbin.casbin_helpers import casbin_subject
+from app.casbin.casbin_config import create_casbin_enforcer
 from app.logging import get_logger
 from app.logging.log_config import configure_structlog
 from app.logging.log_middleware import LoggingMiddleware
 from app.pages.page_routes import page_router
-from app.users.user_crud import UserCRUD
 from app.users.user_routes import user_router
 from app.utils import database as db
 from app.utils.config import settings
@@ -28,20 +26,12 @@ async def lifespan(app: FastAPI):
     async with db.engine.begin() as conn:
         await conn.run_sync(db.metadata.create_all)
 
-    async with db.AsyncSessionLocal() as session:
-        admin = await UserCRUD.get_user_by_username(session, "admin")
-        if admin:
-            has_role = await casbin_manager.enforcer.has_role_for_user(
-                casbin_subject(admin.id), "admin"
-            )
-            if not has_role:
-                await casbin_manager.enforcer.add_role_for_user(
-                    casbin_subject(admin.id), "admin"
-                )
+    app.state.casbin_enforcer = await create_casbin_enforcer(
+        settings.casbin_database_url
+    )
 
     yield
 
-    # ----------- CLEANUP ----------
     await db.engine.dispose()
 
 

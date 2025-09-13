@@ -1,11 +1,12 @@
 from typing import List, Sequence
 from uuid import UUID
 
+from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
-from app.casbin.casbin_config import casbin_manager
+from app.casbin.casbin_config import get_casbin_enforcer
 from app.casbin.casbin_helpers import casbin_object, casbin_subject
 from app.logging import get_logger, log_handler
 from app.users.user_crud import UserCRUD
@@ -45,8 +46,9 @@ async def read_user(
     user_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> User:
-    allowed = await casbin_manager.enforce(
+    allowed = enforcer.enforce(
         casbin_subject(current_user.id), casbin_object("u", user_id), "read"
     )
     if not allowed:
@@ -66,8 +68,9 @@ async def update_user(
     user_update: UserUpdate,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> User:
-    allowed = await casbin_manager.enforce(
+    allowed = enforcer.enforce(
         casbin_subject(current_user.id), casbin_object("u", user_id), "update"
     )
     if not allowed:
@@ -84,8 +87,9 @@ async def delete_user(
     user_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
-    allowed = await casbin_manager.enforce(
+    allowed = enforcer.enforce(
         casbin_subject(current_user.id), casbin_object("u", user_id), "update"
     )
     user = await UserCRUD.get_user(session, user_id)
@@ -98,7 +102,7 @@ async def delete_user(
     if not UserCRUD.delete_user(session, user_id):
         raise HTTPException(status_code=404, detail="User not found")
 
-    await casbin_manager.delete_roles_for_user(casbin_subject(user_id))
+    await enforcer.delete_roles_for_user(casbin_subject(user_id))
 
     log_handler.log_security_event(
         event="User deleted",

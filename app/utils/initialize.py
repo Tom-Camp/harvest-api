@@ -1,7 +1,8 @@
+from casbin import AsyncEnforcer
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.casbin.casbin_config import casbin_manager
+from app.casbin.casbin_config import get_casbin_enforcer
 from app.casbin.casbin_helpers import casbin_subject
 from app.logging import get_logger, log_handler
 from app.users.user_crud import UserCRUD
@@ -12,7 +13,10 @@ from app.utils.database import get_db
 logger = get_logger(__name__)
 
 
-async def setup_initial_admin(session: AsyncSession = Depends(get_db)) -> str:
+async def setup_initial_admin(
+    session: AsyncSession = Depends(get_db),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> str:
     admin_data = {
         "username": settings.INITIAL_USER_NAME,
         "email": settings.INITIAL_USER_MAIL,
@@ -35,7 +39,7 @@ async def setup_initial_admin(session: AsyncSession = Depends(get_db)) -> str:
             },
         )
 
-        await casbin_manager.add_role_for_user(casbin_subject(admin_user.id), "admin")
+        await enforcer.add_role_for_user(casbin_subject(admin_user.id), "admin")
         log_handler.log_security_event(
             event="Assigned admin role to admin user in Casbin"
         )
@@ -46,7 +50,9 @@ async def setup_initial_admin(session: AsyncSession = Depends(get_db)) -> str:
         return existing_admin.username
 
 
-async def setup_casbin_policies() -> None:
+async def setup_casbin_policies(
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> None:
     policies = [
         ("admin", "*", "*"),
         ("moderator", "user", "read"),
@@ -57,7 +63,7 @@ async def setup_casbin_policies() -> None:
         ("user", "page", "delete"),
     ]
     for p in policies:
-        await casbin_manager.add_policy(*p)
+        await enforcer.add_policy(*p)
 
 
 async def initialize_data() -> None:

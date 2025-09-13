@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +11,7 @@ from app.auth.auth import (
     create_access_token,
 )
 from app.auth.auth_schemas import Token
-from app.casbin.casbin_config import casbin_manager
+from app.casbin.casbin_config import get_casbin_enforcer
 from app.casbin.casbin_helpers import casbin_subject
 from app.logging import get_logger, log_handler
 from app.users.user_crud import UserCRUD
@@ -70,6 +71,7 @@ async def login_for_access_token(
 async def register(
     request: Request,
     user: UserCreate,
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
     session: AsyncSession = Depends(get_db),
 ) -> User:
     if username := await UserCRUD.get_user_by_username(session, user.username):
@@ -88,10 +90,10 @@ async def register(
 
     new_user = await UserCRUD.create_user(session, user)
 
-    await casbin_manager.add_role_for_user(casbin_subject(new_user.id), "user")
+    await enforcer.add_role_for_user(casbin_subject(new_user.id), "user")
 
     log_handler.log_security_event(
-        "user_login_success",
+        "user_register_success",
         severity="low",
         context={
             "event_type": "authentication",
