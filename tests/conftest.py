@@ -14,7 +14,7 @@ os.environ["CASBIN_DB_URL"] = TEST_DB_URL
 
 
 @pytest_asyncio.fixture
-async def app():
+async def test_app():
     if os.path.exists(TEST_DB_PATH):
         os.remove(TEST_DB_PATH)
 
@@ -47,7 +47,26 @@ async def app():
 
 
 @pytest_asyncio.fixture
-async def client(app):
-    transport = ASGITransport(app=app)
+async def client(test_app):
+    transport = ASGITransport(app=test_app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as ac:
         yield ac
+
+
+@pytest_asyncio.fixture
+async def default_user(test_app):
+    from app.users.user_crud import UserCRUD
+    from app.users.user_schemas import UserCreate
+    from app.utils import database as db
+
+    async with db.AsyncSessionLocal() as session:
+        user_in = UserCreate(
+            username="testuser",
+            email="test@example.com",
+            password="Passw0rd!123",
+        )
+        user = await UserCRUD.create_user(session, user_in)
+        try:
+            yield user
+        finally:
+            await UserCRUD.delete_user(session, user.id)

@@ -46,10 +46,10 @@ async def authenticate_user(
     user = result.scalars().first()
 
     if not user:
-        logger.warning("Login user empty.")
+        logger.warning("Username not found.")
         return None
     if not verify_password(password, user.hashed_password):
-        logger.warning("Login password mismatch.")
+        logger.warning("Incorrect password.")
         return None
     return user
 
