@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -19,7 +21,7 @@ async def assign_role(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
-    allowed = enforcer.enforce(casbin_subject(current_user.id), "/assign-role", "add")
+    allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "add")
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
 
@@ -53,9 +55,7 @@ async def remove_role(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
-    allowed = enforcer.enforce(
-        casbin_subject(current_user.id), "/remove-role", "delete"
-    )
+    allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "delete")
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
 
@@ -89,9 +89,7 @@ async def check_permission(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
-    allowed = enforcer.enforce(
-        casbin_subject(current_user.id), "/check-permissions", "read"
-    )
+    allowed = enforcer.enforce(casbin_subject(current_user.id), "policy", "read")
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
 
@@ -124,17 +122,17 @@ async def check_permission(
     }
 
 
-@admin_router.get("/user-roles/{username}")
+@admin_router.get("/user-roles/{user_id}")
 async def get_user_roles(
-    role_request: RoleRequest,
+    user_id: UUID,
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
-    allowed = enforcer.enforce(casbin_subject(current_user.id), "/check-roles", "read")
+    allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "read")
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    roles = enforcer.get_roles_for_user(casbin_subject(role_request.user_id))
+    roles = await enforcer.get_roles_for_user(casbin_subject(user_id))
 
     log_handler.log_security_event(
         "List user roles",
@@ -143,13 +141,12 @@ async def get_user_roles(
             "event_type": "security",
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "target_user_id": role_request.user_id,
-            "target_username": role_request.username,
+            "target_user_id": user_id,
             "action": "role_list",
             "resource": "user_role",
         },
     )
-    return {"username": role_request.username, "roles": roles}
+    return {"user_id": user_id, "roles": roles}
 
 
 @admin_router.get("/role-users/{role_name}")
@@ -158,7 +155,7 @@ async def get_role_users(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
-    allowed = enforcer.enforce(casbin_subject(current_user.id), "/role-users", "read")
+    allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "read")
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
 
