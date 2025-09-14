@@ -77,7 +77,7 @@ async def default_user(test_app):
                 user_in = UserCreate(
                     username=f"{test_user}_user",
                     email=f"{test_user}@example.com",
-                    password="Passw0rd!123",
+                    password="UkeV3BNUIL7x/n0J",
                 )
                 user: User = await UserCRUD.create_user(session, user_in)
                 await test_app.state.casbin_enforcer.add_role_for_user(

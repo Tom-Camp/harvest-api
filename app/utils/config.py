@@ -1,6 +1,6 @@
 from typing import List
 
-from pydantic import Field, SecretStr
+from pydantic import EmailStr, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     POSTGRES_PORT: str | None = None
     POSTGRES_USER: str | None = None
     SECRET_KEY: str | None = None
+    SITE_EMAIL: EmailStr | None = None
     USER_SECRET: str | None = None
 
     model_config = SettingsConfigDict(
