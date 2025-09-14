@@ -7,8 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
+    assess_password,
     authenticate_user,
     create_access_token,
+    failed_password_messages,
 )
 from app.auth.auth_schemas import Token
 from app.casbin.casbin_config import get_casbin_enforcer
@@ -49,7 +51,7 @@ async def login_for_access_token(
         )
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
+    access_token = await create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
 
@@ -86,6 +88,28 @@ async def register(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered",
+        )
+
+    pw_is_valid = await assess_password(password=user.password)
+    if not pw_is_valid.get("ok"):
+        log_handler.log_security_event(
+            "insufficient_password_complexity",
+            severity="low",
+            context={
+                "event_type": "authentication",
+                "username": user.username,
+                "client_ip": request.client.host,
+                "user_agent": request.headers.get("user-agent"),
+                "ok": pw_is_valid.get("ok"),
+                "length": pw_is_valid.get("length"),
+                "zxcvbn_score": pw_is_valid.get("zxcvbn_score"),
+                "pwned_count": pw_is_valid.get("pwned_count"),
+            },
+        )
+        response_message = await failed_password_messages(pw_is_valid)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=response_message,
         )
 
     new_user = await UserCRUD.create_user(session, user)

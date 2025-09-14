@@ -1,6 +1,8 @@
+import hashlib
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import List
 
+import httpx
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from fastapi import Depends, HTTPException, status
@@ -8,6 +10,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError, decode, encode
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
+from zxcvbn_rs_py import zxcvbn
 
 from app.logging import get_logger
 from app.users.user_models import User
@@ -23,9 +26,10 @@ ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 ph = PasswordHasher()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+HIBP_RANGE_URL = "https://api.pwnedpasswords.com/range/"
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
+async def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         ph.verify(hashed_password, plain_password)
         return True
@@ -48,13 +52,13 @@ async def authenticate_user(
     if not user:
         logger.warning("Username not found.")
         return None
-    if not verify_password(password, user.hashed_password):
+    if not await verify_password(password, user.hashed_password):
         logger.warning("Incorrect password.")
         return None
     return user
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+async def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(timezone.utc).replace(tzinfo=None) + expires_delta
@@ -98,3 +102,57 @@ async def get_current_active_user(
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
+
+async def hibp_breach_count(password: str, timeout: float = 10.0) -> int:
+    sha1 = hashlib.sha1(password.encode("utf-8")).hexdigest().upper()  # nosec B324
+    prefix, suffix = sha1[:5], sha1[5:]
+
+    headers = {
+        "User-Agent": "HarvestAuth/1.0 (password checker))",
+        "Add-Padding": "true",
+    }
+
+    client = httpx.AsyncClient(timeout=timeout)
+    close_client = True
+    try:
+        resp = await client.get(f"{HIBP_RANGE_URL}{prefix}", headers=headers)
+        resp.raise_for_status()
+        for line in resp.text.splitlines():
+            if not line:
+                continue
+            sfx, cnt = line.split(":")
+            if sfx.upper() == suffix:
+                return int(cnt)
+        return 0
+    finally:
+        if close_client:
+            await client.aclose()
+
+
+async def failed_password_messages(reasons: dict) -> List:
+    message: List = []
+    if reasons.get("pwned_count"):
+        message.append(
+            "This password appears in known data breaches and can’t be used. Pick a "
+            "different, longer passphrase."
+        )
+    if reasons.get("length", 3) <= 12 or reasons.get("zxcvbn_score", 0) <= 3:
+        message.append(
+            "This password can’t be used. Use at least 12 characters; a passphrase "
+            "of 3–4 uncommon words works well."
+        )
+    return message
+
+
+async def assess_password(password: str) -> dict:
+    # zxcvbn score 0..4
+    score = int(zxcvbn(password).score)
+    pwned = await hibp_breach_count(password)
+    ok = (len(password) >= 12) and (score >= 3) and (pwned == 0)
+    return {
+        "ok": ok,
+        "length": len(password),
+        "zxcvbn_score": score,
+        "pwned_count": pwned,
+    }

@@ -4,11 +4,11 @@ import pytest
 class TestAuthRoutes:
 
     @pytest.mark.asyncio
-    async def test_user_register(self, client):
-        payload: dict = {
+    async def test_register(self, client):
+        payload = {
             "username": "alice",
             "email": "alice@example.com",
-            "password": "secret123",
+            "password": "milk prairie island desert",
         }
         response = await client.post(
             "/api/auth/register",
@@ -21,11 +21,11 @@ class TestAuthRoutes:
         assert data["email"] == "alice@example.com"
 
     @pytest.mark.asyncio
-    async def test_user_register_invalid_email(self, client):
+    async def test_register_invalid_email(self, client):
         payload: dict = {
             "username": "alice",
             "email": "alice@example",
-            "password": "secret123",
+            "password": "milk prairie island desert",
         }
         response = await client.post(
             "/api/auth/register",
@@ -35,10 +35,10 @@ class TestAuthRoutes:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_user_register_invalid_username(self, client):
-        payload: dict = {
+    async def test_register_invalid_username(self, client):
+        payload = {
             "email": "alice@example",
-            "password": "secret123",
+            "password": "milk prairie island desert",
         }
         response = await client.post(
             "/api/auth/register",
@@ -48,11 +48,50 @@ class TestAuthRoutes:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_user_login(self, client, default_user):
+    async def test_register_invalid_password_length(self, client):
+        payload = {
+            "email": "alice@example",
+            "password": "6j9ZI43/jcA",
+        }
+        response = await client.post(
+            "/api/auth/register",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_register_invalid_password_complexity(self, client):
+        payload = {
+            "email": "alice@example",
+            "password": "lemon meringue pie",
+        }
+        response = await client.post(
+            "/api/auth/register",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_register_invalid_password_breach(self, client):
+        payload = {
+            "email": "alice@example",
+            "password": "correct horse battery staple",
+        }
+        response = await client.post(
+            "/api/auth/register",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_login_for_access_token(self, client, default_user):
         user = default_user.get("user")
-        payload: dict = {
+        payload = {
             "username": user.username,
-            "password": "Passw0rd!123",
+            "password": "UkeV3BNUIL7x/n0J",
         }
         response = await client.post(
             "/api/auth/token",
@@ -61,11 +100,11 @@ class TestAuthRoutes:
         assert "access_token" in response.json()
 
     @pytest.mark.asyncio
-    async def test_user_login_invalid_password(self, client, default_user):
+    async def test_login_for_access_token_invalid_password(self, client, default_user):
         user = default_user.get("user")
-        payload: dict = {
+        payload = {
             "username": user.username,
-            "password": "Passw0rd!1234",
+            "password": "YkeV3BNUIL7x/n0J",
         }
         response = await client.post(
             "/api/auth/token",

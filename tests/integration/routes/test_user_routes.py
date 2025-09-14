@@ -11,7 +11,7 @@ class TestUserRoutes:
         test_as = next(iter(default_user.values()))
         get_token = await client.post(
             url="/api/auth/token",
-            data={"username": test_as.username, "password": "Passw0rd!123"},
+            data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
         )
         self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
         response = await client.get(url="/api/users/me", headers=self.headers)
@@ -42,7 +42,7 @@ class TestUserRoutes:
         read_user = default_user["user"]
         get_token = await client.post(
             url="/api/auth/token",
-            data={"username": test_as.username, "password": "Passw0rd!123"},
+            data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
         )
         self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
         response = await client.get(
@@ -69,7 +69,7 @@ class TestUserRoutes:
         read_user = default_user["user"]
         get_token = await client.post(
             url="/api/auth/token",
-            data={"username": test_as.username, "password": "Passw0rd!123"},
+            data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
         )
         self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
         payload: dict = {
@@ -98,13 +98,13 @@ class TestUserRoutes:
         test_as = default_user[test_user]
         get_token = await client.post(
             url="/api/auth/token",
-            data={"username": test_as.username, "password": "Passw0rd!123"},
+            data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
         )
         self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
         payload: dict = {
             "username": "alice",
             "email": "alice@example.com",
-            "password": "secret123",
+            "password": "milk prairie island desert",
         }
         response = await client.post(
             "/api/auth/register",

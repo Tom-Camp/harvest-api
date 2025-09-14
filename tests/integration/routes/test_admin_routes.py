@@ -19,7 +19,7 @@ class TestAdminRoutes:
         test_as = default_user.get(test_user)
         get_token = await client.post(
             "/api/auth/token",
-            data={"username": test_as.username, "password": "Passw0rd!123"},
+            data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
         )
         self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
         user_user = default_user.get("user")
@@ -49,7 +49,7 @@ class TestAdminRoutes:
         test_as = default_user.get(user_name)
         get_token = await client.post(
             "/api/auth/token",
-            data={"username": test_as.username, "password": "Passw0rd!123"},
+            data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
         )
         self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
         user_user = default_user.get("user")
@@ -79,7 +79,7 @@ class TestAdminRoutes:
         test_as = default_user.get(user_name)
         get_token = await client.post(
             "/api/auth/token",
-            data={"username": test_as.username, "password": "Passw0rd!123"},
+            data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
         )
         self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
         moderator_user = default_user.get("moderator")
@@ -110,7 +110,7 @@ class TestAdminRoutes:
         test_as = default_user.get(user_name)
         get_token = await client.post(
             "/api/auth/token",
-            data={"username": test_as.username, "password": "Passw0rd!123"},
+            data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
         )
         self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
         moderator_user = default_user.get("moderator")
@@ -135,7 +135,7 @@ class TestAdminRoutes:
         test_as = default_user.get(user_name)
         get_token = await client.post(
             "/api/auth/token",
-            data={"username": test_as.username, "password": "Passw0rd!123"},
+            data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
         )
         self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
         response = await client.get(
