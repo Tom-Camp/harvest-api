@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Dict
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -55,18 +56,32 @@ async def client(test_app):
 
 @pytest_asyncio.fixture
 async def default_user(test_app):
+    from app.casbin.casbin_helpers import casbin_subject
     from app.users.user_crud import UserCRUD
+    from app.users.user_models import User
     from app.users.user_schemas import UserCreate
     from app.utils import database as db
 
+    user_dict: Dict[str, User] = {}
+    test_user_list: dict = {
+        "test_admin": "admin",
+        "test_moderator": "moderator",
+        "test_user": "user",
+    }
     async with db.AsyncSessionLocal() as session:
-        user_in = UserCreate(
-            username="testuser",
-            email="test@example.com",
-            password="Passw0rd!123",
-        )
-        user = await UserCRUD.create_user(session, user_in)
         try:
-            yield user
+            for test_user, role in test_user_list.items():
+                user_in = UserCreate(
+                    username=f"{test_user}_user",
+                    email=f"{test_user}@example.com",
+                    password="Passw0rd!123",
+                )
+                user: User = await UserCRUD.create_user(session, user_in)
+                await test_app.state.casbin_enforcer.add_role_for_user(
+                    user=casbin_subject(user.id), role=role
+                )
+                user_dict[role] = user
+            yield user_dict
         finally:
-            await UserCRUD.delete_user(session, user.id)
+            for user_out in user_dict.values():
+                await UserCRUD.delete_user(session, user_out.id)

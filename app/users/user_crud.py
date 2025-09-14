@@ -71,8 +71,8 @@ class UserCRUD:
     @staticmethod
     async def delete_user(session: AsyncSession, user_id: UUID) -> bool:
         user = await session.get(User, user_id)
-        if user:
-            await session.delete(user)
-            await session.commit()
-            return True
-        return False
+        if not isinstance(user, User):
+            return False
+        await session.delete(user)
+        await session.commit()
+        return True

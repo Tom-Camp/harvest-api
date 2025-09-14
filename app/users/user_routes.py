@@ -102,7 +102,7 @@ async def delete_user(
     if not UserCRUD.delete_user(session, user_id):
         raise HTTPException(status_code=404, detail="User not found")
 
-    await enforcer.delete_roles_for_user(casbin_subject(user_id))
+    await enforcer.delete_user(casbin_subject(user_id))
 
     log_handler.log_security_event(
         event="User deleted",
@@ -115,4 +115,5 @@ async def delete_user(
             "action": "user_delete",
         },
     )
+
     return {"message": f"User {user.username} deleted successfully"}
