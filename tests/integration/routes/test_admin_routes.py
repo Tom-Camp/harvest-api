@@ -43,9 +43,7 @@ class TestAdminRoutes:
             ("user", 403),
         ],
     )
-    async def test_role_remove(
-        self, client, default_user, user_name: str, expected_status: int
-    ):
+    async def test_role_remove(self, client, default_user, user_name, expected_status):
         test_as = default_user.get(user_name)
         get_token = await client.post(
             "/api/auth/token",
@@ -74,7 +72,7 @@ class TestAdminRoutes:
         ],
     )
     async def test_check_permissions(
-        self, client, default_user, user_name: str, expected_status: int
+        self, client, default_user, user_name, expected_status
     ):
         test_as = default_user.get(user_name)
         get_token = await client.post(
@@ -105,7 +103,7 @@ class TestAdminRoutes:
         ],
     )
     async def test_get_user_roles(
-        self, client, default_user, user_name: str, expected_status: int
+        self, client, default_user, user_name, expected_status
     ):
         test_as = default_user.get(user_name)
         get_token = await client.post(
@@ -130,7 +128,7 @@ class TestAdminRoutes:
         ],
     )
     async def test_get_role_users(
-        self, client, default_user, user_name: str, expected_status: int
+        self, client, default_user, user_name, expected_status
     ):
         test_as = default_user.get(user_name)
         get_token = await client.post(
