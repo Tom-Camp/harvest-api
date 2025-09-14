@@ -1,122 +1,178 @@
-import logging
-from typing import List
+from typing import List, Sequence
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from casbin import AsyncEnforcer
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
-from app.casbin.casbin_config import AsyncCasbinManager
-from app.casbin.permissions import RequirePageRead, check_page_ownership
+from app.casbin.casbin_config import get_casbin_enforcer
+from app.casbin.casbin_helpers import casbin_object, casbin_subject
+from app.logging import get_logger, log_handler
 from app.pages.page_crud import PageCRUD
-from app.pages.page_schemas import PageCreate, PageRead, PageUpdate
+from app.pages.page_models import Page
+from app.pages.page_schemas import PageList, PageRead
 from app.users.user_models import User
-from app.utils.database import get_session
-from app.utils.dependencies import get_casbin_manager
+from app.utils.database import get_db
+
+logger = get_logger(__name__)
 
 page_router = APIRouter(prefix="/pages")
 
 
-@page_router.post("/", response_model=PageRead)
+@page_router.post("/", response_model=Page)
 async def create_page(
-    page: PageCreate,
-    session: AsyncSession = Depends(get_session),
+    page: Page,
+    session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
-    return PageCRUD.create_page(session, page, current_user.id)
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> Page:
+    subject: str = casbin_subject(current_user.id)
+    allowed = enforcer.enforce(subject, "/pages", "write")
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    new_page = await PageCRUD.create_page(session, page, current_user.id)
+    logger.info(
+        event="Page create",
+        severity="moderate",
+        context={
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "page_id": new_page.id,
+            "page_title": new_page.title,
+            "action": "content_creation",
+        },
+    )
+    object_id: str = casbin_object(identifier="p", object_id=new_page.id)
+    await enforcer.add_policy(subject, object_id, "update")
+    log_handler.log_security_event(
+        event="Permission policy update",
+        severity="moderate",
+        context={
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "page_id": new_page.id,
+            "page_title": new_page.title,
+            "action": "page_update",
+        },
+    )
+
+    await enforcer.add_policy(subject, object_id, "delete")
+    log_handler.log_security_event(
+        event="Permission policy delete",
+        severity="moderate",
+        context={
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "page_id": new_page.id,
+            "page_title": new_page.title,
+            "action": "page_delete",
+        },
+    )
+
+    return new_page
 
 
-@page_router.get("/", response_model=List[PageRead])
+@page_router.get("/", response_model=List[PageList])
 async def read_pages(
     skip: int = 0,
     limit: int = 100,
-    session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(RequirePageRead),
+    session: AsyncSession = Depends(get_db),
 ):
-    logging.info("%s listed all pages" % current_user.username)
-    return PageCRUD.get_pages(session, skip=skip, limit=limit)
+    return await PageCRUD.get_pages(session, skip=skip, limit=limit)
 
 
-@page_router.get("/my", response_model=List[PageRead])
+@page_router.get("/my", response_model=List[PageList])
 async def read_my_pages(
     skip: int = 0,
     limit: int = 100,
-    session: AsyncSession = Depends(get_session),
+    session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
-    """Get current user's pages"""
-    return PageCRUD.get_user_pages(session, current_user.id, skip=skip, limit=limit)
+) -> Sequence:
+    return await PageCRUD.get_user_pages(
+        session, current_user.id, skip=skip, limit=limit
+    )
 
 
 @page_router.get("/{page_id}", response_model=PageRead)
 async def read_page(
     page_id: UUID,
-    session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_active_user),
-    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
+    session: AsyncSession = Depends(get_db),
 ):
     page = await PageCRUD.get_page(session, page_id)
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
-
-    user_identifier = f"user:{current_user.username}"
-    if not (
-        check_page_ownership(page.__table__.c.owner_id, current_user)
-        or casbin_manager.check_permission(user_identifier, "page", "read")
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied"
-        )
 
     return page
 
 
-@page_router.put("/{page_id}", response_model=PageRead)
+@page_router.put("/{page_id}", response_model=Page)
 async def update_page(
     page_id: UUID,
-    page_update: PageUpdate,
-    session: AsyncSession = Depends(get_session),
+    page_update: Page,
+    session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
-):
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> Page | None:
+    allowed = enforcer.enforce(
+        casbin_subject(current_user.id), casbin_object("p", page_id), "update"
+    )
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     page = await PageCRUD.get_page(session, page_id)
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
 
-    user_identifier = f"user:{current_user.username}"
-    if not (
-        check_page_ownership(page.__table__.c.owner_id, current_user)
-        or casbin_manager.check_permission(user_identifier, "page", "write")
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied"
+    updated_page = await PageCRUD.update_page(session, page_id, page_update)
+    if updated_page:
+        log_handler.log_security_event(
+            event="Page updated",
+            severity="low",
+            context={
+                "actor_id": current_user.id,
+                "event_type": "security",
+                "actor_username": current_user.username,
+                "page_id": updated_page.id,
+                "page_title": updated_page.title,
+                "action": "page_update",
+            },
         )
-
-    updated_page = PageCRUD.update_page(session, page_id, page_update)
     return updated_page
 
 
 @page_router.delete("/{page_id}")
 async def delete_page(
     page_id: UUID,
-    session: AsyncSession = Depends(get_session),
+    session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
-):
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> dict:
+    allowed = enforcer.enforce(
+        casbin_subject(current_user.id), casbin_object("p", page_id), "delete"
+    )
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     page = await PageCRUD.get_page(session, page_id)
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
 
-    user_identifier = f"user:{current_user.username}"
-    if not (
-        check_page_ownership(page.__table__.c.owner_id, current_user)
-        or casbin_manager.check_permission(user_identifier, "page", "write")
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied"
-        )
-
     if not PageCRUD.delete_page(session, page_id):
         raise HTTPException(status_code=404, detail="Page not found")
+
+    log_handler.log_security_event(
+        event="Page deleted",
+        severity="moderate",
+        context={
+            "event_type": "security",
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "page_id": page.id,
+            "page_title": page.title,
+            "action": "page_delete",
+        },
+    )
 
     return {"message": "Page deleted successfully"}

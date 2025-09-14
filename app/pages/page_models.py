@@ -1,14 +1,16 @@
+from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship
 
 from app.helpers.model_base import ModelBase
 
+if TYPE_CHECKING:
+    from app.users.user_models import User  # noqa: F401
 
-class PageBase(SQLModel):
+
+class Page(ModelBase, table=True):  # type: ignore
     title: str
     body: str
-
-
-class Page(ModelBase, PageBase, table=True):  # type: ignore
-    owner_id: UUID = Field(foreign_key="user.id")
+    user_id: UUID = Field(foreign_key="user.id", nullable=False)
+    user: "User" = Relationship(back_populates="pages")

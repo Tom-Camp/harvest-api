@@ -1,48 +1,19 @@
-import logging
-
+from casbin import AsyncEnforcer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.casbin.casbin_config import AsyncCasbinManager
-from app.users.role_crud import RoleCRUD
-from app.users.user_schemas import RoleCreate, UserCreate
-from app.users.users_crud import UserCRUD
+from app.casbin.casbin_config import create_casbin_enforcer
+from app.casbin.casbin_helpers import casbin_subject
+from app.casbin.default_policies import policies
+from app.logging import get_logger, log_handler
+from app.users.user_crud import UserCRUD
+from app.users.user_schemas import UserCreate
 from app.utils.config import settings
-from app.utils.database import (
-    AsyncSessionLocal,
-    create_db_and_tables,
-    init_casbin_tables,
-)
+from app.utils.database import AsyncSessionLocal
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
-async def setup_initial_roles(session: AsyncSession):
-    roles_data = [
-        {"name": "admin", "description": "System administrator with full access"},
-        {"name": "moderator", "description": "Moderator with limited admin access"},
-        {"name": "user", "description": "Regular user with basic access"},
-    ]
-
-    created_roles = []
-    for role_data in roles_data:
-        existing_role = await RoleCRUD.get_role_by_name(session, role_data["name"])
-        if not existing_role:
-            role = RoleCreate(**role_data)
-            created_role = await RoleCRUD.create_role(session, role)
-            created_roles.append(created_role)
-            logger.info(f"Created role: {created_role.name}")
-        else:
-            logger.info(f"Role already exists: {role_data['name']}")
-            created_roles.append(existing_role)
-
-    return created_roles
-
-
-async def setup_initial_admin(
-    session: AsyncSession,
-    casbin_manager: AsyncCasbinManager,
-) -> str:
+async def setup_initial_admin(session: AsyncSession, enforcer: AsyncEnforcer) -> str:
     admin_data = {
         "username": settings.INITIAL_USER_NAME,
         "email": settings.INITIAL_USER_MAIL,
@@ -51,22 +22,32 @@ async def setup_initial_admin(
     }
 
     existing_admin = await UserCRUD.get_user_by_username(
-        session=session, username=admin_data.get("username")  # type: ignore
+        session=session, username=str(admin_data.get("username", ""))
     )
     if not existing_admin:
         admin_create = UserCreate(**admin_data)
         admin_user = await UserCRUD.create_user(session, admin_create)
-        print(admin_user)
-        logger.info(f"Created admin user: {admin_user.username}")
+        log_handler.log_security_event(
+            event="Initial user created",
+            severity="low",
+            context={
+                "username": admin_user.username,
+                "user_id": admin_user.id,
+            },
+        )
 
-        admin_role = await RoleCRUD.get_role_by_name(session, "admin")
-        if admin_role:
-            await RoleCRUD.assign_role_to_user(session, admin_user.id, admin_role.id)
-            logger.info("Assigned admin role to admin user in database")
-
-        user_identifier = f"user:{admin_user.username}"
-        await casbin_manager.add_role_for_user(user_identifier, "admin")
-        logger.info("Assigned admin role to admin user in Casbin")
+        await enforcer.add_role_for_user(casbin_subject(admin_user.id), "admin")
+        log_handler.log_security_event(
+            event="User deleted",
+            severity="moderate",
+            context={
+                "actor_id": "default",
+                "actor_username": "default",
+                "target_user_id": admin_user.id,
+                "target_username": admin_user.username,
+                "action": "add_admin_role",
+            },
+        )
 
         return admin_user.username
     else:
@@ -74,51 +55,15 @@ async def setup_initial_admin(
         return existing_admin.username
 
 
-async def setup_casbin_policies(casbin_manager: AsyncCasbinManager):
-    enforcer = await casbin_manager.get_enforcer()
-
-    enforcer.clear_policy()
-
-    user_roles = [
-        ["admin", "admin"],
-    ]
-
-    for user_role in user_roles:
-        enforcer.add_grouping_policy(*user_role)
-        logger.info(f"Added user role: {user_role}")
-
-    policies = [
-        ["admin", "*", "*"],
-        ["moderator", "user", "read"],
-        ["moderator", "user", "write"],
-        ["moderator", "page", "*"],
-        ["moderator", "role", "read"],
-        ["user", "page", "read"],
-        ["user", "page", "create"],
-    ]
-
-    for policy in policies:
-        await enforcer.add_policy(*policy)
-        logger.info(f"Added policy: {policy}")
-
-    await enforcer.save_policy()
-    logger.info("Casbin policies saved")
+async def setup_casbin_policies(enforcer: AsyncEnforcer) -> None:
+    await enforcer.add_policies(rules=policies)
 
 
-async def initialize_data(casbin_manager: AsyncCasbinManager):
-    logger.info("Starting initial data setup...")
-
-    await create_db_and_tables()
-    await init_casbin_tables()
-
-    await setup_casbin_policies(casbin_manager=casbin_manager)
-
+async def initialize_data() -> None:
+    logger.info("Casbin setup")
     async with AsyncSessionLocal() as session:
-        await setup_initial_roles(session)
-        admin = await setup_initial_admin(
-            session=session,
-            casbin_manager=casbin_manager,
+        async_enforcer = await create_casbin_enforcer(
+            db_url=settings.casbin_database_url
         )
-        logger.info("Initial data setup completed!")
-        logger.info(f"Admin user created: username={admin}")
-        await session.commit()
+        await setup_casbin_policies(enforcer=async_enforcer)
+        await setup_initial_admin(session=session, enforcer=async_enforcer)

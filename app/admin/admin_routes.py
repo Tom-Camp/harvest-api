@@ -1,117 +1,175 @@
-import logging
+from uuid import UUID
 
+from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.admin.permission_schemas import AssignRoleRequest, PermissionCheck
+from app.admin.permission_schemas import PermissionCheck, RoleRequest
 from app.auth.auth import get_current_active_user
-from app.casbin.casbin_config import AsyncCasbinManager
-from app.casbin.permissions import RequireAdmin
-from app.users.role_crud import RoleCRUD
+from app.casbin.casbin_config import get_casbin_enforcer
+from app.casbin.casbin_helpers import casbin_subject
+from app.logging import get_logger, log_handler
 from app.users.user_models import User
-from app.users.users_crud import UserCRUD
-from app.utils.database import get_session
-from app.utils.dependencies import get_casbin_manager
+
+logger = get_logger(__name__)
 
 admin_router = APIRouter(prefix="/admin")
 
 
 @admin_router.post("/assign-role")
 async def assign_role(
-    request: AssignRoleRequest,
-    session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(RequireAdmin),
-    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
-):
-    user = await UserCRUD.get_user(session, request.user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    role_request: RoleRequest,
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> dict:
+    allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "add")
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
-    role = await RoleCRUD.get_role_by_name(session, request.role_name)
-    if not role:
-        raise HTTPException(status_code=404, detail="Role not found")
-
-    await RoleCRUD.assign_role_to_user(session, request.user_id, role.id)
-
-    user_identifier = f"user:{user.username}"
-    await casbin_manager.add_role_for_user(user_identifier, request.role_name)
-    logging.info(
-        "Role %s assigned to user %s by %s" % request.role_name,
-        user.username,
-        current_user.username,
+    await enforcer.add_role_for_user(
+        user=casbin_subject(role_request.user_id), role=role_request.role_name
     )
 
-    return {"message": f"Role '{request.role_name}' assigned to user '{user.username}'"}
+    log_handler.log_security_event(
+        "Role assigned to user",
+        severity="medium",
+        context={
+            "event_type": "security",
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "target_user_id": role_request.user_id,
+            "target_username": role_request.username,
+            "action": "role_assignment",
+            "resource": "user_role",
+            "role_name": role_request.role_name,
+        },
+    )
+
+    return {
+        "message": f"Role '{role_request.role_name}' assigned to user '{role_request.username}'"
+    }
 
 
 @admin_router.post("/remove-role")
 async def remove_role(
-    request: AssignRoleRequest,
-    session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(RequireAdmin),
-    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
-):
-    user = await UserCRUD.get_user(session, request.user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    role_request: RoleRequest,
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> dict:
+    allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "delete")
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
-    role = await RoleCRUD.get_role_by_name(session, request.role_name)
-    if not role:
-        raise HTTPException(status_code=404, detail="Role not found")
+    await enforcer.delete_role_for_user(
+        user=casbin_subject(role_request.user_id), role=role_request.role_name
+    )
 
-    await RoleCRUD.remove_role_from_user(session, request.user_id, role.id)
-
-    user_identifier = f"user:{user.username}"
-    await casbin_manager.remove_role_for_user(user_identifier, request.role_name)
-    logging.info(
-        "Role %s removed from user %s by %s" % request.role_name,
-        user.username,
-        current_user.username,
+    log_handler.log_security_event(
+        "Role removed from user",
+        severity="medium",
+        context={
+            "event_type": "security",
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "target_user_id": role_request.user_id,
+            "target_username": role_request.username,
+            "action": "role_assignment",
+            "resource": "user_role",
+            "role_name": role_request.role_name,
+        },
     )
 
     return {
-        "message": f"Role '{request.role_name}' removed from user '{user.username}'"
+        "message": f"Role '{role_request.role_name}' removed from user '{role_request.username}'"
     }
 
 
 @admin_router.post("/check-permission")
 async def check_permission(
-    request: PermissionCheck,
+    permission_request: PermissionCheck,
     current_user: User = Depends(get_current_active_user),
-    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
-):
-    user_identifier = f"user:{current_user.username}"
-    has_permission = casbin_manager.check_permission(
-        user_identifier, request.resource, request.action
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> dict:
+    allowed = enforcer.enforce(casbin_subject(current_user.id), "policy", "read")
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    has_permission = enforcer.enforce(
+        casbin_subject(permission_request.user_id),
+        permission_request.resource,
+        permission_request.action,
+    )
+
+    log_handler.log_security_event(
+        "Permission check",
+        severity="low",
+        context={
+            "event_type": "security",
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "target_user_id": permission_request.user_id,
+            "target_username": permission_request.username,
+            "action": "permission_check",
+            "resource": permission_request.resource,
+            "role_name": permission_request.action,
+        },
     )
 
     return {
-        "user": current_user.username,
-        "resource": request.resource,
-        "action": request.action,
+        "user": permission_request.username,
+        "resource": permission_request.resource,
+        "action": permission_request.action,
         "has_permission": has_permission,
-        "roles": casbin_manager.get_roles_for_user(user_identifier),
     }
 
 
-@admin_router.get("/user-roles/{username}")
+@admin_router.get("/user-roles/{user_id}")
 async def get_user_roles(
-    username: str,
-    current_user: User = Depends(RequireAdmin),
-    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
-):
-    user_identifier = f"user:{username}"
-    roles = casbin_manager.get_roles_for_user(user_identifier)
-    logging.info("%s listed %s role" % current_user.username, username)
-    return {"username": username, "roles": roles}
+    user_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> dict:
+    allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "read")
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    roles = await enforcer.get_roles_for_user(casbin_subject(user_id))
+
+    log_handler.log_security_event(
+        "List user roles",
+        severity="low",
+        context={
+            "event_type": "security",
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "target_user_id": user_id,
+            "action": "role_list",
+            "resource": "user_role",
+        },
+    )
+    return {"user_id": user_id, "roles": roles}
 
 
 @admin_router.get("/role-users/{role_name}")
 async def get_role_users(
     role_name: str,
-    current_user: User = Depends(RequireAdmin),
-    casbin_manager: AsyncCasbinManager = Depends(get_casbin_manager),
-):
-    users = await casbin_manager.get_users_for_role(role_name)
-    logging.info("%s listed the users with role" % current_user.username, role_name)
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> dict:
+    allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "read")
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    users = await enforcer.get_users_for_role(role_name)
+
+    log_handler.log_security_event(
+        "List user with role",
+        severity="low",
+        context={
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "target_role": role_name,
+            "action": "role_list_users",
+            "resource": "user_role",
+        },
+    )
     return {"role": role_name, "users": [user.replace("user:", "") for user in users]}

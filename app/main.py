@@ -7,24 +7,34 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.admin.admin_routes import admin_router
 from app.auth.auth_routes import auth_router
-from app.casbin.casbin_config import AsyncCasbinManager
+from app.casbin.casbin_config import create_casbin_enforcer
+from app.logging import get_logger
 from app.logging.log_config import configure_structlog
 from app.logging.log_middleware import LoggingMiddleware
 from app.pages.page_routes import page_router
-from app.users.role_routes import role_router
 from app.users.user_routes import user_router
+from app.utils import database as db
 from app.utils.config import settings
 from app.utils.initialize import initialize_data
+
+configure_structlog()
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.casbin_manager = AsyncCasbinManager(settings.postgres_uri)
-    await initialize_data(casbin_manager=app.state.casbin_manager)
+    # ----------- CREATE TABLES ON STARTUP ----------
+    async with db.engine.begin() as conn:
+        await conn.run_sync(db.metadata.create_all)
+
+    app.state.casbin_enforcer = await create_casbin_enforcer(
+        settings.casbin_database_url
+    )
+    await initialize_data()
     yield
 
+    await db.engine.dispose()
 
-configure_structlog()
 
 app = FastAPI(
     lifespan=lifespan,
@@ -46,10 +56,8 @@ app.add_middleware(
     include_response_body=False,
 )
 
-
 app.include_router(auth_router, prefix="/api", tags=["authentication"])
 app.include_router(user_router, prefix="/api", tags=["users"])
-app.include_router(role_router, prefix="/api", tags=["roles"])
 app.include_router(admin_router, prefix="/api", tags=["admin"])
 app.include_router(page_router, prefix="/api", tags=["pages"])
 
