@@ -29,7 +29,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 HIBP_RANGE_URL = "https://api.pwnedpasswords.com/range/"
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
+async def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         ph.verify(hashed_password, plain_password)
         return True
@@ -52,13 +52,13 @@ async def authenticate_user(
     if not user:
         logger.warning("Username not found.")
         return None
-    if not verify_password(password, user.hashed_password):
+    if not await verify_password(password, user.hashed_password):
         logger.warning("Incorrect password.")
         return None
     return user
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+async def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(timezone.utc).replace(tzinfo=None) + expires_delta
@@ -130,7 +130,7 @@ async def hibp_breach_count(password: str, timeout: float = 10.0) -> int:
             await client.aclose()
 
 
-def failed_password_messages(reasons: dict) -> List:
+async def failed_password_messages(reasons: dict) -> List:
     message: List = []
     if reasons.get("pwned_count"):
         message.append(

@@ -51,7 +51,7 @@ async def login_for_access_token(
         )
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
+    access_token = await create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
 
@@ -106,7 +106,7 @@ async def register(
                 "pwned_count": pw_is_valid.get("pwned_count"),
             },
         )
-        response_message = failed_password_messages(pw_is_valid)
+        response_message = await failed_password_messages(pw_is_valid)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=response_message,
