@@ -9,12 +9,26 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
+      APP_NAME: "harvesting.food API"
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      CORS_ORIGINS: '["http://localhost:5000"]'
       DATABASE_URL: sqlite+aiosqlite:///./test_auth.db
+      ENVIRONMENT: development
+      HASH_ALGORITHM: HS256
+      INITIAL_USER_NAME: test_user
+      INITIAL_USER_MAIL: test@example.com
+      INITIAL_USER_PASS: Password!23
+      LOG_LEVEL: INFO
+      LOG_NAME: harvestLogs
+      LOG_ACCESS_NAME: harvestAccessLogs
+      LOG_JSON_FORMAT: false
       POSTGRES_DB: postgress
       POSTGRES_HOST: postgress
       POSTGRES_PASS: postgress
       POSTGRES_PORT: 5432
       POSTGRES_USER: postgress
+      SECRET_KEY: test_secret_key
+      USER_SECRET: test_user_key
 
     steps:
       - name: Checkout code
