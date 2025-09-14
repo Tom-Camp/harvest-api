@@ -13,6 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TEST_DB_PATH = "./test_auth.db"
 TEST_DB_URL = f"sqlite+aiosqlite:///{TEST_DB_PATH}"
 os.environ["CASBIN_DB_URL"] = TEST_DB_URL
+os.environ["DATABASE_URL"] = TEST_DB_URL
 
 import app.main as main_module  # noqa E402
 from app.casbin.casbin_config import create_casbin_enforcer  # noqa E402

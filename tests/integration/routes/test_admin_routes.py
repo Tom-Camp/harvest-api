@@ -24,7 +24,7 @@ class TestAdminRoutes:
         self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
         user_user = default_user.get("user")
         response = await client.post(
-            "api/admin/assign-role",
+            "/api/admin/assign-role",
             json={
                 "user_id": str(user_user.id),
                 "username": user_user.username,
@@ -54,7 +54,7 @@ class TestAdminRoutes:
         self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
         user_user = default_user.get("user")
         response = await client.post(
-            "api/admin/remove-role",
+            "/api/admin/remove-role",
             json={
                 "user_id": str(user_user.id),
                 "username": user_user.username,
@@ -84,7 +84,7 @@ class TestAdminRoutes:
         self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
         moderator_user = default_user.get("moderator")
         response = await client.post(
-            "api/admin/check-permission",
+            "/api/admin/check-permission",
             json={
                 "user_id": str(moderator_user.id),
                 "username": moderator_user.username,
@@ -115,7 +115,7 @@ class TestAdminRoutes:
         self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
         moderator_user = default_user.get("moderator")
         response = await client.get(
-            f"api/admin/user-roles/{moderator_user.id}",
+            f"/api/admin/user-roles/{moderator_user.id}",
             headers=self.headers,
         )
         assert response.status_code == expected_status
@@ -139,7 +139,7 @@ class TestAdminRoutes:
         )
         self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
         response = await client.get(
-            "api/admin/role-users/moderator",
+            "/api/admin/role-users/moderator",
             headers=self.headers,
         )
         assert response.status_code == expected_status
