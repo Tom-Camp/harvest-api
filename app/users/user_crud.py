@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from typing import Sequence
 from uuid import UUID
 
@@ -63,7 +62,6 @@ class UserCRUD:
             user_data = user_update.model_dump(exclude_unset=True)
             for field, value in user_data.items():
                 setattr(user, field, value)
-            user.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
             session.add(user)
             await session.commit()
             await session.refresh(user)
