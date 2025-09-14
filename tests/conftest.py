@@ -5,6 +5,7 @@ from typing import Dict
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlmodel import SQLModel
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -13,19 +14,21 @@ TEST_DB_PATH = "./test_auth.db"
 TEST_DB_URL = f"sqlite+aiosqlite:///{TEST_DB_PATH}"
 os.environ["CASBIN_DB_URL"] = TEST_DB_URL
 
+import app.main as main_module  # noqa E402
+from app.casbin.casbin_config import create_casbin_enforcer  # noqa E402
+from app.casbin.casbin_helpers import casbin_subject  # noqa E402
+from app.casbin.default_policies import policies  # noqa E402
+from app.users.user_crud import UserCRUD  # noqa E402
+from app.users.user_models import User  # noqa E402
+from app.users.user_schemas import UserCreate  # noqa E402
+from app.utils import database as db  # noqa E402
+from app.utils.config import settings  # noqa E402
+
 
 @pytest_asyncio.fixture
 async def test_app():
     if os.path.exists(TEST_DB_PATH):
         os.remove(TEST_DB_PATH)
-
-    from sqlmodel import SQLModel
-
-    import app.main as main_module
-    from app.casbin.casbin_config import create_casbin_enforcer
-    from app.casbin.default_policies import policies
-    from app.utils import database as db
-    from app.utils.config import settings
 
     test_engine = create_async_engine(TEST_DB_URL, echo=False, future=True)
     db.engine = test_engine
@@ -59,11 +62,6 @@ async def client(test_app):
 
 @pytest_asyncio.fixture
 async def default_user(test_app):
-    from app.casbin.casbin_helpers import casbin_subject
-    from app.users.user_crud import UserCRUD
-    from app.users.user_models import User
-    from app.users.user_schemas import UserCreate
-    from app.utils import database as db
 
     user_dict: Dict[str, User] = {}
     test_user_list: dict = {
