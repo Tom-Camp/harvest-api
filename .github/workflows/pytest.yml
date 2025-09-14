@@ -10,6 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: sqlite+aiosqlite:///./test_auth.db
+      POSTGRES_DB: postgress
+      POSTGRES_HOST: localhost
+      POSTGRES_PASS: postgress
+      POSTGRES_PORT: postgress
+      POSTGRES_USER: postgress
 
     steps:
       - name: Checkout code
