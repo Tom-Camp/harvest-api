@@ -1,8 +1,10 @@
+import os
+
 from casbin import AsyncEnforcer
 from casbin_async_sqlalchemy_adapter import Adapter as AsyncAdapter
 from fastapi import Request
 
-MODEL_PATH = "app/casbin/casbin_model.conf"
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "casbin_model.conf")
 
 
 async def create_casbin_enforcer(db_url: str) -> AsyncEnforcer:

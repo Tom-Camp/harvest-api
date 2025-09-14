@@ -1,7 +1,7 @@
 import pytest
 
 
-class TestUserRoutes:
+class TestAuthRoutes:
 
     @pytest.mark.asyncio
     async def test_user_register(self, client):

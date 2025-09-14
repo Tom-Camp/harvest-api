@@ -15,6 +15,7 @@ from app.pages.page_routes import page_router
 from app.users.user_routes import user_router
 from app.utils import database as db
 from app.utils.config import settings
+from app.utils.initialize import initialize_data
 
 configure_structlog()
 logger = get_logger(__name__)
@@ -29,7 +30,7 @@ async def lifespan(app: FastAPI):
     app.state.casbin_enforcer = await create_casbin_enforcer(
         settings.casbin_database_url
     )
-
+    await initialize_data()
     yield
 
     await db.engine.dispose()

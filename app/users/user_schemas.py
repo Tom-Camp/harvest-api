@@ -12,7 +12,6 @@ class UserUpdate(SQLModel):
     email: str | None = None
     username: str | None = None
     full_name: str | None = None
-    is_active: bool = False
 
 
 class UserRead(ModelBase, UserBase):

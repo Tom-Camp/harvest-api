@@ -23,6 +23,7 @@ async def test_app():
 
     import app.main as main_module
     from app.casbin.casbin_config import create_casbin_enforcer
+    from app.casbin.default_policies import policies
     from app.utils import database as db
     from app.utils.config import settings
 
@@ -40,6 +41,8 @@ async def test_app():
     # Initialize Casbin enforcer against testing DB (normally done in lifespan)
     enforcer = await create_casbin_enforcer(settings.casbin_database_url)
     application.state.casbin_enforcer = enforcer
+
+    await enforcer.add_policies(rules=policies)
 
     try:
         yield application

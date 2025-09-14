@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Sequence
 from uuid import UUID
 
+from pydantic import EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -39,7 +40,7 @@ class UserCRUD:
         return result.scalars().first()
 
     @staticmethod
-    async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
+    async def get_user_by_email(session: AsyncSession, email: EmailStr) -> User | None:
         statement = select(User).where(User.__table__.c.email == email)
         result = await session.execute(statement)
         return result.scalars().first()
