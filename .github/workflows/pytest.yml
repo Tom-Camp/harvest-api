@@ -11,9 +11,9 @@ jobs:
     env:
       DATABASE_URL: sqlite+aiosqlite:///./test_auth.db
       POSTGRES_DB: postgress
-      POSTGRES_HOST: localhost
+      POSTGRES_HOST: postgress
       POSTGRES_PASS: postgress
-      POSTGRES_PORT: postgress
+      POSTGRES_PORT: 5432
       POSTGRES_USER: postgress
 
     steps:
