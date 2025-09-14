@@ -99,7 +99,7 @@ async def delete_user(
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    if not UserCRUD.delete_user(session, user_id):
+    if not await UserCRUD.delete_user(session, user_id):
         raise HTTPException(status_code=404, detail="User not found")
 
     await enforcer.delete_user(casbin_subject(user_id))
