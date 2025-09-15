@@ -72,19 +72,15 @@ async def default_user(test_app):
         "test_user": "user",
     }
     async with db.AsyncSessionLocal() as session:
-        try:
-            for test_user, role in test_user_list.items():
-                user_in = UserCreate(
-                    username=f"{test_user}_user",
-                    email=f"{test_user}@example.com",
-                    password="UkeV3BNUIL7x/n0J",
-                )
-                user: User = await UserCRUD.create_user(session, user_in)
-                await test_app.state.casbin_enforcer.add_role_for_user(
-                    user=casbin_subject(user.id), role=role
-                )
-                user_dict[role] = user
-            yield user_dict
-        finally:
-            for user_out in user_dict.values():
-                await UserCRUD.delete_user(session, user_out.id)
+        for test_user, role in test_user_list.items():
+            user_in = UserCreate(
+                username=f"{test_user}_user",
+                email=f"{test_user}@example.com",
+                password="UkeV3BNUIL7x/n0J",
+            )
+            user: User = await UserCRUD.create_user(session, user_in)
+            await test_app.state.casbin_enforcer.add_role_for_user(
+                user=casbin_subject(user.id), role=role
+            )
+            user_dict[role] = user
+        yield user_dict

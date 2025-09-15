@@ -11,7 +11,7 @@ class TestAuthRoutes:
             "password": "milk prairie island desert",
         }
         response = await client.post(
-            "/api/auth/register",
+            url="/api/auth/register",
             json=payload,
             headers={"Content-Type": "application/json"},
         )
@@ -28,7 +28,7 @@ class TestAuthRoutes:
             "password": "milk prairie island desert",
         }
         response = await client.post(
-            "/api/auth/register",
+            url="/api/auth/register",
             json=payload,
             headers={"Content-Type": "application/json"},
         )
@@ -41,7 +41,7 @@ class TestAuthRoutes:
             "password": "milk prairie island desert",
         }
         response = await client.post(
-            "/api/auth/register",
+            url="/api/auth/register",
             json=payload,
             headers={"Content-Type": "application/json"},
         )
@@ -54,7 +54,7 @@ class TestAuthRoutes:
             "password": "6j9ZI43/jcA",
         }
         response = await client.post(
-            "/api/auth/register",
+            url="/api/auth/register",
             json=payload,
             headers={"Content-Type": "application/json"},
         )
@@ -67,7 +67,7 @@ class TestAuthRoutes:
             "password": "lemon meringue pie",
         }
         response = await client.post(
-            "/api/auth/register",
+            url="/api/auth/register",
             json=payload,
             headers={"Content-Type": "application/json"},
         )
@@ -80,7 +80,7 @@ class TestAuthRoutes:
             "password": "correct horse battery staple",
         }
         response = await client.post(
-            "/api/auth/register",
+            url="/api/auth/register",
             json=payload,
             headers={"Content-Type": "application/json"},
         )
@@ -94,7 +94,7 @@ class TestAuthRoutes:
             "password": "UkeV3BNUIL7x/n0J",
         }
         response = await client.post(
-            "/api/auth/token",
+            url="/api/auth/token",
             data=payload,
         )
         assert "access_token" in response.json()
@@ -107,7 +107,7 @@ class TestAuthRoutes:
             "password": "YkeV3BNUIL7x/n0J",
         }
         response = await client.post(
-            "/api/auth/token",
+            url="/api/auth/token",
             data=payload,
         )
         assert response.status_code == 401

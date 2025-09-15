@@ -11,7 +11,7 @@ from app.casbin.casbin_helpers import casbin_object, casbin_subject
 from app.logging import get_logger, log_handler
 from app.pages.page_crud import PageCRUD
 from app.pages.page_models import Page
-from app.pages.page_schemas import PageList, PageRead
+from app.pages.page_schemas import PageCreate, PageList, PageRead
 from app.users.user_models import User
 from app.utils.database import get_db
 
@@ -22,13 +22,13 @@ page_router = APIRouter(prefix="/pages")
 
 @page_router.post("/", response_model=Page)
 async def create_page(
-    page: Page,
+    page: PageCreate,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Page:
     subject: str = casbin_subject(current_user.id)
-    allowed = enforcer.enforce(subject, "/pages", "write")
+    allowed = enforcer.enforce(subject, "page", "write")
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
 
@@ -159,7 +159,7 @@ async def delete_page(
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
 
-    if not PageCRUD.delete_page(session, page_id):
+    if not await PageCRUD.delete_page(session, page_id):
         raise HTTPException(status_code=404, detail="Page not found")
 
     log_handler.log_security_event(

@@ -17,3 +17,8 @@ class PageList(SQLModel):
     user_id: UUID
     title: str
     created_date: datetime
+
+
+class PageCreate(SQLModel):
+    title: str
+    body: str

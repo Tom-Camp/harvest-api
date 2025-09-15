@@ -6,18 +6,17 @@ from sqlmodel import select
 
 from app.logging import get_logger
 from app.pages.page_models import Page
+from app.pages.page_schemas import PageCreate
 
 logger = get_logger(__name__)
 
 
 class PageCRUD:
     @staticmethod
-    async def create_page(session: AsyncSession, page: Page, user_id: UUID) -> Page:
-        db_page = Page(
-            title=page.title,
-            body=page.body,
-            user_id=user_id,
-        )
+    async def create_page(
+        session: AsyncSession, page: PageCreate, user_id: UUID
+    ) -> Page:
+        db_page = Page(**page.model_dump(), user_id=user_id)
         session.add(db_page)
         await session.commit()
         await session.refresh(db_page)
@@ -42,7 +41,7 @@ class PageCRUD:
     ) -> Sequence[Page]:
         statement = (
             select(Page)
-            .where(Page.__table__.c.owner_id == user_id)
+            .where(Page.__table__.c.user_id == user_id)
             .offset(skip)
             .limit(limit)
         )
@@ -67,7 +66,7 @@ class PageCRUD:
 
     @staticmethod
     async def delete_page(session: AsyncSession, page_id: UUID) -> bool:
-        page = session.get(Page, page_id)
+        page = await session.get(Page, page_id)
         if page:
             await session.delete(page)
             await session.commit()
