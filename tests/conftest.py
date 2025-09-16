@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import Dict
+from typing import Dict, List
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -84,3 +84,30 @@ async def default_user(test_app):
             )
             user_dict[role] = user
         yield user_dict
+
+
+@pytest_asyncio.fixture
+async def default_pages(default_user):
+    from app.pages.page_models import Page
+    from app.utils import database as db
+
+    pages_list: List[Page] = []
+    test_pages_list: List[dict] = [
+        {"title": "Page one", "body": "This is page one"},
+        {"title": "Page two", "body": "This is page two"},
+        {"title": "Page three", "body": "This is page three"},
+    ]
+    user = default_user.get("moderator")
+    for test_page in test_pages_list:
+        pages_list.append(
+            Page(
+                title=test_page.get("title"),
+                body=test_page.get("body"),
+                user_id=user.id,
+            )
+        )
+    async with db.AsyncSessionLocal() as session:
+        session.add_all(pages_list)
+        await session.commit()
+
+        yield pages_list

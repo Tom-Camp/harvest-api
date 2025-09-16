@@ -22,3 +22,8 @@ class PageList(SQLModel):
 class PageCreate(SQLModel):
     title: str
     body: str
+
+
+class PageUpdate(SQLModel):
+    title: str | None = None
+    body: str | None = None

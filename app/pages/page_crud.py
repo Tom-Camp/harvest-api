@@ -6,7 +6,7 @@ from sqlmodel import select
 
 from app.logging import get_logger
 from app.pages.page_models import Page
-from app.pages.page_schemas import PageCreate
+from app.pages.page_schemas import PageCreate, PageUpdate
 
 logger = get_logger(__name__)
 
@@ -51,7 +51,7 @@ class PageCRUD:
 
     @staticmethod
     async def update_page(
-        session: AsyncSession, page_id: UUID, page_update: Page
+        session: AsyncSession, page_id: UUID, page_update: PageUpdate
     ) -> Page | None:
         page: Page | None = await session.get(Page, page_id)
         if page:

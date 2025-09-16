@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+from typing import List
+from uuid import UUID
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -7,7 +9,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.admin.admin_routes import admin_router
 from app.auth.auth_routes import auth_router
-from app.casbin.casbin_config import create_casbin_enforcer
+from app.casbin.casbin_config import startup_casbin
 from app.logging import get_logger
 from app.logging.log_config import configure_structlog
 from app.logging.log_middleware import LoggingMiddleware
@@ -15,7 +17,7 @@ from app.pages.page_routes import page_router
 from app.users.user_routes import user_router
 from app.utils import database as db
 from app.utils.config import settings
-from app.utils.initialize import initialize_data
+from app.utils.initialize import setup_initial_admin
 
 configure_structlog()
 logger = get_logger(__name__)
@@ -27,10 +29,13 @@ async def lifespan(app: FastAPI):
     async with db.engine.begin() as conn:
         await conn.run_sync(db.metadata.create_all)
 
-    app.state.casbin_enforcer = await create_casbin_enforcer(
-        settings.casbin_database_url
-    )
-    await initialize_data()
+    admin_user_ids: List[UUID] = []
+    async for session in db.get_db():
+        admin_user = await setup_initial_admin(session=session)
+        admin_user_ids.append(admin_user)
+        break
+
+    await startup_casbin(app, settings.async_database_url, admin_user_ids)
     yield
 
     await db.engine.dispose()

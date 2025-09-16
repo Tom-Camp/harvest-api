@@ -173,3 +173,19 @@ async def get_role_users(
         },
     )
     return {"role": role_name, "users": [user.replace("user:", "") for user in users]}
+
+
+@admin_router.get("/debug-permissions")
+async def debug_permissions(
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+):
+    user_subject = casbin_subject(current_user.id)
+
+    return {
+        "user_subject": user_subject,
+        "roles": await enforcer.get_roles_for_user(user_subject),
+        "policies": enforcer.get_policy(),
+        "can_assign_role": enforcer.enforce(user_subject, "role", "add"),
+        "has_admin_role": await enforcer.has_role_for_user(user_subject, "admin"),
+    }
