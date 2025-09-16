@@ -22,10 +22,8 @@ async def test_app():
         os.remove(TEST_DB_PATH)
 
     import app.main as main_module
-    from app.casbin.casbin_config import create_casbin_enforcer
-    from app.casbin.default_policies import policies
+    from app.casbin.casbin_config import startup_casbin
     from app.utils import database as db
-    from app.utils.config import settings
 
     test_engine = create_async_engine(TEST_DB_URL, echo=False, future=True)
     db.engine = test_engine
@@ -35,14 +33,9 @@ async def test_app():
     async with db.engine.begin() as conn:
         await conn.run_sync(db.metadata.create_all)
 
-    # Get the FastAPI app instance
     application = main_module.app
 
-    # Initialize Casbin enforcer against testing DB (normally done in lifespan)
-    enforcer = await create_casbin_enforcer(settings.casbin_database_url)
-    application.state.casbin_enforcer = enforcer
-
-    await enforcer.add_policies(rules=policies)
+    await startup_casbin(application, TEST_DB_URL)
 
     try:
         yield application
