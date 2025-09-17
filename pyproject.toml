@@ -28,6 +28,7 @@ dependencies = [
     "pytest-asyncio>=1.1.0",
     "aiosqlite>=0.21.0",
     "zxcvbn-rs-py>=0.2.0",
+    "pytest-cov>=6.3.0",
 ]
 
 [tool.pytest.ini_options]

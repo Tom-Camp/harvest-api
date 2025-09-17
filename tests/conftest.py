@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import Dict
+from typing import Dict, List
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -16,16 +16,14 @@ os.environ["CASBIN_DB_URL"] = TEST_DB_URL
 os.environ["DATABASE_URL"] = TEST_DB_URL
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=True)
 async def test_app():
     if os.path.exists(TEST_DB_PATH):
         os.remove(TEST_DB_PATH)
 
     import app.main as main_module
-    from app.casbin.casbin_config import create_casbin_enforcer
-    from app.casbin.default_policies import policies
+    from app.casbin.casbin_config import startup_casbin
     from app.utils import database as db
-    from app.utils.config import settings
 
     test_engine = create_async_engine(TEST_DB_URL, echo=False, future=True)
     db.engine = test_engine
@@ -35,14 +33,9 @@ async def test_app():
     async with db.engine.begin() as conn:
         await conn.run_sync(db.metadata.create_all)
 
-    # Get the FastAPI app instance
     application = main_module.app
 
-    # Initialize Casbin enforcer against testing DB (normally done in lifespan)
-    enforcer = await create_casbin_enforcer(settings.casbin_database_url)
-    application.state.casbin_enforcer = enforcer
-
-    await enforcer.add_policies(rules=policies)
+    await startup_casbin(application, TEST_DB_URL)
 
     try:
         yield application
@@ -57,7 +50,7 @@ async def client(test_app):
         yield ac
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=True)
 async def default_user(test_app):
     from app.casbin.casbin_helpers import casbin_subject
     from app.users.user_crud import UserCRUD
@@ -69,22 +62,39 @@ async def default_user(test_app):
     test_user_list: dict = {
         "test_admin": "admin",
         "test_moderator": "moderator",
-        "test_user": "user",
+        "test_authenticated": "authenticated",
     }
     async with db.AsyncSessionLocal() as session:
-        try:
-            for test_user, role in test_user_list.items():
-                user_in = UserCreate(
-                    username=f"{test_user}_user",
-                    email=f"{test_user}@example.com",
-                    password="UkeV3BNUIL7x/n0J",
-                )
-                user: User = await UserCRUD.create_user(session, user_in)
-                await test_app.state.casbin_enforcer.add_role_for_user(
-                    user=casbin_subject(user.id), role=role
-                )
-                user_dict[role] = user
-            yield user_dict
-        finally:
-            for user_out in user_dict.values():
-                await UserCRUD.delete_user(session, user_out.id)
+        for test_user, role in test_user_list.items():
+            user_in = UserCreate(
+                username=f"{test_user}_user",
+                email=f"{test_user}@example.com",
+                password="UkeV3BNUIL7x/n0J",
+            )
+            user: User = await UserCRUD.create_user(session, user_in)
+            await test_app.state.casbin_enforcer.add_role_for_user(
+                user=casbin_subject(user.id), role=role
+            )
+            user_dict[role] = user
+        yield user_dict
+
+
+@pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=True)
+async def default_pages(default_user):
+    from app.pages.page_models import Page
+    from app.utils import database as db
+
+    pages_list: List[Page] = []
+    for key, user in default_user.items():
+        pages_list.append(
+            Page(
+                title=f"{user.username}'s page",
+                body=f"{user.username} they have the role {key}",
+                user_id=user.id,
+            )
+        )
+    async with db.AsyncSessionLocal() as session:
+        session.add_all(pages_list)
+        await session.commit()
+
+    yield pages_list

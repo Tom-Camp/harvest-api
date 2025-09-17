@@ -21,6 +21,7 @@ async def assign_role(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+
     allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "add")
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -28,7 +29,6 @@ async def assign_role(
     await enforcer.add_role_for_user(
         user=casbin_subject(role_request.user_id), role=role_request.role_name
     )
-
     log_handler.log_security_event(
         "Role assigned to user",
         severity="medium",
@@ -38,9 +38,9 @@ async def assign_role(
             "actor_username": current_user.username,
             "target_user_id": role_request.user_id,
             "target_username": role_request.username,
-            "action": "role_assignment",
-            "resource": "user_role",
             "role_name": role_request.role_name,
+            "action": "assign_role",
+            "resource": "admin_routes",
         },
     )
 
@@ -55,6 +55,7 @@ async def remove_role(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+
     allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "delete")
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -72,9 +73,9 @@ async def remove_role(
             "actor_username": current_user.username,
             "target_user_id": role_request.user_id,
             "target_username": role_request.username,
-            "action": "role_assignment",
-            "resource": "user_role",
             "role_name": role_request.role_name,
+            "action": "remove_role",
+            "resource": "admin_routes",
         },
     )
 
@@ -89,6 +90,7 @@ async def check_permission(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+
     allowed = enforcer.enforce(casbin_subject(current_user.id), "policy", "read")
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -108,9 +110,10 @@ async def check_permission(
             "actor_username": current_user.username,
             "target_user_id": permission_request.user_id,
             "target_username": permission_request.username,
-            "action": "permission_check",
-            "resource": permission_request.resource,
+            "check_resource": permission_request.resource,
             "role_name": permission_request.action,
+            "action": "check_permission",
+            "resource": "admin_routes",
         },
     )
 
@@ -128,6 +131,7 @@ async def get_user_roles(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+
     allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "read")
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -142,8 +146,8 @@ async def get_user_roles(
             "actor_id": current_user.id,
             "actor_username": current_user.username,
             "target_user_id": user_id,
-            "action": "role_list",
-            "resource": "user_role",
+            "action": "get_user_roles",
+            "resource": "admin_routes",
         },
     )
     return {"user_id": user_id, "roles": roles}
@@ -155,6 +159,7 @@ async def get_role_users(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+
     allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "read")
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -168,8 +173,8 @@ async def get_role_users(
             "actor_id": current_user.id,
             "actor_username": current_user.username,
             "target_role": role_name,
-            "action": "role_list_users",
-            "resource": "user_role",
+            "action": "get_role_users",
+            "resource": "admin_routes",
         },
     )
     return {"role": role_name, "users": [user.replace("user:", "") for user in users]}

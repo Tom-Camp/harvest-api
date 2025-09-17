@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
 from app.casbin.casbin_config import get_casbin_enforcer
-from app.casbin.casbin_helpers import casbin_object, casbin_subject
+from app.casbin.casbin_helpers import casbin_object, casbin_subject, is_owner
 from app.logging import get_logger, log_handler
 from app.users.user_crud import UserCRUD
 from app.users.user_models import User
@@ -24,6 +24,7 @@ async def read_users_me(
     current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db),
 ) -> User | None:
+
     user = await UserCRUD.get_user(
         session=session,
         user_id=current_user.id,
@@ -37,6 +38,7 @@ async def read_users(
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
 ) -> Sequence:
+
     users = await UserCRUD.get_users(session, skip=skip, limit=limit)
     return users
 
@@ -48,6 +50,7 @@ async def read_user(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> User:
+
     allowed = enforcer.enforce(
         casbin_subject(current_user.id), casbin_object("u", user_id), "read"
     )
@@ -70,10 +73,19 @@ async def update_user(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> User:
-    allowed = enforcer.enforce(
-        casbin_subject(current_user.id), casbin_object("u", user_id), "update"
-    )
-    if not allowed:
+
+    existing_user = await UserCRUD.get_user(session, user_id)
+    if not existing_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user_subject = casbin_subject(current_user.id)
+    user_resource = casbin_object("p", user_id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, user_resource, "update")
+
+    # If RBAC fails, check ownership manually
+    if not allowed and not is_owner(user_subject, existing_user):
         raise HTTPException(status_code=403, detail="Forbidden")
 
     user = await UserCRUD.update_user(session, user_id, user_update)
@@ -89,15 +101,22 @@ async def delete_user(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
-    allowed = enforcer.enforce(
-        casbin_subject(current_user.id), casbin_object("u", user_id), "update"
-    )
-    user = await UserCRUD.get_user(session, user_id)
-    if not user:
+
+    existing_user = await UserCRUD.get_user(session, user_id)
+    if not existing_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if not allowed:
+    user_subject = casbin_subject(current_user.id)
+    user_resource = casbin_object("p", user_id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, user_resource, "update")
+
+    # If RBAC fails, check ownership manually
+    if not allowed and not is_owner(user_subject, existing_user):
         raise HTTPException(status_code=403, detail="Forbidden")
+
+    # Delete Pages associated with the User
 
     if not await UserCRUD.delete_user(session, user_id):
         raise HTTPException(status_code=404, detail="User not found")
@@ -110,10 +129,11 @@ async def delete_user(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "target_user_id": user.id,
-            "target_username": user.username,
-            "action": "user_delete",
+            "target_user_id": existing_user.id,
+            "target_username": existing_user.username,
+            "action": "delete_user",
+            "resource": "user_routes",
         },
     )
 
-    return {"message": f"User {user.username} deleted successfully"}
+    return {"message": f"User {existing_user.username} deleted successfully"}

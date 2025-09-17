@@ -17,3 +17,13 @@ class PageList(SQLModel):
     user_id: UUID
     title: str
     created_date: datetime
+
+
+class PageCreate(SQLModel):
+    title: str
+    body: str
+
+
+class PageUpdate(SQLModel):
+    title: str | None = None
+    body: str | None = None
