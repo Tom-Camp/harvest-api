@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
 from app.casbin.casbin_config import get_casbin_enforcer
-from app.casbin.casbin_helpers import casbin_object, casbin_subject
+from app.casbin.casbin_helpers import casbin_object, casbin_subject, is_owner
 from app.logging import get_logger, log_handler
 from app.pages.page_crud import PageCRUD
 from app.pages.page_models import Page
@@ -42,34 +42,8 @@ async def create_page(
             "actor_username": current_user.username,
             "page_id": new_page.id,
             "page_title": new_page.title,
-            "action": "content_creation",
-        },
-    )
-    object_id: str = casbin_object(kind="p", object_id=new_page.id)
-    await enforcer.add_policy(subject, object_id, "update")
-    await enforcer.add_policy(subject, object_id, "delete")
-    log_handler.log_security_event(
-        event="Permission policy update",
-        severity="moderate",
-        context={
-            "actor_id": current_user.id,
-            "actor_username": current_user.username,
-            "page_id": new_page.id,
-            "page_title": new_page.title,
-            "action": "page_update",
-        },
-    )
-
-    await enforcer.add_policy(subject, object_id, "delete")
-    log_handler.log_security_event(
-        event="Permission policy delete",
-        severity="moderate",
-        context={
-            "actor_id": current_user.id,
-            "actor_username": current_user.username,
-            "page_id": new_page.id,
-            "page_title": new_page.title,
-            "action": "page_delete",
+            "action": "create_page",
+            "resource": "page_routes",
         },
     )
 
@@ -125,8 +99,14 @@ async def update_page(
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
 
-    allowed = enforcer.enforce(casbin_subject(current_user.id), page, "update")
-    if not allowed:
+    user_subject = casbin_subject(current_user.id)
+    page_resource = casbin_object("p", page.id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, page_resource, "update")
+
+    # If RBAC fails, check ownership manually
+    if not allowed and not is_owner(user_subject, page):
         raise HTTPException(status_code=403, detail="Forbidden")
 
     updated_page = await PageCRUD.update_page(session, page_id, page_update)
@@ -140,7 +120,8 @@ async def update_page(
                 "actor_username": current_user.username,
                 "page_id": updated_page.id,
                 "page_title": updated_page.title,
-                "action": "page_update",
+                "action": "update_page",
+                "resource": "page_routes",
             },
         )
     return updated_page
@@ -158,8 +139,14 @@ async def delete_page(
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
 
-    allowed = enforcer.enforce(casbin_subject(current_user.id), page, "delete")
-    if not allowed:
+    user_subject = casbin_subject(current_user.id)
+    page_resource = casbin_object("p", page.id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, page_resource, "update")
+
+    # If RBAC fails, check ownership manually
+    if not allowed and not is_owner(user_subject, page):
         raise HTTPException(status_code=403, detail="Forbidden")
 
     if not await PageCRUD.delete_page(session, page_id):
@@ -174,7 +161,8 @@ async def delete_page(
             "actor_username": current_user.username,
             "page_id": page.id,
             "page_title": page.title,
-            "action": "page_delete",
+            "action": "delete_page",
+            "resource": "page_routes",
         },
     )
 

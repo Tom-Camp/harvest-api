@@ -37,24 +37,26 @@ m = m_admin || m_rbac || m_owner
 ## Default Policies
 
 ```python
-policies = [
-    # admin – total wildcard
-    ("p", "admin", "*", "*", "allow"),
-
-    # moderator – can read/update/delete any user object
-    ("p", "moderator", "u:*", "read",   "allow"),
-    ("p", "moderator", "u:*", "update", "allow"),
-    ("p", "moderator", "u:*", "delete", "allow"),
-
-    # moderator – can manage any page
-    ("p", "moderator", "p:*", "create", "allow"),
-    ("p", "moderator", "p:*", "update", "allow"),
-    ("p", "moderator", "p:*", "delete", "allow"),
-
-    # regular user – can update/delete **their own** user record
-    # we will rely on the ABAC “owner” matcher for this, so the object pattern
-    # can be a wildcard; the owner check will filter it down.
-    ("p", "user", "u:*", "update", "allow"),
-    ("p", "user", "u:*", "delete", "allow"),
+DEFAULT_POLICIES = [
+    # Admin permissions - full access
+    ("admin", "*", "*"),
+    ("admin", "role", "add"),
+    ("admin", "role", "delete"),
+    ("admin", "role", "read"),
+    ("admin", "policy", "read"),
+    # Moderator permissions
+    ("moderator", "u:*", "read"),
+    ("moderator", "u:*", "update"),
+    ("moderator", "u:*", "delete"),
+    ("moderator", "p:*", "create"),
+    ("moderator", "p:*", "read"),
+    ("moderator", "p:*", "update"),
+    ("moderator", "p:*", "delete"),
+    ("moderator", "role", "read"),
+    ("moderator", "policy", "read"),
+    # User permissions - basic access
+    ("user", "u:*", "read"),
+    ("user", "p:*", "create"),
+    ("user", "p:*", "read"),
 ]
 ```

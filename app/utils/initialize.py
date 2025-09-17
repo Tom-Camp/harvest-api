@@ -32,7 +32,8 @@ async def setup_initial_admin(session: AsyncSession) -> UUID:
                 "actor_username": "lifespan",
                 "username": admin_user.username,
                 "user_id": admin_user.id,
-                "resource": "user_create",
+                "action": "setup_initial_admin",
+                "resource": "initialize",
             },
         )
 

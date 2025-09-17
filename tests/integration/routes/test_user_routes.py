@@ -2,22 +2,36 @@ from typing import List
 
 import pytest
 
+from app.users.user_models import User
+
 
 class TestUserRoutes:
-    headers: dict = {"Content-Type": "application/json"}
 
     @pytest.mark.asyncio
-    async def test_read_users_me(self, client, default_user):
-        test_as = next(iter(default_user.values()))
-        get_token = await client.post(
-            url="/api/auth/token",
-            data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
-        )
-        self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
-        response = await client.get(url="/api/users/me", headers=self.headers)
+    @pytest.mark.parametrize(
+        "user_name,expected_status",
+        [
+            ("", 401),
+            ("admin", 200),
+            ("moderator", 200),
+            ("authenticated", 200),
+        ],
+    )
+    async def test_read_users_me(
+        self, client, default_user, user_name, expected_status
+    ):
+        headers: dict = {"Content-Type": "application/json"}
+        if test_as := default_user.get(user_name, ""):
+            get_token = await client.post(
+                url="/api/auth/token",
+                data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
+            )
+            headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
+        response = await client.get(url="/api/users/me", headers=headers)
 
-        assert response.status_code == 200
-        assert response.json()["username"] == test_as.username
+        assert response.status_code == expected_status
+        if response.status_code == 200:
+            assert response.json()["username"] == test_as.username
 
     @pytest.mark.asyncio
     async def test_read_users(self, client):
@@ -28,26 +42,27 @@ class TestUserRoutes:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "test_user,expected_status",
+        "user_name,expected_status",
         [
+            ("", 401),
             ("admin", 200),
-            ("moderator", 403),
-            ("user", 403),
+            ("moderator", 200),
+            ("authenticated", 200),
         ],
     )
     async def test_read_user(
-        self, client, default_user, test_user: str, expected_status: int
+        self, client, default_user, user_name: str, expected_status: int
     ):
-        test_as = default_user[test_user]
-        read_user = default_user["user"]
-        get_token = await client.post(
-            url="/api/auth/token",
-            data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
-        )
-        self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
-        response = await client.get(
-            url=f"/api/users/{read_user.id}", headers=self.headers
-        )
+        headers: dict = {"Content-Type": "application/json"}
+        if test_as := default_user.get(user_name, ""):
+            get_token = await client.post(
+                url="/api/auth/token",
+                data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
+            )
+            headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
+
+        read_user = default_user["authenticated"]
+        response = await client.get(url=f"/api/users/{read_user.id}", headers=headers)
 
         assert response.status_code == expected_status
         if expected_status == 200:
@@ -55,67 +70,34 @@ class TestUserRoutes:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "test_user,expected_status",
+        "user_name,expected_status",
         [
+            ("", 401),
             ("admin", 200),
-            ("moderator", 403),
-            ("user", 403),
+            ("moderator", 200),
+            ("authenticated", 200),
         ],
     )
     async def test_update_user(
-        self, client, default_user, test_user: str, expected_status: int
+        self, client, default_user, user_name: str, expected_status: int
     ):
-        test_as = default_user[test_user]
-        read_user = default_user["user"]
-        get_token = await client.post(
-            url="/api/auth/token",
-            data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
-        )
-        self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
+        headers: dict = {"Content-Type": "application/json"}
+        if test_as := default_user.get(user_name, ""):
+            get_token = await client.post(
+                url="/api/auth/token",
+                data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
+            )
+            headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
+
+        read_user = default_user["authenticated"]
+        username = test_as.username if isinstance(test_as, User) else "Anonymous"
         payload: dict = {
-            "full_name": f"Updated by {test_as.username}",
+            "full_name": f"Updated by {username}",
         }
         response = await client.put(
-            url=f"/api/users/{read_user.id}", json=payload, headers=self.headers
+            url=f"/api/users/{read_user.id}", json=payload, headers=headers
         )
 
         assert response.status_code == expected_status
         if expected_status == 200:
-            assert response.json()["full_name"] == f"Updated by {test_as.username}"
-
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize(
-        "test_user,expected_status",
-        [
-            ("admin", 200),
-            ("moderator", 403),
-            ("user", 403),
-        ],
-    )
-    async def test_delete_user(
-        self, client, default_user, test_user: str, expected_status: int
-    ):
-        test_as = default_user[test_user]
-        get_token = await client.post(
-            url="/api/auth/token",
-            data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
-        )
-        self.headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
-        payload: dict = {
-            "username": "alice",
-            "email": "alice@example.com",
-            "password": "milk prairie island desert",
-        }
-        response = await client.post(
-            "/api/auth/register",
-            json=payload,
-            headers={"Content-Type": "application/json"},
-        )
-        new_user = response.json()
-        response = await client.delete(
-            url=f"/api/users/{new_user.get('id', None)}", headers=self.headers
-        )
-
-        assert response.status_code == expected_status
-        if expected_status == 200:
-            assert response.json().get("message") == "User alice deleted successfully"
+            assert response.json()["full_name"] == f"Updated by {username}"

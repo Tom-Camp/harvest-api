@@ -52,6 +52,7 @@ async def initialize_default_policies(enforcer: AsyncEnforcer):
             "actor_id": "startup",
             "actor_username": "lifespan",
             "policies": DEFAULT_POLICIES,
+            "action": "initialize_default_policies",
             "resource": "casbin_config",
         },
     )
@@ -79,6 +80,7 @@ async def setup_admin_users(
                         "actor_username": "lifespan",
                         "user_id": admin_id,
                         "role": "admin",
+                        "action": "setup_admin_users",
                         "resource": "casbin_config",
                     },
                 )
@@ -91,6 +93,7 @@ async def setup_admin_users(
                         "actor_username": "lifespan",
                         "user_id": admin_id,
                         "role": "admin",
+                        "action": "setup_admin_users",
                         "resource": "casbin_config",
                     },
                 )
@@ -103,6 +106,7 @@ async def setup_admin_users(
                     "actor_username": "lifespan",
                     "user_id": admin_id,
                     "role": "admin",
+                    "action": "setup_admin_users",
                     "resource": "casbin_config",
                 },
             )
@@ -135,6 +139,7 @@ async def startup_casbin(app, db_url: str, admin_user_ids: List | None = None):
             context={
                 "total_policies": total_policies,
                 "total_roles_assigned": total_roles,
+                "action": "startup_casbin",
                 "resource": "casbin_config",
             },
         )

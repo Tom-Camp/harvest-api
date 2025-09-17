@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
 from app.casbin.casbin_config import get_casbin_enforcer
-from app.casbin.casbin_helpers import casbin_object, casbin_subject
+from app.casbin.casbin_helpers import casbin_object, casbin_subject, is_owner
 from app.logging import get_logger, log_handler
 from app.users.user_crud import UserCRUD
 from app.users.user_models import User
@@ -78,8 +78,14 @@ async def update_user(
     if not existing_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    allowed = enforcer.enforce(casbin_subject(current_user.id), existing_user, "update")
-    if not allowed:
+    user_subject = casbin_subject(current_user.id)
+    user_resource = casbin_object("p", user_id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, user_resource, "update")
+
+    # If RBAC fails, check ownership manually
+    if not allowed and not is_owner(user_subject, existing_user):
         raise HTTPException(status_code=403, detail="Forbidden")
 
     user = await UserCRUD.update_user(session, user_id, user_update)
@@ -100,8 +106,14 @@ async def delete_user(
     if not existing_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    allowed = enforcer.enforce(casbin_subject(current_user.id), existing_user, "update")
-    if not allowed:
+    user_subject = casbin_subject(current_user.id)
+    user_resource = casbin_object("p", user_id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, user_resource, "update")
+
+    # If RBAC fails, check ownership manually
+    if not allowed and not is_owner(user_subject, existing_user):
         raise HTTPException(status_code=403, detail="Forbidden")
 
     # Delete Pages associated with the User
@@ -119,7 +131,8 @@ async def delete_user(
             "actor_username": current_user.username,
             "target_user_id": existing_user.id,
             "target_username": existing_user.username,
-            "action": "user_delete",
+            "action": "delete_user",
+            "resource": "user_routes",
         },
     )
 

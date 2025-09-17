@@ -42,6 +42,8 @@ async def login_for_access_token(
                 "username": form_data.username,
                 "client_ip": request.client.host,
                 "user_agent": request.headers.get("user-agent"),
+                "action": "login_for_access_token",
+                "resource": "auth_routes",
             },
         )
         raise HTTPException(
@@ -64,6 +66,8 @@ async def login_for_access_token(
             "client_ip": request.client.host,
             "user_agent": request.headers.get("user-agent"),
             "user_id": user.id,
+            "action": "login_for_access_token",
+            "resource": "auth_routes",
         },
     )
     return {"access_token": access_token, "token_type": "bearer"}
@@ -104,6 +108,8 @@ async def register(
                 "length": pw_is_valid.get("length"),
                 "zxcvbn_score": pw_is_valid.get("zxcvbn_score"),
                 "pwned_count": pw_is_valid.get("pwned_count"),
+                "action": "register",
+                "resource": "auth_routes",
             },
         )
         response_message = await failed_password_messages(pw_is_valid)
@@ -125,6 +131,8 @@ async def register(
             "client_ip": request.client.host,
             "user_agent": request.headers.get("user-agent"),
             "user_id": new_user.id,
+            "action": "register",
+            "resource": "auth_routes",
         },
     )
 

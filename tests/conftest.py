@@ -16,7 +16,7 @@ os.environ["CASBIN_DB_URL"] = TEST_DB_URL
 os.environ["DATABASE_URL"] = TEST_DB_URL
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=True)
 async def test_app():
     if os.path.exists(TEST_DB_PATH):
         os.remove(TEST_DB_PATH)
@@ -50,7 +50,7 @@ async def client(test_app):
         yield ac
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=True)
 async def default_user(test_app):
     from app.casbin.casbin_helpers import casbin_subject
     from app.users.user_crud import UserCRUD
@@ -62,7 +62,7 @@ async def default_user(test_app):
     test_user_list: dict = {
         "test_admin": "admin",
         "test_moderator": "moderator",
-        "test_user": "user",
+        "test_authenticated": "authenticated",
     }
     async with db.AsyncSessionLocal() as session:
         for test_user, role in test_user_list.items():
@@ -79,23 +79,17 @@ async def default_user(test_app):
         yield user_dict
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=True)
 async def default_pages(default_user):
     from app.pages.page_models import Page
     from app.utils import database as db
 
     pages_list: List[Page] = []
-    test_pages_list: List[dict] = [
-        {"title": "Page one", "body": "This is page one"},
-        {"title": "Page two", "body": "This is page two"},
-        {"title": "Page three", "body": "This is page three"},
-    ]
-    user = default_user.get("moderator")
-    for test_page in test_pages_list:
+    for key, user in default_user.items():
         pages_list.append(
             Page(
-                title=test_page.get("title"),
-                body=test_page.get("body"),
+                title=f"{user.username}'s page",
+                body=f"{user.username} they have the role {key}",
                 user_id=user.id,
             )
         )
@@ -103,4 +97,4 @@ async def default_pages(default_user):
         session.add_all(pages_list)
         await session.commit()
 
-        yield pages_list
+    yield pages_list

@@ -88,7 +88,7 @@ class TestAuthRoutes:
 
     @pytest.mark.asyncio
     async def test_login_for_access_token(self, client, default_user):
-        user = default_user.get("user")
+        user = default_user.get("admin")
         payload = {
             "username": user.username,
             "password": "UkeV3BNUIL7x/n0J",
@@ -101,7 +101,7 @@ class TestAuthRoutes:
 
     @pytest.mark.asyncio
     async def test_login_for_access_token_invalid_password(self, client, default_user):
-        user = default_user.get("user")
+        user = default_user.get("admin")
         payload = {
             "username": user.username,
             "password": "YkeV3BNUIL7x/n0J",
