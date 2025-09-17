@@ -1,6 +1,10 @@
 from typing import Any
 from uuid import UUID
 
+from app.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 def casbin_subject(user_id: UUID) -> str:
     return f"user:{user_id}"
@@ -21,6 +25,7 @@ def is_owner(subject_id: str, check_object: Any) -> bool:
       * any other domain object that defines an `user_id` association.
       * a string in format "kind:uuid" (e.g., "p:uuid" or "u:uuid")
     """
+    logger.info(f"Checking if {subject_id} is owner")
     try:
         _, sub_uuid = subject_id.split(":")
     except (ValueError, AttributeError):

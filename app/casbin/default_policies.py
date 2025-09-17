@@ -2,24 +2,18 @@ from typing import List
 from uuid import UUID
 
 DEFAULT_POLICIES = [
-    ("admin", "*", "*"),
-    ("admin", "role", "add"),
-    ("admin", "role", "delete"),
-    ("admin", "role", "read"),
-    ("admin", "policy", "read"),
-    ("admin", "policy", "add"),
-    ("moderator", "u:*", "read"),
-    ("moderator", "u:*", "update"),
-    ("moderator", "u:*", "delete"),
-    ("moderator", "page", "create"),
-    ("moderator", "p:*", "read"),
-    ("moderator", "p:*", "update"),
-    ("moderator", "p:*", "delete"),
-    ("moderator", "role", "read"),
-    ("moderator", "policy", "read"),
-    ("authenticated", "u:*", "read"),
-    ("authenticated", "page", "create"),
-    ("authenticated", "p:*", "read"),
+    ("admin", "*", "*", "allow"),
+    ("moderator", "u:*", "read", "allow"),
+    ("moderator", "u:*", "update", "allow"),
+    ("moderator", "u:*", "delete", "allow"),
+    ("moderator", "page", "create", "allow"),
+    ("moderator", "p:*", "read", "allow"),
+    ("moderator", "p:*", "update", "allow"),
+    ("moderator", "p:*", "delete", "allow"),
+    ("moderator", "role", "read", "allow"),
+    ("moderator", "policy", "read", "allow"),
+    ("authenticated", "u:*", "read", "allow"),
+    ("authenticated", "p:*", "read", "allow"),
 ]
 
 DEFAULT_ADMIN_USERS: List[UUID] = []

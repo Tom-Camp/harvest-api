@@ -13,7 +13,7 @@ class TestPageRoutes:
         [
             ("admin", 200),
             ("moderator", 200),
-            ("authenticated", 200),
+            ("authenticated", 403),
             ("", 401),
         ],
     )
@@ -101,7 +101,7 @@ class TestPageRoutes:
             ("", 401),
             ("admin", 200),
             ("moderator", 200),
-            ("authenticated", 200),
+            ("authenticated", 403),
         ],
     )
     async def test_update_page(
@@ -109,6 +109,7 @@ class TestPageRoutes:
     ):
         headers: dict = {"Content-Type": "application/json"}
         if test_as := default_user.get(user_name, ""):
+            headers["Authorization"] = ""
             get_token = await client.post(
                 url="/api/auth/token",
                 data={
