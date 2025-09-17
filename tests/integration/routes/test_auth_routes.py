@@ -1,3 +1,5 @@
+from typing import Dict
+
 import pytest
 
 
@@ -22,7 +24,7 @@ class TestAuthRoutes:
 
     @pytest.mark.asyncio
     async def test_register_invalid_email(self, client):
-        payload: dict = {
+        payload: Dict[str, str] = {
             "username": "alice",
             "email": "alice@example",
             "password": "milk prairie island desert",
@@ -36,7 +38,7 @@ class TestAuthRoutes:
 
     @pytest.mark.asyncio
     async def test_register_invalid_username(self, client):
-        payload = {
+        payload: Dict[str, str] = {
             "email": "alice@example",
             "password": "milk prairie island desert",
         }
@@ -49,7 +51,7 @@ class TestAuthRoutes:
 
     @pytest.mark.asyncio
     async def test_register_invalid_password_length(self, client):
-        payload = {
+        payload: Dict[str, str] = {
             "email": "alice@example",
             "password": "6j9ZI43/jcA",
         }
@@ -62,7 +64,7 @@ class TestAuthRoutes:
 
     @pytest.mark.asyncio
     async def test_register_invalid_password_complexity(self, client):
-        payload = {
+        payload: Dict[str, str] = {
             "email": "alice@example",
             "password": "lemon meringue pie",
         }
@@ -75,7 +77,7 @@ class TestAuthRoutes:
 
     @pytest.mark.asyncio
     async def test_register_invalid_password_breach(self, client):
-        payload = {
+        payload: Dict[str, str] = {
             "email": "alice@example",
             "password": "correct horse battery staple",
         }
@@ -89,7 +91,7 @@ class TestAuthRoutes:
     @pytest.mark.asyncio
     async def test_login_for_access_token(self, client, default_user):
         user = default_user.get("admin")
-        payload = {
+        payload: Dict[str, str] = {
             "username": user.username,
             "password": "UkeV3BNUIL7x/n0J",
         }
