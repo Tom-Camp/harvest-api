@@ -9,8 +9,6 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: float = 30
     CASBIN_DB_URL: str | None = None
     CORS_ORIGINS: List[str] | None = None
-    DB_USER: str | None = None
-    DB_PASS: str | None = None
     ENVIRONMENT: str | None = None
     HASH_ALGORITHM: str | None = None
     INITIAL_USER_NAME: str = Field(default="admin")
