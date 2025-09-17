@@ -1,3 +1,5 @@
+from typing import Dict
+
 import pytest
 
 
@@ -16,7 +18,7 @@ class TestAdminRoutes:
     async def test_assign_role(
         self, client, default_user, user_name: str, expected_status: int
     ):
-        headers: dict = {"Content-Type": "application/json"}
+        headers: Dict[str, str] = {"Content-Type": "application/json"}
         if test_as := default_user.get(user_name, ""):
             get_token = await client.post(
                 url="/api/auth/token",
@@ -48,7 +50,7 @@ class TestAdminRoutes:
     async def test_remove_role(
         self, client, default_user, user_name: str, expected_status: int
     ):
-        headers: dict = {"Content-Type": "application/json"}
+        headers: Dict[str, str] = {"Content-Type": "application/json"}
         if test_as := default_user.get(user_name, ""):
             get_token = await client.post(
                 url="/api/auth/token",
@@ -80,7 +82,7 @@ class TestAdminRoutes:
     async def test_check_permissions(
         self, client, default_user, user_name: str, expected_status: int
     ):
-        headers: dict = {"Content-Type": "application/json"}
+        headers: Dict[str, str] = {"Content-Type": "application/json"}
         if test_as := default_user.get(user_name, ""):
             get_token = await client.post(
                 url="/api/auth/token",
@@ -113,7 +115,7 @@ class TestAdminRoutes:
     async def test_get_user_roles(
         self, client, default_user, user_name: str, expected_status: int
     ):
-        headers: dict = {}
+        headers: Dict[str, str] = {}
         if test_as := default_user.get(user_name, ""):
             get_token = await client.post(
                 url="/api/auth/token",
@@ -140,7 +142,7 @@ class TestAdminRoutes:
     async def test_get_role_users(
         self, client, default_user, user_name: str, expected_status: int
     ):
-        headers: dict = {"Content-Type": "application/json"}
+        headers: Dict[str, str] = {"Content-Type": "application/json"}
         if test_as := default_user.get(user_name, ""):
             get_token = await client.post(
                 url="/api/auth/token",
@@ -166,7 +168,7 @@ class TestAdminRoutes:
     async def test_debug_role_users(
         self, client, default_user, user_name: str, expected_status: int
     ):
-        headers: dict = {"Content-Type": "application/json"}
+        headers: Dict[str, str] = {"Content-Type": "application/json"}
         if test_as := default_user.get(user_name, ""):
             get_token = await client.post(
                 url="/api/auth/token",

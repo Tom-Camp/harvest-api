@@ -12,7 +12,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Ensure Casbin uses the testing DB
 TEST_DB_PATH = "./test_auth.db"
 TEST_DB_URL = f"sqlite+aiosqlite:///{TEST_DB_PATH}"
-os.environ["CASBIN_DB_URL"] = TEST_DB_URL
 os.environ["DATABASE_URL"] = TEST_DB_URL
 
 
@@ -63,6 +62,7 @@ async def default_user(test_app):
         "test_admin": "admin",
         "test_moderator": "moderator",
         "test_authenticated": "authenticated",
+        "test_user": "tester",
     }
     async with db.AsyncSessionLocal() as session:
         for test_user, role in test_user_list.items():
@@ -72,9 +72,10 @@ async def default_user(test_app):
                 password="UkeV3BNUIL7x/n0J",
             )
             user: User = await UserCRUD.create_user(session, user_in)
-            await test_app.state.casbin_enforcer.add_role_for_user(
-                user=casbin_subject(user.id), role=role
-            )
+            if role in ["admin", "moderator"]:
+                await test_app.state.casbin_enforcer.add_role_for_user(
+                    user=casbin_subject(user.id), role=role
+                )
             user_dict[role] = user
         yield user_dict
 
@@ -85,14 +86,20 @@ async def default_pages(default_user):
     from app.utils import database as db
 
     pages_list: List[Page] = []
-    for key, user in default_user.items():
-        pages_list.append(
-            Page(
-                title=f"{user.username}'s page",
-                body=f"{user.username} they have the role {key}",
-                user_id=user.id,
-            )
+    pages_list.append(
+        Page(
+            title=f"{default_user['admin'].username}'s page",
+            body=f"{default_user['admin'].username} they have the role admin",
+            user_id=default_user["admin"].id,
         )
+    )
+    pages_list.append(
+        Page(
+            title=f"{default_user['moderator'].username}'s page",
+            body=f"{default_user['moderator'].username} they have the role moderator",
+            user_id=default_user["moderator"].id,
+        )
+    )
     async with db.AsyncSessionLocal() as session:
         session.add_all(pages_list)
         await session.commit()

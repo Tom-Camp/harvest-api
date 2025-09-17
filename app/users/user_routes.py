@@ -23,12 +23,17 @@ user_router = APIRouter(prefix="/users")
 async def read_users_me(
     current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> User | None:
 
     user = await UserCRUD.get_user(
         session=session,
         user_id=current_user.id,
     )
+    if user:
+        await enforcer.add_role_for_user(
+            user=casbin_subject(user.id), role="authenticated"
+        )
     return user
 
 

@@ -27,7 +27,6 @@ class Settings(BaseSettings):
     POSTGRES_USER: str | None = None
     SECRET_KEY: str | None = None
     SITE_EMAIL: EmailStr | None = None
-    USER_SECRET: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -41,10 +40,6 @@ class Settings(BaseSettings):
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{pwd}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
-
-    @property
-    def casbin_database_url(self) -> str:
-        return self.CASBIN_DB_URL or self.async_database_url
 
 
 settings = Settings()
