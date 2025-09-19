@@ -11,6 +11,7 @@ class TestAuthRoutes:
             "username": "alice",
             "email": "alice@example.com",
             "password": "milk prairie island desert",
+            "location": "Lebanon, Kansas",
         }
         response = await client.post(
             url="/api/auth/register",
@@ -28,6 +29,7 @@ class TestAuthRoutes:
             "username": "alice",
             "email": "alice@example",
             "password": "milk prairie island desert",
+            "location": "Lebanon, Kansas",
         }
         response = await client.post(
             url="/api/auth/register",
@@ -41,6 +43,7 @@ class TestAuthRoutes:
         payload: Dict[str, str] = {
             "email": "alice@example",
             "password": "milk prairie island desert",
+            "location": "Lebanon, Kansas",
         }
         response = await client.post(
             url="/api/auth/register",
@@ -54,6 +57,7 @@ class TestAuthRoutes:
         payload: Dict[str, str] = {
             "email": "alice@example",
             "password": "6j9ZI43/jcA",
+            "location": "Lebanon, Kansas",
         }
         response = await client.post(
             url="/api/auth/register",
@@ -80,6 +84,20 @@ class TestAuthRoutes:
         payload: Dict[str, str] = {
             "email": "alice@example",
             "password": "correct horse battery staple",
+            "location": "Lebanon, Kansas",
+        }
+        response = await client.post(
+            url="/api/auth/register",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_register_no_location(self, client):
+        payload: Dict[str, str] = {
+            "email": "alice@example",
+            "password": "correct horse battery staple",
         }
         response = await client.post(
             url="/api/auth/register",
@@ -94,6 +112,7 @@ class TestAuthRoutes:
         payload: Dict[str, str] = {
             "username": user.username,
             "password": "UkeV3BNUIL7x/n0J",
+            "location": "Lebanon, Kansas",
         }
         response = await client.post(
             url="/api/auth/token",
@@ -107,6 +126,7 @@ class TestAuthRoutes:
         payload = {
             "username": user.username,
             "password": "YkeV3BNUIL7x/n0J",
+            "location": "Lebanon, Kansas",
         }
         response = await client.post(
             url="/api/auth/token",

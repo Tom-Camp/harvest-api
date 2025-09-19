@@ -11,8 +11,9 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] | None = None
     ENVIRONMENT: str | None = None
     HASH_ALGORITHM: str | None = None
-    INITIAL_USER_NAME: str = Field(default="admin")
+    INITIAL_USER_LOCATION: str = Field(default="Lebanon, Kansas")
     INITIAL_USER_MAIL: str = Field(default="admin@example.com")
+    INITIAL_USER_NAME: str = Field(default="admin")
     INITIAL_USER_PASS: str = Field(default="Ch4ng3M3!")
     LOG_LEVEL: str = Field(default="INFO")
     LOG_NAME: str = Field(default="harvestLog")

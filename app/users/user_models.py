@@ -19,10 +19,12 @@ class UserBase(SQLModel):
         nullable=False,
         description="User email",
     )
-    full_name: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
     is_active: bool = Field(default=True)
 
 
 class User(ModelBase, UserBase, table=True):  # type: ignore
+    location: str
     hashed_password: str
     pages: List["Page"] = Relationship(back_populates="user")

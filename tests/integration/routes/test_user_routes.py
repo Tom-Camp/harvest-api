@@ -92,7 +92,7 @@ class TestUserRoutes:
         read_user = default_user["tester"]
         username = test_as.username if isinstance(test_as, User) else "Anonymous"
         payload: Dict[str, str] = {
-            "full_name": f"{read_user.username} updated by {username}",
+            "first_name": f"{read_user.username} updated by {username}",
         }
         response = await client.put(
             url=f"/api/users/{read_user.id}", json=payload, headers=headers
@@ -101,7 +101,7 @@ class TestUserRoutes:
         assert response.status_code == expected_status
         if expected_status == 200:
             assert (
-                response.json()["full_name"]
+                response.json()["first_name"]
                 == f"{read_user.username} updated by {username}"
             )
 
@@ -128,7 +128,7 @@ class TestUserRoutes:
         headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
 
         payload: Dict[str, str] = {
-            "full_name": f"{default_user[user_name].username} updated by self",
+            "first_name": f"{default_user[user_name].username} updated by self",
         }
         response = await client.put(
             url=f"/api/users/{default_user[user_name].id}",
@@ -138,6 +138,6 @@ class TestUserRoutes:
 
         assert response.status_code == expected_status
         assert (
-            response.json()["full_name"]
+            response.json()["first_name"]
             == f"{default_user[user_name].username} updated by self"
         )

@@ -6,13 +6,21 @@ from app.users.user_models import UserBase
 
 class UserCreate(UserBase):
     password: str
+    location: str
+    first_name: str | None = None
+    last_name: str | None = None
 
 
 class UserUpdate(SQLModel):
     email: str | None = None
     username: str | None = None
-    full_name: str | None = None
+    location: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
 
 
 class UserRead(ModelBase, UserBase):
-    pass
+    email: str
+    username: str
+    first_name: str | None = None
+    last_name: str | None = None
