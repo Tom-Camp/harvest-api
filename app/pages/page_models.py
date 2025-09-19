@@ -12,5 +12,5 @@ if TYPE_CHECKING:
 class Page(ModelBase, table=True):  # type: ignore
     title: str
     body: str
-    user_id: UUID = Field(foreign_key="user.id", nullable=False)
+    user_id: UUID = Field(foreign_key="user.id", nullable=False, ondelete="CASCADE")
     user: "User" = Relationship(back_populates="pages")

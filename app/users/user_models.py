@@ -7,6 +7,7 @@ from sqlmodel import Field, Relationship, SQLModel
 from app.helpers.model_base import ModelBase
 
 if TYPE_CHECKING:
+    from app.gardens.garden_models import Garden  # noqa: F401
     from app.pages.page_models import Page  # noqa: F401
 
 
@@ -28,3 +29,4 @@ class User(ModelBase, UserBase, table=True):  # type: ignore
     location: str
     hashed_password: str
     pages: List["Page"] = Relationship(back_populates="user")
+    gardens: List["Garden"] = Relationship(back_populates="user")
