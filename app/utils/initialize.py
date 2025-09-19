@@ -15,7 +15,7 @@ async def setup_initial_admin(session: AsyncSession) -> UUID:
         "username": settings.INITIAL_USER_NAME,
         "email": settings.INITIAL_USER_MAIL,
         "password": settings.INITIAL_USER_PASS,
-        "is_active": True,
+        "location": settings.INITIAL_USER_LOCATION,
     }
 
     existing_admin = await UserCRUD.get_user_by_username(
