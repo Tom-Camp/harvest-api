@@ -2,22 +2,13 @@ from typing import List
 
 from pydantic import BaseModel
 
+from app.gardens.bed_schemas import BedRead
 
-class BedList(BaseModel):
+
+class GardenCreate(BaseModel):
     name: str
     description: str | None = None
-
-
-class BedRead(BaseModel):
-    name: str
-    description: str | None = None
-    notes: List[str] | None = None
-
-
-class BedUpdate(BaseModel):
-    name: str
-    description: str | None = None
-    notes: List[str] | None = None
+    location: str | None = None
 
 
 class GardenList(BaseModel):
@@ -34,8 +25,8 @@ class GardenRead(BaseModel):
 
 
 class GardenUpdate(BaseModel):
-    name: str
+    name: str | None = None
     description: str | None = None
-    location: str
+    location: str | None = None
     notes: List[str] | None = None
     is_private: bool

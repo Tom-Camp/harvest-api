@@ -10,6 +10,8 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from app.admin.admin_routes import admin_router
 from app.auth.auth_routes import auth_router
 from app.casbin.casbin_config import startup_casbin
+from app.gardens.bed_routes import bed_router
+from app.gardens.garden_routes import garden_router
 from app.logging import get_logger
 from app.logging.log_config import configure_structlog
 from app.logging.log_middleware import LoggingMiddleware
@@ -62,9 +64,11 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix="/api", tags=["authentication"])
-app.include_router(user_router, prefix="/api", tags=["users"])
 app.include_router(admin_router, prefix="/api", tags=["admin"])
+app.include_router(bed_router, prefix="/api", tags=["garden"])
+app.include_router(garden_router, prefix="/api", tags=["garden"])
 app.include_router(page_router, prefix="/api", tags=["pages"])
+app.include_router(user_router, prefix="/api", tags=["users"])
 
 
 @app.get("/health")

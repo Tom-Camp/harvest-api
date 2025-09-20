@@ -1,10 +1,10 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlmodel import SQLModel
+from pydantic import BaseModel
 
 
-class PageRead(SQLModel):
+class PageRead(BaseModel):
     id: UUID
     user_id: UUID
     title: str
@@ -12,18 +12,18 @@ class PageRead(SQLModel):
     created_date: datetime
 
 
-class PageList(SQLModel):
+class PageList(BaseModel):
     id: UUID
     user_id: UUID
     title: str
     created_date: datetime
 
 
-class PageCreate(SQLModel):
+class PageCreate(BaseModel):
     title: str
     body: str
 
 
-class PageUpdate(SQLModel):
+class PageUpdate(BaseModel):
     title: str | None = None
     body: str | None = None

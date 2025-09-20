@@ -70,7 +70,6 @@ async def default_user(test_app):
                 username=f"{test_user}_user",
                 email=f"{test_user}@example.com",
                 password="UkeV3BNUIL7x/n0J",
-                location="Lebanon, Kansas",
             )
             user: User = await UserCRUD.create_user(session, user_in)
             if role in ["admin", "moderator"]:

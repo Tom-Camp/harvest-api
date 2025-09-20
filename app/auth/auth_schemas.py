@@ -1,17 +1,17 @@
 from typing import Optional
 
-from sqlmodel import SQLModel
+from pydantic import BaseModel
 
 
-class Token(SQLModel):
+class Token(BaseModel):
     access_token: str
     token_type: str
 
 
-class TokenData(SQLModel):
+class TokenData(BaseModel):
     username: Optional[str] = None
 
 
-class UserLogin(SQLModel):
+class UserLogin(BaseModel):
     username: str
     password: str

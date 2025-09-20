@@ -26,7 +26,6 @@ class UserBase(SQLModel):
 
 
 class User(ModelBase, UserBase, table=True):  # type: ignore
-    location: str
     hashed_password: str
     pages: List["Page"] = Relationship(back_populates="user")
     gardens: List["Garden"] = Relationship(back_populates="user")
