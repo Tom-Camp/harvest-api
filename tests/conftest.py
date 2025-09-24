@@ -73,11 +73,14 @@ async def default_user(test_app):
                 password="UkeV3BNUIL7x/n0J",
             )
             user: User = await UserCRUD.create_user(session, user_in)
-            if role in ["admin", "moderator", "authenticated"]:
+            await test_app.state.casbin_enforcer.add_role_for_user(
+                user=casbin_subject(user.id), role="authenticated"
+            )
+            if role in ["admin", "moderator"]:
                 await test_app.state.casbin_enforcer.add_role_for_user(
                     user=casbin_subject(user.id), role=role
                 )
-                await add_default_garden(user=user, session=session)
+            await add_default_garden(user=user, session=session)
             user_dict[role] = user
         yield user_dict
 

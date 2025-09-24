@@ -100,7 +100,7 @@ async def update_page(
         raise HTTPException(status_code=404, detail="Page not found")
 
     user_subject = casbin_subject(current_user.id)
-    page_resource = casbin_object("p", page.id)
+    page_resource = casbin_object("pa", page.id)
 
     # Check RBAC permissions
     allowed = enforcer.enforce(user_subject, page_resource, "update")
@@ -140,7 +140,7 @@ async def delete_page(
         raise HTTPException(status_code=404, detail="Page not found")
 
     user_subject = casbin_subject(current_user.id)
-    page_resource = casbin_object("p", page.id)
+    page_resource = casbin_object("pa", page.id)
 
     # Check RBAC permissions
     allowed = enforcer.enforce(user_subject, page_resource, "update")

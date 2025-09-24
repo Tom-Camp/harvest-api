@@ -2,6 +2,7 @@ from typing import Optional, Sequence
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from app.gardens.bed_models import Bed
@@ -26,7 +27,14 @@ class BedCRUD:
 
     @staticmethod
     async def get_bed(session: AsyncSession, bed_id: UUID) -> Optional[Bed]:
-        return await session.get(Bed, bed_id)
+        statement = (
+            select(Bed)
+            .options(selectinload(Bed.__table__.c.notes))
+            .where(Bed.__table__.c.id == bed_id)
+        )
+        result = await session.execute(statement)
+        bed = result.scalars().first()
+        return bed
 
     @staticmethod
     async def get_beds(

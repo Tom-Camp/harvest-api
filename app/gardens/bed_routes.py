@@ -11,6 +11,7 @@ from app.casbin.casbin_helpers import casbin_object, casbin_subject, is_owner
 from app.gardens.bed_crud import BedCRUD
 from app.gardens.bed_models import Bed
 from app.gardens.bed_schemas import BedCreate, BedList, BedRead, BedUpdate
+from app.gardens.garden_crud import GardenCRUD
 from app.logging import get_logger, log_handler
 from app.users.user_models import User
 from app.utils.database import get_db
@@ -28,9 +29,17 @@ async def create_bed(
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Bed:
 
-    subject: str = casbin_subject(current_user.id)
-    allowed = enforcer.enforce(subject, "garden", "create")
-    if not allowed:
+    garden = await GardenCRUD.get_garden(session, bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    user_subject: str = casbin_subject(current_user.id)
+    garden_resource: str = casbin_object("ga", garden.id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, garden_resource, "create")
+
+    if not allowed and not is_owner(user_subject, garden):
         raise HTTPException(status_code=403, detail="Forbidden")
 
     new_bed = await BedCRUD.create_bed(
@@ -96,7 +105,7 @@ async def update_bed(
         raise HTTPException(status_code=404, detail="Bed not found")
 
     user_subject = casbin_subject(current_user.id)
-    bed_resource = casbin_object("p", bed.id)
+    bed_resource = casbin_object("be", bed.id)
 
     # Check RBAC permissions
     allowed = enforcer.enforce(user_subject, bed_resource, "update")
@@ -141,7 +150,7 @@ async def delete_bed(
         raise HTTPException(status_code=404, detail="Bed not found")
 
     user_subject = casbin_subject(current_user.id)
-    bed_resource = casbin_object("p", bed.garden_id)
+    bed_resource = casbin_object("be", bed.garden_id)
 
     # Check RBAC permissions
     allowed = enforcer.enforce(user_subject, bed_resource, "update")

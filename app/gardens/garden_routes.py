@@ -121,7 +121,7 @@ async def update_garden(
         raise HTTPException(status_code=404, detail="Garden not found")
 
     user_subject = casbin_subject(current_user.id)
-    garden_resource = casbin_object("p", garden.id)
+    garden_resource = casbin_object("ga", garden.id)
 
     # Check RBAC permissions
     allowed = enforcer.enforce(user_subject, garden_resource, "update")
@@ -165,7 +165,7 @@ async def delete_garden(
         raise HTTPException(status_code=404, detail="Garden not found")
 
     user_subject = casbin_subject(current_user.id)
-    garden_resource = casbin_object("p", garden.id)
+    garden_resource = casbin_object("ga", garden.id)
 
     # Check RBAC permissions
     allowed = enforcer.enforce(user_subject, garden_resource, "update")
