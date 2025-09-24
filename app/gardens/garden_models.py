@@ -21,7 +21,9 @@ class Garden(ModelBase, table=True):  # type: ignore
     description: str | None = None
     location: str = Field(default="Lebanon, Kansas, USA", nullable=False)
     is_private: bool = Field(default=True)
-    notes: List[GardenNote] = Relationship(back_populates="garden")
+    notes: List[GardenNote] = Relationship(
+        back_populates="garden", sa_relationship_kwargs={"cascade": "all, delete"}
+    )
     beds: List["Bed"] = Relationship(back_populates="garden")
     user_id: Optional[UUID] = Field(
         foreign_key="user.id", nullable=False, ondelete="CASCADE"

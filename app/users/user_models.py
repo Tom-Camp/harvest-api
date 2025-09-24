@@ -27,5 +27,11 @@ class UserBase(SQLModel):
 
 class User(ModelBase, UserBase, table=True):  # type: ignore
     hashed_password: str
-    pages: List["Page"] = Relationship(back_populates="user")
-    gardens: List["Garden"] = Relationship(back_populates="user")
+    pages: List["Page"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete"},
+    )
+    gardens: List["Garden"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete"},
+    )

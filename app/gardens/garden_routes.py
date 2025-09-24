@@ -36,10 +36,11 @@ async def create_garden(
     subject: str = casbin_subject(current_user.id)
     allowed = enforcer.enforce(subject, "garden", "create")
     if not allowed:
+        logger.debug(f"User: {current_user.username}: allowed {allowed}")
         raise HTTPException(status_code=403, detail="Forbidden")
 
     new_garden = await GardenCRUD.create_garden(
-        garden=garden, session=session, user_id=current_user.id
+        garden=garden, session=session, user=current_user
     )
     logger.info(
         event="Garden create",
@@ -65,6 +66,19 @@ async def read_gardens(
 ):
 
     return await GardenCRUD.get_gardens(session, skip=skip, limit=limit)
+
+
+@garden_router.get("/user/{user_id}", response_model=List[GardenList])
+async def read_user_gardens(
+    user_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+    session: AsyncSession = Depends(get_db),
+):
+
+    return await GardenCRUD.get_user_gardens(
+        session=session, user_id=user_id, skip=skip, limit=limit
+    )
 
 
 @garden_router.get("/my", response_model=List[GardenList])

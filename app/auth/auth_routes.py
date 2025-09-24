@@ -15,6 +15,8 @@ from app.auth.auth import (
 from app.auth.auth_schemas import Token
 from app.casbin.casbin_config import get_casbin_enforcer
 from app.casbin.casbin_helpers import casbin_subject
+from app.gardens.garden_crud import GardenCRUD
+from app.gardens.garden_schemas import GardenCreate
 from app.logging import get_logger, log_handler
 from app.users.user_crud import UserCRUD
 from app.users.user_models import User
@@ -24,6 +26,41 @@ from app.utils.database import get_db
 logger = get_logger(__name__)
 
 auth_router = APIRouter(prefix="/auth")
+
+
+async def add_default_garden(user: User, session: AsyncSession):
+    garden = GardenCreate(
+        name="Default garden",
+        description="Garden added when user created",
+        location="Lebanon, Kansas",
+    )
+    default_garden = await GardenCRUD.create_garden(
+        garden=garden, session=session, user=user
+    )
+    if default_garden:
+        log_handler.log_security_event(
+            "add_default_garden",
+            severity="moderate",
+            context={
+                "event_type": "registration",
+                "user_name": user.username,
+                "user_id": user.id,
+                "garden_id": default_garden.id,
+                "resource": "auth_routes",
+            },
+        )
+    else:
+        log_handler.log_security_event(
+            "default_garden_create_failed",
+            severity="moderate",
+            context={
+                "event_type": "registration",
+                "user_name": user.username,
+                "user_id": user.id,
+                "action": "default_garden_failed",
+                "resource": "auth_routes",
+            },
+        )
 
 
 @auth_router.post("/token", response_model=Token)
@@ -120,7 +157,7 @@ async def register(
 
     new_user = await UserCRUD.create_user(session, user)
 
-    await enforcer.add_role_for_user(casbin_subject(new_user.id), "user")
+    await enforcer.add_role_for_user(casbin_subject(new_user.id), "authenticated")
 
     log_handler.log_security_event(
         "user_register_success",
@@ -135,5 +172,7 @@ async def register(
             "resource": "auth_routes",
         },
     )
+
+    await add_default_garden(user=new_user, session=session)
 
     return new_user

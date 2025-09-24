@@ -18,6 +18,9 @@ class BedNote(ModelBase, table=True):  # type: ignore
 class Bed(ModelBase, table=True):  # type: ignore
     name: str
     description: str | None = None
-    notes: List[BedNote] = Relationship(back_populates="bed")
+    notes: List[BedNote] = Relationship(
+        back_populates="bed",
+        sa_relationship_kwargs={"cascade": "all, delete"},
+    )
     garden_id: UUID = Field(foreign_key="garden.id", nullable=False, ondelete="CASCADE")
     garden: "Garden" = Relationship(back_populates="beds")
