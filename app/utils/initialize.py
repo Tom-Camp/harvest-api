@@ -19,7 +19,7 @@ async def setup_initial_admin(session: AsyncSession) -> UUID:
     }
 
     existing_admin = await UserCRUD.get_user_by_username(
-        session=session, username=str(admin_data.get("username", ""))
+        session=session, username=admin_data.get("username", "")
     )
     if not existing_admin:
         admin_create = UserCreate(**admin_data)

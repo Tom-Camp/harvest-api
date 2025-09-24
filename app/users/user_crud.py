@@ -20,7 +20,6 @@ class UserCRUD:
         db_user = User(
             username=user.username,
             email=user.email,
-            location=user.location,
             hashed_password=hashed_password,
         )
         session.add(db_user)

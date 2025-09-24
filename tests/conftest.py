@@ -51,6 +51,7 @@ async def client(test_app):
 
 @pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=True)
 async def default_user(test_app):
+    from app.auth.auth_routes import add_default_garden
     from app.casbin.casbin_helpers import casbin_subject
     from app.users.user_crud import UserCRUD
     from app.users.user_models import User
@@ -70,13 +71,13 @@ async def default_user(test_app):
                 username=f"{test_user}_user",
                 email=f"{test_user}@example.com",
                 password="UkeV3BNUIL7x/n0J",
-                location="Lebanon, Kansas",
             )
             user: User = await UserCRUD.create_user(session, user_in)
-            if role in ["admin", "moderator"]:
+            if role in ["admin", "moderator", "authenticated"]:
                 await test_app.state.casbin_enforcer.add_role_for_user(
                     user=casbin_subject(user.id), role=role
                 )
+                await add_default_garden(user=user, session=session)
             user_dict[role] = user
         yield user_dict
 
@@ -86,21 +87,18 @@ async def default_pages(default_user):
     from app.pages.page_models import Page
     from app.utils import database as db
 
-    pages_list: List[Page] = []
-    pages_list.append(
+    pages_list: List[Page] = [
         Page(
             title=f"{default_user['admin'].username}'s page",
             body=f"{default_user['admin'].username} they have the role admin",
             user_id=default_user["admin"].id,
-        )
-    )
-    pages_list.append(
+        ),
         Page(
             title=f"{default_user['moderator'].username}'s page",
             body=f"{default_user['moderator'].username} they have the role moderator",
             user_id=default_user["moderator"].id,
-        )
-    )
+        ),
+    ]
     async with db.AsyncSessionLocal() as session:
         session.add_all(pages_list)
         await session.commit()

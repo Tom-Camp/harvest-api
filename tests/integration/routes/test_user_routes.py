@@ -3,6 +3,7 @@ from typing import Dict, List
 import pytest
 
 from app.users.user_models import User
+from tests.helpers.test_helpers import get_auth_headers
 
 
 class TestUserRoutes:
@@ -20,13 +21,9 @@ class TestUserRoutes:
     async def test_read_users_me(
         self, client, default_user, user_name, expected_status
     ):
-        headers: Dict[str, str] = {"Content-Type": "application/json"}
-        if test_as := default_user.get(user_name, ""):
-            get_token = await client.post(
-                url="/api/auth/token",
-                data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
-            )
-            headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
+        test_as = default_user.get(user_name, "")
+        username = test_as.username if test_as else None
+        headers = await get_auth_headers(client=client, user_name=username)
         response = await client.get(url="/api/users/me", headers=headers)
 
         assert response.status_code == expected_status
@@ -53,13 +50,9 @@ class TestUserRoutes:
     async def test_read_user(
         self, client, default_user, user_name: str, expected_status: int
     ):
-        headers: Dict[str, str] = {"Content-Type": "application/json"}
-        if test_as := default_user.get(user_name, ""):
-            get_token = await client.post(
-                url="/api/auth/token",
-                data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
-            )
-            headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
+        test_as = default_user.get(user_name, "")
+        username = test_as.username if test_as else None
+        headers = await get_auth_headers(client=client, user_name=username)
 
         read_user = default_user["authenticated"]
         response = await client.get(url=f"/api/users/{read_user.id}", headers=headers)
@@ -81,13 +74,9 @@ class TestUserRoutes:
     async def test_update_user(
         self, client, default_user, user_name: str, expected_status: int
     ):
-        headers: Dict[str, str] = {"Content-Type": "application/json"}
-        if test_as := default_user.get(user_name, ""):
-            get_token = await client.post(
-                url="/api/auth/token",
-                data={"username": test_as.username, "password": "UkeV3BNUIL7x/n0J"},
-            )
-            headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
+        test_as = default_user.get(user_name, "")
+        username = test_as.username if test_as else None
+        headers = await get_auth_headers(client=client, user_name=username)
 
         read_user = default_user["tester"]
         username = test_as.username if isinstance(test_as, User) else "Anonymous"
@@ -117,15 +106,9 @@ class TestUserRoutes:
     async def test_update_user_self(
         self, client, default_user, user_name: str, expected_status: int
     ):
-        headers: Dict[str, str] = {"Content-Type": "application/json"}
-        get_token = await client.post(
-            url="/api/auth/token",
-            data={
-                "username": default_user[user_name].username,
-                "password": "UkeV3BNUIL7x/n0J",
-            },
-        )
-        headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
+        test_as = default_user.get(user_name, "")
+        username = test_as.username if test_as else None
+        headers = await get_auth_headers(client=client, user_name=username)
 
         payload: Dict[str, str] = {
             "first_name": f"{default_user[user_name].username} updated by self",
@@ -141,3 +124,36 @@ class TestUserRoutes:
             response.json()["first_name"]
             == f"{default_user[user_name].username} updated by self"
         )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "user_name,expected_status",
+        [
+            ("admin", 200),
+            ("moderator", 200),
+            ("authenticated", 403),
+        ],
+    )
+    async def test_delete_user(
+        self, client, default_user, user_name: str, expected_status: int
+    ):
+        test_as = default_user.get(user_name, "")
+        username = test_as.username if test_as else None
+        headers = await get_auth_headers(client=client, user_name=username)
+
+        payload = {
+            "username": f"alice+{test_as}",
+            "email": f"{test_as}+alice@example.com",
+            "password": "milk prairie island desert",
+        }
+        response = await client.post(
+            url="/api/auth/register",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        delete_user = response.json()
+        delete_response = await client.delete(
+            url=f"/api/users/{delete_user.get('id', '')}",
+            headers=headers,
+        )
+        assert delete_response.status_code == expected_status
