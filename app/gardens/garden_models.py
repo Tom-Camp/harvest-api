@@ -27,7 +27,7 @@ class Garden(ModelBase, table=True):  # type: ignore
     beds: list["Bed"] = Relationship(
         back_populates="garden", sa_relationship_kwargs={"cascade": "all, delete"}
     )
-    user_id: Optional[UUID] = Field(
+    user_id: UUID | None = Field(
         foreign_key="user.id", nullable=False, ondelete="CASCADE"
     )
     user: Optional["User"] = Relationship(back_populates="gardens")

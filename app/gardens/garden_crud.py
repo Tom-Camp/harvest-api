@@ -1,4 +1,4 @@
-from typing import Optional, Sequence
+from typing import Sequence
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,7 +27,7 @@ class GardenCRUD:
         return db_garden
 
     @staticmethod
-    async def get_garden(session: AsyncSession, garden_id: UUID) -> Optional[Garden]:
+    async def get_garden(session: AsyncSession, garden_id: UUID) -> Garden | None:
         statement = (
             select(Garden)
             .options(

@@ -1,4 +1,4 @@
-from typing import Optional, Sequence
+from typing import Sequence
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,7 +26,7 @@ class BedCRUD:
         return db_bed
 
     @staticmethod
-    async def get_bed(session: AsyncSession, bed_id: UUID) -> Optional[Bed]:
+    async def get_bed(session: AsyncSession, bed_id: UUID) -> Bed | None:
         statement = select(Bed).options(selectinload(Bed.notes)).where(Bed.id == bed_id)
         result = await session.execute(statement)
         bed = result.scalars().first()
