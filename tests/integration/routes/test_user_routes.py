@@ -184,7 +184,7 @@ class TestUserRoutes:
         default_user: dict[str, User],
     ):
         headers = await get_auth_headers(client=client, user_name="")
-        user = default_user.get("tester_user")
+        user = default_user.get("tester")
         if isinstance(user, User):
             response = await client.delete(
                 url=f"/api/users/{user.id}",
@@ -192,4 +192,4 @@ class TestUserRoutes:
             )
             assert response.status_code == 401
         else:
-            pytest.fail("No garden found for user test_user")
+            pytest.fail("No user found for user test_user")
