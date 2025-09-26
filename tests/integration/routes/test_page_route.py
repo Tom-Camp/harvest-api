@@ -1,5 +1,3 @@
-from typing import Dict, List
-
 import pytest
 from httpx import AsyncClient
 
@@ -23,7 +21,7 @@ class TestPageRoutes:
     async def test_create_page(
         self,
         client: AsyncClient,
-        default_user: Dict[str, User],
+        default_user: dict[str, User],
         user_name: str,
         expected_status: int,
     ):
@@ -50,8 +48,8 @@ class TestPageRoutes:
     )
     async def test_read_pages(
         self,
-        default_pages: List[Page],
-        default_user: Dict[str, User],
+        default_pages: list[Page],
+        default_user: dict[str, User],
         client: AsyncClient,
         user_name: str,
         expected_status: int,
@@ -62,7 +60,7 @@ class TestPageRoutes:
 
         response = await client.get(url="/api/pages/", headers=headers)
 
-        assert isinstance(response.json(), List)
+        assert isinstance(response.json(), list)
         assert response.status_code == expected_status
 
     @pytest.mark.asyncio
@@ -78,8 +76,8 @@ class TestPageRoutes:
     async def test_read_my_pages(
         self,
         client: AsyncClient,
-        default_user: Dict[str, User],
-        default_pages: List[Page],
+        default_user: dict[str, User],
+        default_pages: list[Page],
         user_name: str,
         expected_status: int,
     ):
@@ -95,7 +93,7 @@ class TestPageRoutes:
         assert response.status_code == expected_status
 
     @pytest.mark.asyncio
-    async def test_read_page(self, client: AsyncClient, default_pages: List[Page]):
+    async def test_read_page(self, client: AsyncClient, default_pages: list[Page]):
         page_response = await client.get(url=f"/api/pages/{default_pages[0].id}")
         assert page_response.json().get("title") == default_pages[0].title
 
@@ -112,8 +110,8 @@ class TestPageRoutes:
     async def test_update_page(
         self,
         client: AsyncClient,
-        default_user: Dict[str, User],
-        default_pages: List[Page],
+        default_user: dict[str, User],
+        default_pages: list[Page],
         user_name: str,
         expected_status: int,
     ):
@@ -144,7 +142,7 @@ class TestPageRoutes:
     async def test_delete_page(
         self,
         client: AsyncClient,
-        default_user: Dict[str, User],
+        default_user: dict[str, User],
         user_name: str,
         expected_status: int,
     ):
