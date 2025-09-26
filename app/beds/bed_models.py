@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlmodel import Field, Relationship
@@ -18,7 +18,7 @@ class BedNote(ModelBase, table=True):  # type: ignore
 class Bed(ModelBase, table=True):  # type: ignore
     name: str
     description: str | None = None
-    notes: List[BedNote] = Relationship(
+    notes: list[BedNote] = Relationship(
         back_populates="bed",
         sa_relationship_kwargs={"cascade": "all, delete"},
     )

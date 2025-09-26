@@ -1,6 +1,6 @@
 import time
 import uuid
-from typing import Callable, List, Optional
+from typing import Callable
 
 import structlog
 from fastapi import Request, Response
@@ -15,7 +15,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app: ASGIApp,
-        excluded_paths: Optional[List[str]] = None,
+        excluded_paths: list[str] | None = None,
         include_request_body: bool = False,
         include_response_body: bool = False,
     ):
@@ -109,7 +109,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
 
 def create_logging_middleware(
-    excluded_paths: Optional[List[str]] = None,
+    excluded_paths: list[str] | None = None,
     include_request_body: bool = False,
     include_response_body: bool = False,
 ) -> type:

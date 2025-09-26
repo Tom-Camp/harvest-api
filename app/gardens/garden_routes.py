@@ -1,4 +1,4 @@
-from typing import List, Sequence
+from typing import Sequence
 from uuid import UUID
 
 from casbin import AsyncEnforcer
@@ -58,7 +58,7 @@ async def create_garden(
     return new_garden
 
 
-@garden_router.get("/", response_model=List[GardenList])
+@garden_router.get("/", response_model=list[GardenList])
 async def read_gardens(
     skip: int = 0,
     limit: int = 100,
@@ -68,7 +68,7 @@ async def read_gardens(
     return await GardenCRUD.get_gardens(session, skip=skip, limit=limit)
 
 
-@garden_router.get("/user/{user_id}", response_model=List[GardenList])
+@garden_router.get("/user/{user_id}", response_model=list[GardenList])
 async def read_user_gardens(
     user_id: UUID,
     skip: int = 0,
@@ -81,7 +81,7 @@ async def read_user_gardens(
     )
 
 
-@garden_router.get("/my", response_model=List[GardenList])
+@garden_router.get("/my", response_model=list[GardenList])
 async def read_my_gardens(
     skip: int = 0,
     limit: int = 100,
@@ -121,7 +121,7 @@ async def update_garden(
         raise HTTPException(status_code=404, detail="Garden not found")
 
     user_subject = casbin_subject(current_user.id)
-    garden_resource = casbin_object("p", garden.id)
+    garden_resource = casbin_object("ga", garden.id)
 
     # Check RBAC permissions
     allowed = enforcer.enforce(user_subject, garden_resource, "update")
@@ -165,10 +165,10 @@ async def delete_garden(
         raise HTTPException(status_code=404, detail="Garden not found")
 
     user_subject = casbin_subject(current_user.id)
-    garden_resource = casbin_object("p", garden.id)
+    garden_resource = casbin_object("ga", garden.id)
 
     # Check RBAC permissions
-    allowed = enforcer.enforce(user_subject, garden_resource, "update")
+    allowed = enforcer.enforce(user_subject, garden_resource, "delete")
 
     # If RBAC fails, check ownership manually
     if not allowed and not is_owner(user_subject, garden):

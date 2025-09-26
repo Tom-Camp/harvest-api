@@ -1,8 +1,7 @@
-from typing import Dict, List
-
 import pytest
 from httpx import AsyncClient
 
+from app.pages.page_models import Page
 from app.users.user_models import User
 from tests.helpers.test_helpers import get_auth_headers
 
@@ -22,12 +21,12 @@ class TestPageRoutes:
     async def test_create_page(
         self,
         client: AsyncClient,
-        default_user: Dict,
+        default_user: dict[str, User],
         user_name: str,
         expected_status: int,
     ):
         test_as = default_user.get(user_name, "")
-        username = test_as.username if test_as else None
+        username = test_as.username if hasattr(test_as, "username") else ""
         headers = await get_auth_headers(client=client, user_name=username)
         username = test_as.username if isinstance(test_as, User) else "Anonymous"
         payload = {
@@ -49,19 +48,19 @@ class TestPageRoutes:
     )
     async def test_read_pages(
         self,
-        default_pages: List,
-        default_user: Dict,
+        default_pages: list[Page],
+        default_user: dict[str, User],
         client: AsyncClient,
         user_name: str,
         expected_status: int,
     ):
         test_as = default_user.get(user_name, "")
-        username = test_as.username if test_as else None
+        username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
 
         response = await client.get(url="/api/pages/", headers=headers)
 
-        assert isinstance(response.json(), List)
+        assert isinstance(response.json(), list)
         assert response.status_code == expected_status
 
     @pytest.mark.asyncio
@@ -77,13 +76,13 @@ class TestPageRoutes:
     async def test_read_my_pages(
         self,
         client: AsyncClient,
-        default_user: Dict,
-        default_pages: List,
+        default_user: dict[str, User],
+        default_pages: list[Page],
         user_name: str,
         expected_status: int,
     ):
         test_as = default_user.get(user_name, "")
-        username = test_as.username if test_as else None
+        username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
 
         response = await client.get(
@@ -94,7 +93,7 @@ class TestPageRoutes:
         assert response.status_code == expected_status
 
     @pytest.mark.asyncio
-    async def test_read_page(self, client: AsyncClient, default_pages: List):
+    async def test_read_page(self, client: AsyncClient, default_pages: list[Page]):
         page_response = await client.get(url=f"/api/pages/{default_pages[0].id}")
         assert page_response.json().get("title") == default_pages[0].title
 
@@ -111,13 +110,13 @@ class TestPageRoutes:
     async def test_update_page(
         self,
         client: AsyncClient,
-        default_user: Dict,
-        default_pages: List,
+        default_user: dict[str, User],
+        default_pages: list[Page],
         user_name: str,
         expected_status: int,
     ):
         test_as = default_user.get(user_name, "")
-        username = test_as.username if test_as else None
+        username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
         page = default_pages[-1]
         page_response = await client.get(url=f"/api/pages/{page.id}")
@@ -143,7 +142,7 @@ class TestPageRoutes:
     async def test_delete_page(
         self,
         client: AsyncClient,
-        default_user: dict,
+        default_user: dict[str, User],
         user_name: str,
         expected_status: int,
     ):
@@ -159,7 +158,7 @@ class TestPageRoutes:
         to_delete = new_page.json()
 
         test_as = default_user.get(user_name, "")
-        username = test_as.username if test_as else None
+        username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
         delete_garden = await client.delete(
             url=f"/api/pages/{to_delete.get('id', '')}", headers=headers

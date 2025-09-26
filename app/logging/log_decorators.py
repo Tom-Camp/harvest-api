@@ -1,7 +1,7 @@
 import asyncio
 import time
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Union
 
 import structlog
 
@@ -9,7 +9,7 @@ from app.logging.log_handler import log_handler
 
 
 def log_function_call(
-    operation_name: Optional[str] = None,
+    operation_name: str | None = None,
     log_args: bool = False,
     log_result: bool = False,
     log_duration: bool = True,
@@ -74,7 +74,7 @@ async def _execute_with_logging(
     args: tuple,
     kwargs: dict,
 ) -> Any:
-    log_data: Dict[str, Any] = {
+    log_data: dict[str, Any] = {
         "event_type": event_type,
         "function": func_name,
     }
@@ -212,14 +212,14 @@ def log_external_api_call(service: str, endpoint: str | None = None):
     return decorator
 
 
-def _sanitize_args(args: tuple) -> List[Any]:
+def _sanitize_args(args: tuple) -> list[Any]:
     return [_sanitize_value(arg) for arg in args[:5]]  # Limit to first 5 args
 
 
-def _sanitize_kwargs(kwargs: dict) -> Dict[str, Any]:
+def _sanitize_kwargs(kwargs: dict) -> dict[str, Any]:
     sensitive_keys = {"password", "token", "secret", "key", "auth"}
 
-    sanitized: Dict[str, Any] = {}
+    sanitized: dict[str, Any] = {}
     for key, value in list(kwargs.items())[:10]:  # Limit to first 10 kwargs
         if any(sensitive in key.lower() for sensitive in sensitive_keys):
             sanitized[key] = "***REDACTED***"
@@ -235,7 +235,7 @@ def _sanitize_result(result: Any) -> Any:
 
 def _sanitize_value(
     value: Any,
-) -> Union[str, int, float, bool, None, List[Any], Dict[str, Any]]:
+) -> Union[str, int, float, bool, None, list[Any], dict[str, Any]]:
     if isinstance(value, (str, int, float, bool, type(None))):
         if isinstance(value, str) and len(value) > 200:
             return f"{value[:200]}..."

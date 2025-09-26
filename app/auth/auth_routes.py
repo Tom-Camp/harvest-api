@@ -1,4 +1,5 @@
 from datetime import timedelta
+from uuid import UUID
 
 from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -13,6 +14,8 @@ from app.auth.auth import (
     failed_password_messages,
 )
 from app.auth.auth_schemas import Token
+from app.beds.bed_crud import BedCRUD
+from app.beds.bed_schemas import BedCreate
 from app.casbin.casbin_config import get_casbin_enforcer
 from app.casbin.casbin_helpers import casbin_subject
 from app.gardens.garden_crud import GardenCRUD
@@ -28,16 +31,29 @@ logger = get_logger(__name__)
 auth_router = APIRouter(prefix="/auth")
 
 
+async def add_default_bed(session: AsyncSession, garden_id: UUID):
+    bed = BedCreate(
+        name="Default bed",
+        description="A garden bed",
+        garden_id=garden_id,
+    )
+    await BedCRUD.create_bed(bed=bed, session=session)
+
+
 async def add_default_garden(user: User, session: AsyncSession):
     garden = GardenCreate(
         name="Default garden",
         description="Garden added when user created",
         location="Lebanon, Kansas",
+        is_private=False,
     )
     default_garden = await GardenCRUD.create_garden(
         garden=garden, session=session, user=user
     )
     if default_garden:
+        await add_default_bed(session=session, garden_id=default_garden.id)
+        await session.refresh(default_garden, ["beds"])
+
         log_handler.log_security_event(
             "add_default_garden",
             severity="moderate",
@@ -61,6 +77,7 @@ async def add_default_garden(user: User, session: AsyncSession):
                 "resource": "auth_routes",
             },
         )
+    return default_garden
 
 
 @auth_router.post("/token", response_model=Token)

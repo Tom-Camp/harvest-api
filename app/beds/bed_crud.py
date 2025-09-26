@@ -1,11 +1,12 @@
-from typing import Optional, Sequence
+from typing import Sequence
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from app.gardens.bed_models import Bed
-from app.gardens.bed_schemas import BedCreate, BedUpdate
+from app.beds.bed_models import Bed
+from app.beds.bed_schemas import BedCreate, BedUpdate
 from app.logging import get_logger
 
 logger = get_logger(__name__)
@@ -25,18 +26,18 @@ class BedCRUD:
         return db_bed
 
     @staticmethod
-    async def get_bed(session: AsyncSession, bed_id: UUID) -> Optional[Bed]:
-        return await session.get(Bed, bed_id)
+    async def get_bed(session: AsyncSession, bed_id: UUID) -> Bed | None:
+        statement = select(Bed).options(selectinload(Bed.notes)).where(Bed.id == bed_id)
+        result = await session.execute(statement)
+        bed = result.scalars().first()
+        return bed
 
     @staticmethod
     async def get_beds(
         garden_id: UUID, session: AsyncSession, skip: int = 0, limit: int = 100
     ) -> Sequence[Bed]:
         statement = (
-            select(Bed)
-            .where(Bed.__table__.c.garden_id == garden_id)
-            .offset(skip)
-            .limit(limit)
+            select(Bed).where(Bed.garden_id == garden_id).offset(skip).limit(limit)
         )
         result = await session.execute(statement)
         bed = result.scalars().all()

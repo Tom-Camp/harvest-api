@@ -1,6 +1,5 @@
 import hashlib
 from datetime import datetime, timedelta, timezone
-from typing import List
 
 import httpx
 from argon2 import PasswordHasher
@@ -130,8 +129,8 @@ async def hibp_breach_count(password: str, timeout: float = 10.0) -> int:
             await client.aclose()
 
 
-async def failed_password_messages(reasons: dict) -> List:
-    message: List = []
+async def failed_password_messages(reasons: dict) -> list:
+    message: list = []
     if reasons.get("pwned_count"):
         message.append(
             "This password appears in known data breaches and can’t be used. Pick a "

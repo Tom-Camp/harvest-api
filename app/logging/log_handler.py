@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 import structlog
 from fastapi import Request
@@ -114,7 +114,7 @@ class StructlogHandler:
 
         self.logger.error(message, exc_info=exception is not None, **log_data)
 
-    def _get_log_method_for_status(self, status_code: Optional[int]):
+    def _get_log_method_for_status(self, status_code: int | None):
         if not status_code:
             return self.logger.info
 

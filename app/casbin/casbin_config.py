@@ -1,5 +1,4 @@
 import os
-from typing import List
 
 from casbin import AsyncEnforcer
 from casbin_async_sqlalchemy_adapter import Adapter as AsyncAdapter
@@ -59,7 +58,7 @@ async def initialize_default_policies(enforcer: AsyncEnforcer):
 
 
 async def setup_admin_users(
-    enforcer: AsyncEnforcer, admin_user_ids: List | None = None
+    enforcer: AsyncEnforcer, admin_user_ids: list | None = None
 ):
     """Setup admin users with admin role"""
     admin_ids = admin_user_ids or DEFAULT_ADMIN_USERS
@@ -114,7 +113,7 @@ async def setup_admin_users(
     await enforcer.save_policy()
 
 
-async def startup_casbin(app, db_url: str, admin_user_ids: List | None = None):
+async def startup_casbin(app, db_url: str, admin_user_ids: list | None = None):
     """Complete Casbin initialization for FastAPI startup"""
     try:
         logger.info("=== Casbin Initialization ===")

@@ -1,6 +1,5 @@
-from typing import Dict, List
-
 import pytest
+from httpx import AsyncClient
 
 from app.users.user_models import User
 from tests.helpers.test_helpers import get_auth_headers
@@ -19,23 +18,27 @@ class TestUserRoutes:
         ],
     )
     async def test_read_users_me(
-        self, client, default_user, user_name, expected_status
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+        user_name: str,
+        expected_status: int,
     ):
         test_as = default_user.get(user_name, "")
-        username = test_as.username if test_as else None
+        username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         response = await client.get(url="/api/users/me", headers=headers)
 
         assert response.status_code == expected_status
-        if response.status_code == 200:
+        if isinstance(test_as, User):
             assert response.json()["username"] == test_as.username
 
     @pytest.mark.asyncio
-    async def test_read_users(self, client):
+    async def test_read_users(self, client: AsyncClient):
         response = await client.get(url="/api/users/")
 
         assert response.status_code == 200
-        assert isinstance(response.json(), List)
+        assert isinstance(response.json(), list)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -48,10 +51,14 @@ class TestUserRoutes:
         ],
     )
     async def test_read_user(
-        self, client, default_user, user_name: str, expected_status: int
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+        user_name: str,
+        expected_status: int,
     ):
         test_as = default_user.get(user_name, "")
-        username = test_as.username if test_as else None
+        username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
 
         read_user = default_user["authenticated"]
@@ -72,15 +79,19 @@ class TestUserRoutes:
         ],
     )
     async def test_update_user(
-        self, client, default_user, user_name: str, expected_status: int
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+        user_name: str,
+        expected_status: int,
     ):
         test_as = default_user.get(user_name, "")
-        username = test_as.username if test_as else None
+        username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
 
         read_user = default_user["tester"]
         username = test_as.username if isinstance(test_as, User) else "Anonymous"
-        payload: Dict[str, str] = {
+        payload: dict[str, str] = {
             "first_name": f"{read_user.username} updated by {username}",
         }
         response = await client.put(
@@ -104,13 +115,17 @@ class TestUserRoutes:
         ],
     )
     async def test_update_user_self(
-        self, client, default_user, user_name: str, expected_status: int
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+        user_name: str,
+        expected_status: int,
     ):
         test_as = default_user.get(user_name, "")
-        username = test_as.username if test_as else None
+        username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
 
-        payload: Dict[str, str] = {
+        payload: dict[str, str] = {
             "first_name": f"{default_user[user_name].username} updated by self",
         }
         response = await client.put(
@@ -135,10 +150,14 @@ class TestUserRoutes:
         ],
     )
     async def test_delete_user(
-        self, client, default_user, user_name: str, expected_status: int
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+        user_name: str,
+        expected_status: int,
     ):
         test_as = default_user.get(user_name, "")
-        username = test_as.username if test_as else None
+        username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
 
         payload = {

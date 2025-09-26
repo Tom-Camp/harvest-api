@@ -1,4 +1,4 @@
-from typing import List, Sequence
+from typing import Sequence
 from uuid import UUID
 
 from casbin import AsyncEnforcer
@@ -37,7 +37,7 @@ async def read_users_me(
     return user
 
 
-@user_router.get("/", response_model=List[UserRead])
+@user_router.get("/", response_model=list[UserRead])
 async def read_users(
     skip: int = 0,
     limit: int = 100,
@@ -57,7 +57,7 @@ async def read_user(
 ) -> User:
 
     allowed = enforcer.enforce(
-        casbin_subject(current_user.id), casbin_object("u", user_id), "read"
+        casbin_subject(current_user.id), casbin_object("us", user_id), "read"
     )
     if not allowed:
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -84,7 +84,7 @@ async def update_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     user_subject = casbin_subject(current_user.id)
-    user_resource = casbin_object("p", user_id)
+    user_resource = casbin_object("us", user_id)
 
     # Check RBAC permissions
     allowed = enforcer.enforce(user_subject, user_resource, "update")
@@ -112,7 +112,7 @@ async def delete_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     user_subject = casbin_subject(current_user.id)
-    user_resource = casbin_object("p", user_id)
+    user_resource = casbin_object("us", user_id)
 
     # Check RBAC permissions
     allowed = enforcer.enforce(user_subject, user_resource, "update")

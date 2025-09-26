@@ -1,4 +1,3 @@
-from typing import List
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -19,10 +18,10 @@ class BedList(BaseModel):
 class BedRead(BaseModel):
     name: str
     description: str | None = None
-    notes: List[str] | None = None
+    notes: list[str] | None = None
 
 
 class BedUpdate(BaseModel):
     name: str
     description: str | None = None
-    notes: List[str] | None = None
+    notes: list[str] | None = None

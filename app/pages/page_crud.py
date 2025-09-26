@@ -1,4 +1,4 @@
-from typing import Optional, Sequence
+from typing import Sequence
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +23,7 @@ class PageCRUD:
         return db_page
 
     @staticmethod
-    async def get_page(session: AsyncSession, page_id: UUID) -> Optional[Page]:
+    async def get_page(session: AsyncSession, page_id: UUID) -> Page | None:
         return await session.get(Page, page_id)
 
     @staticmethod

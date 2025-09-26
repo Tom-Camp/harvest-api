@@ -1,5 +1,5 @@
 import logging.config
-from typing import Any, List
+from typing import Any
 
 import structlog
 
@@ -14,7 +14,7 @@ def is_development() -> bool:
     return settings.ENVIRONMENT == "development"
 
 
-def get_structlog_processors(development: bool | None = None) -> List[Any]:
+def get_structlog_processors(development: bool | None = None) -> list[Any]:
     if development is None:
         development = is_development()
 

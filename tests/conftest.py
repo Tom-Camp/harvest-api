@@ -51,14 +51,13 @@ async def client(test_app):
 
 @pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=True)
 async def default_user(test_app):
-    from app.auth.auth_routes import add_default_garden
     from app.casbin.casbin_helpers import casbin_subject
     from app.users.user_crud import UserCRUD
     from app.users.user_models import User
     from app.users.user_schemas import UserCreate
     from app.utils import database as db
 
-    user_dict: Dict[str, User] = {}
+    user_dict: Dict[str, User] = dict()
     test_user_list: dict = {
         "test_admin": "admin",
         "test_moderator": "moderator",
@@ -73,13 +72,15 @@ async def default_user(test_app):
                 password="UkeV3BNUIL7x/n0J",
             )
             user: User = await UserCRUD.create_user(session, user_in)
-            if role in ["admin", "moderator", "authenticated"]:
+            await test_app.state.casbin_enforcer.add_role_for_user(
+                user=casbin_subject(user.id), role="authenticated"
+            )
+            if role in ["admin", "moderator"]:
                 await test_app.state.casbin_enforcer.add_role_for_user(
                     user=casbin_subject(user.id), role=role
                 )
-                await add_default_garden(user=user, session=session)
             user_dict[role] = user
-        yield user_dict
+    yield user_dict
 
 
 @pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=True)
@@ -104,3 +105,16 @@ async def default_pages(default_user):
         await session.commit()
 
     yield pages_list
+
+
+@pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=True)
+async def default_gardens(default_user):
+    from app.auth.auth_routes import add_default_garden
+    from app.gardens.garden_models import Garden
+    from app.utils import database as db
+
+    garden_dict: dict[str, Garden] = dict()
+    async with db.AsyncSessionLocal() as session:
+        for role, user in default_user.items():
+            garden_dict[role] = await add_default_garden(user=user, session=session)
+    yield garden_dict
