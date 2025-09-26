@@ -22,6 +22,6 @@ class BedRead(BaseModel):
 
 
 class BedUpdate(BaseModel):
-    name: str
+    name: str | None = None
     description: str | None = None
     notes: list[str] | None = None

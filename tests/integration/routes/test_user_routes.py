@@ -176,3 +176,20 @@ class TestUserRoutes:
             headers=headers,
         )
         assert delete_response.status_code == expected_status
+
+    @pytest.mark.asyncio
+    async def test_delete_user_unauthenticated(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        headers = await get_auth_headers(client=client, user_name="")
+        user = default_user.get("tester")
+        if isinstance(user, User):
+            response = await client.delete(
+                url=f"/api/users/{user.id}",
+                headers=headers,
+            )
+            assert response.status_code == 401
+        else:
+            pytest.fail("No user found for user test_user")

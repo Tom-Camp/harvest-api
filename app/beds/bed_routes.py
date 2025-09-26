@@ -122,6 +122,10 @@ async def update_bed(
     if not bed:
         raise HTTPException(status_code=404, detail="Bed not found")
 
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
     user_subject = casbin_subject(current_user.id)
     bed_resource = casbin_object("be", bed.id)
 
@@ -129,7 +133,7 @@ async def update_bed(
     allowed = enforcer.enforce(user_subject, bed_resource, "update")
 
     # If RBAC fails, check ownership manually
-    if not allowed and not is_owner(user_subject, bed):
+    if not allowed and not is_owner(user_subject, garden):
         raise HTTPException(status_code=403, detail="Forbidden")
 
     updated_bed = await BedCRUD.update_bed(
@@ -167,14 +171,18 @@ async def delete_bed(
     if not bed:
         raise HTTPException(status_code=404, detail="Bed not found")
 
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
     user_subject = casbin_subject(current_user.id)
-    bed_resource = casbin_object("be", bed.garden_id)
+    bed_resource = casbin_object("be", bed.id)
 
     # Check RBAC permissions
     allowed = enforcer.enforce(user_subject, bed_resource, "update")
 
     # If RBAC fails, check ownership manually
-    if not allowed and not is_owner(user_subject, bed):
+    if not allowed and not is_owner(user_subject, garden):
         raise HTTPException(status_code=403, detail="Forbidden")
 
     if not await BedCRUD.delete_bed(session, bed_id):
