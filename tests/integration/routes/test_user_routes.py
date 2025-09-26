@@ -1,5 +1,3 @@
-from typing import Dict, List
-
 import pytest
 from httpx import AsyncClient
 
@@ -22,7 +20,7 @@ class TestUserRoutes:
     async def test_read_users_me(
         self,
         client: AsyncClient,
-        default_user: Dict[str, User],
+        default_user: dict[str, User],
         user_name: str,
         expected_status: int,
     ):
@@ -40,7 +38,7 @@ class TestUserRoutes:
         response = await client.get(url="/api/users/")
 
         assert response.status_code == 200
-        assert isinstance(response.json(), List)
+        assert isinstance(response.json(), list)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -55,7 +53,7 @@ class TestUserRoutes:
     async def test_read_user(
         self,
         client: AsyncClient,
-        default_user: Dict[str, User],
+        default_user: dict[str, User],
         user_name: str,
         expected_status: int,
     ):
@@ -83,7 +81,7 @@ class TestUserRoutes:
     async def test_update_user(
         self,
         client: AsyncClient,
-        default_user: Dict[str, User],
+        default_user: dict[str, User],
         user_name: str,
         expected_status: int,
     ):
@@ -93,7 +91,7 @@ class TestUserRoutes:
 
         read_user = default_user["tester"]
         username = test_as.username if isinstance(test_as, User) else "Anonymous"
-        payload: Dict[str, str] = {
+        payload: dict[str, str] = {
             "first_name": f"{read_user.username} updated by {username}",
         }
         response = await client.put(
@@ -119,7 +117,7 @@ class TestUserRoutes:
     async def test_update_user_self(
         self,
         client: AsyncClient,
-        default_user: Dict[str, User],
+        default_user: dict[str, User],
         user_name: str,
         expected_status: int,
     ):
@@ -127,7 +125,7 @@ class TestUserRoutes:
         username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
 
-        payload: Dict[str, str] = {
+        payload: dict[str, str] = {
             "first_name": f"{default_user[user_name].username} updated by self",
         }
         response = await client.put(
@@ -154,7 +152,7 @@ class TestUserRoutes:
     async def test_delete_user(
         self,
         client: AsyncClient,
-        default_user: Dict[str, User],
+        default_user: dict[str, User],
         user_name: str,
         expected_status: int,
     ):
