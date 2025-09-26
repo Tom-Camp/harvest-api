@@ -45,9 +45,9 @@ async def create_bed(
         bed=bed,
         session=session,
     )
-    logger.info(
+    log_handler.log_security_event(
         event="Bed create",
-        severity="moderate",
+        severity="low",
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
