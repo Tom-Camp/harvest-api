@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
 from sqlmodel import Field, Relationship
@@ -21,10 +21,10 @@ class Garden(ModelBase, table=True):  # type: ignore
     description: str | None = None
     location: str = Field(default="Lebanon, Kansas, USA", nullable=False)
     is_private: bool = Field(default=True)
-    notes: List[GardenNote] = Relationship(
+    notes: list[GardenNote] = Relationship(
         back_populates="garden", sa_relationship_kwargs={"cascade": "all, delete"}
     )
-    beds: List["Bed"] = Relationship(
+    beds: list["Bed"] = Relationship(
         back_populates="garden", sa_relationship_kwargs={"cascade": "all, delete"}
     )
     user_id: Optional[UUID] = Field(

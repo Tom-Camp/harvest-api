@@ -1,4 +1,4 @@
-from typing import List, Sequence
+from typing import Sequence
 from uuid import UUID
 
 from casbin import AsyncEnforcer
@@ -50,7 +50,7 @@ async def create_page(
     return new_page
 
 
-@page_router.get("/", response_model=List[PageList])
+@page_router.get("/", response_model=list[PageList])
 async def read_pages(
     skip: int = 0,
     limit: int = 100,
@@ -60,7 +60,7 @@ async def read_pages(
     return await PageCRUD.get_pages(session, skip=skip, limit=limit)
 
 
-@page_router.get("/my", response_model=List[PageList])
+@page_router.get("/my", response_model=list[PageList])
 async def read_my_pages(
     skip: int = 0,
     limit: int = 100,

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 from pydantic import EmailStr
 from sqlalchemy import String
@@ -27,11 +27,11 @@ class UserBase(SQLModel):
 
 class User(ModelBase, UserBase, table=True):  # type: ignore
     hashed_password: str
-    pages: List["Page"] = Relationship(
+    pages: list["Page"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete"},
     )
-    gardens: List["Garden"] = Relationship(
+    gardens: list["Garden"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete"},
     )

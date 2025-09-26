@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -35,6 +34,6 @@ class GardenRead(BaseModel):
     updated_date: datetime
     name: str
     description: str | None = None
-    notes: List[str] | None = None
-    beds: List[BedRead] | None = None
+    notes: list[str] | None = None
+    beds: list[BedRead] | None = None
     is_private: bool

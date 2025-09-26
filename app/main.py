@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-from typing import List
 from uuid import UUID
 
 from fastapi import FastAPI, Request
@@ -31,7 +30,7 @@ async def lifespan(app: FastAPI):
     async with db.engine.begin() as conn:
         await conn.run_sync(db.metadata.create_all)
 
-    admin_user_ids: List[UUID] = []
+    admin_user_ids: list[UUID] = []
     async for session in db.get_db():
         admin_user = await setup_initial_admin(session=session)
         admin_user_ids.append(admin_user)

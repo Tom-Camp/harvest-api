@@ -1,4 +1,3 @@
-from typing import List
 from uuid import UUID
 
 from casbin import AsyncEnforcer
@@ -63,7 +62,7 @@ async def create_bed(
     return new_bed
 
 
-@bed_router.get("/{garden_id}", response_model=List[BedList])
+@bed_router.get("/{garden_id}", response_model=list[BedList])
 async def read_beds(
     garden_id: UUID,
     skip: int = 0,

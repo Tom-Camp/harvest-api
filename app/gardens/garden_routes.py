@@ -1,4 +1,4 @@
-from typing import List, Sequence
+from typing import Sequence
 from uuid import UUID
 
 from casbin import AsyncEnforcer
@@ -58,7 +58,7 @@ async def create_garden(
     return new_garden
 
 
-@garden_router.get("/", response_model=List[GardenList])
+@garden_router.get("/", response_model=list[GardenList])
 async def read_gardens(
     skip: int = 0,
     limit: int = 100,
@@ -68,7 +68,7 @@ async def read_gardens(
     return await GardenCRUD.get_gardens(session, skip=skip, limit=limit)
 
 
-@garden_router.get("/user/{user_id}", response_model=List[GardenList])
+@garden_router.get("/user/{user_id}", response_model=list[GardenList])
 async def read_user_gardens(
     user_id: UUID,
     skip: int = 0,
@@ -81,7 +81,7 @@ async def read_user_gardens(
     )
 
 
-@garden_router.get("/my", response_model=List[GardenList])
+@garden_router.get("/my", response_model=list[GardenList])
 async def read_my_gardens(
     skip: int = 0,
     limit: int = 100,

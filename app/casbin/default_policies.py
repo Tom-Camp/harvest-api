@@ -1,4 +1,3 @@
-from typing import List
 from uuid import UUID
 
 DEFAULT_POLICIES = [
@@ -17,4 +16,4 @@ DEFAULT_POLICIES = [
     ("authenticated", "pa:*", "read", "allow"),
 ]
 
-DEFAULT_ADMIN_USERS: List[UUID] = []
+DEFAULT_ADMIN_USERS: list[UUID] = []

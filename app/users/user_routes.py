@@ -1,4 +1,4 @@
-from typing import List, Sequence
+from typing import Sequence
 from uuid import UUID
 
 from casbin import AsyncEnforcer
@@ -37,7 +37,7 @@ async def read_users_me(
     return user
 
 
-@user_router.get("/", response_model=List[UserRead])
+@user_router.get("/", response_model=list[UserRead])
 async def read_users(
     skip: int = 0,
     limit: int = 100,

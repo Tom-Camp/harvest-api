@@ -1,5 +1,3 @@
-from typing import List
-
 from pydantic import EmailStr, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -8,7 +6,7 @@ class Settings(BaseSettings):
     APP_NAME: str = Field(default="Harvesting.Food")
     ACCESS_TOKEN_EXPIRE_MINUTES: float = 30
     CASBIN_DB_URL: str | None = None
-    CORS_ORIGINS: List[str] | None = None
+    CORS_ORIGINS: list[str] | None = None
     ENVIRONMENT: str | None = None
     HASH_ALGORITHM: str | None = None
     INITIAL_USER_LOCATION: str = Field(default="Lebanon, Kansas")
