@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
+from app.beds.bed_models import Bed
 from app.gardens.garden_models import Garden
 from app.gardens.garden_schemas import GardenCreate, GardenUpdate
 from app.logging import get_logger
@@ -29,8 +30,11 @@ class GardenCRUD:
     async def get_garden(session: AsyncSession, garden_id: UUID) -> Optional[Garden]:
         statement = (
             select(Garden)
-            .options(selectinload(Garden.user))
-            .options(selectinload(Garden.notes))
+            .options(
+                selectinload(Garden.beds).selectinload(Bed.notes),
+                selectinload(Garden.user),
+                selectinload(Garden.notes),
+            )
             .where(Garden.id == garden_id)
         )
         result = await session.execute(statement)
@@ -51,10 +55,7 @@ class GardenCRUD:
         session: AsyncSession, user_id: UUID, skip: int = 0, limit: int = 100
     ) -> Sequence[Garden]:
         statement = (
-            select(Garden)
-            .where(Garden.__table__.c.user_id == user_id)
-            .offset(skip)
-            .limit(limit)
+            select(Garden).where(Garden.user_id == user_id).offset(skip).limit(limit)
         )
         result = await session.execute(statement)
         gardens = result.scalars().all()

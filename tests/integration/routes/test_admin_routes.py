@@ -1,5 +1,9 @@
-import pytest
+from typing import Dict
 
+import pytest
+from httpx import AsyncClient
+
+from app.users.user_models import User
 from tests.helpers.test_helpers import get_auth_headers
 
 
@@ -16,10 +20,14 @@ class TestAdminRoutes:
         ],
     )
     async def test_assign_role(
-        self, client, default_user, user_name: str, expected_status: int
+        self,
+        client: AsyncClient,
+        default_user: Dict[str, User],
+        user_name: str,
+        expected_status: int,
     ):
         test_as = default_user.get(user_name, "")
-        username = test_as.username if test_as else None
+        username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
         user_user = default_user.get("authenticated")
         response = await client.post(
@@ -44,10 +52,14 @@ class TestAdminRoutes:
         ],
     )
     async def test_remove_role(
-        self, client, default_user, user_name: str, expected_status: int
+        self,
+        client: AsyncClient,
+        default_user: Dict[str, User],
+        user_name: str,
+        expected_status: int,
     ):
         test_as = default_user.get(user_name, "")
-        username = test_as.username if test_as else None
+        username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
         user_user = default_user.get("authenticated")
         response = await client.post(
@@ -72,10 +84,14 @@ class TestAdminRoutes:
         ],
     )
     async def test_check_permissions(
-        self, client, default_user, user_name: str, expected_status: int
+        self,
+        client: AsyncClient,
+        default_user: Dict[str, User],
+        user_name: str,
+        expected_status: int,
     ):
         test_as = default_user.get(user_name, "")
-        username = test_as.username if test_as else None
+        username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
         user_user = default_user.get("authenticated")
         response = await client.post(
@@ -101,10 +117,14 @@ class TestAdminRoutes:
         ],
     )
     async def test_get_user_roles(
-        self, client, default_user, user_name: str, expected_status: int
+        self,
+        client: AsyncClient,
+        default_user: Dict[str, User],
+        user_name: str,
+        expected_status: int,
     ):
         test_as = default_user.get(user_name, "")
-        username = test_as.username if test_as else None
+        username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
         moderator_user = default_user.get("moderator")
         response = await client.get(
@@ -124,10 +144,14 @@ class TestAdminRoutes:
         ],
     )
     async def test_get_role_users(
-        self, client, default_user, user_name: str, expected_status: int
+        self,
+        client: AsyncClient,
+        default_user: Dict[str, User],
+        user_name: str,
+        expected_status: int,
     ):
         test_as = default_user.get(user_name, "")
-        username = test_as.username if test_as else None
+        username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
         response = await client.get(
             url="/api/admin/role-users/moderator",
@@ -146,10 +170,14 @@ class TestAdminRoutes:
         ],
     )
     async def test_debug_role_users(
-        self, client, default_user, user_name: str, expected_status: int
+        self,
+        client: AsyncClient,
+        default_user: Dict[str, User],
+        user_name: str,
+        expected_status: int,
     ):
         test_as = default_user.get(user_name, "")
-        username = test_as.username if test_as else None
+        username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
         response = await client.get(
             url="/api/admin/role-users/moderator",

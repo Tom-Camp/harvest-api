@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from app.gardens.bed_models import Bed
-from app.gardens.bed_schemas import BedCreate, BedUpdate
+from app.beds.bed_models import Bed
+from app.beds.bed_schemas import BedCreate, BedUpdate
 from app.logging import get_logger
 
 logger = get_logger(__name__)
@@ -27,11 +27,7 @@ class BedCRUD:
 
     @staticmethod
     async def get_bed(session: AsyncSession, bed_id: UUID) -> Optional[Bed]:
-        statement = (
-            select(Bed)
-            .options(selectinload(Bed.__table__.c.notes))
-            .where(Bed.__table__.c.id == bed_id)
-        )
+        statement = select(Bed).options(selectinload(Bed.notes)).where(Bed.id == bed_id)
         result = await session.execute(statement)
         bed = result.scalars().first()
         return bed
@@ -41,10 +37,7 @@ class BedCRUD:
         garden_id: UUID, session: AsyncSession, skip: int = 0, limit: int = 100
     ) -> Sequence[Bed]:
         statement = (
-            select(Bed)
-            .where(Bed.__table__.c.garden_id == garden_id)
-            .offset(skip)
-            .limit(limit)
+            select(Bed).where(Bed.garden_id == garden_id).offset(skip).limit(limit)
         )
         result = await session.execute(statement)
         bed = result.scalars().all()

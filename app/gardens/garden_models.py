@@ -6,7 +6,7 @@ from sqlmodel import Field, Relationship
 from app.helpers.model_base import ModelBase
 
 if TYPE_CHECKING:
-    from app.gardens.bed_models import Bed  # noqa: F401
+    from app.beds.bed_models import Bed  # noqa: F401
     from app.users.user_models import User  # noqa: F401
 
 
@@ -24,7 +24,9 @@ class Garden(ModelBase, table=True):  # type: ignore
     notes: List[GardenNote] = Relationship(
         back_populates="garden", sa_relationship_kwargs={"cascade": "all, delete"}
     )
-    beds: List["Bed"] = Relationship(back_populates="garden")
+    beds: List["Bed"] = Relationship(
+        back_populates="garden", sa_relationship_kwargs={"cascade": "all, delete"}
+    )
     user_id: Optional[UUID] = Field(
         foreign_key="user.id", nullable=False, ondelete="CASCADE"
     )

@@ -168,7 +168,7 @@ async def delete_garden(
     garden_resource = casbin_object("ga", garden.id)
 
     # Check RBAC permissions
-    allowed = enforcer.enforce(user_subject, garden_resource, "update")
+    allowed = enforcer.enforce(user_subject, garden_resource, "delete")
 
     # If RBAC fails, check ownership manually
     if not allowed and not is_owner(user_subject, garden):

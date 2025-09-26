@@ -6,11 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
+from app.beds.bed_crud import BedCRUD
+from app.beds.bed_models import Bed
+from app.beds.bed_schemas import BedCreate, BedList, BedRead, BedUpdate
 from app.casbin.casbin_config import get_casbin_enforcer
 from app.casbin.casbin_helpers import casbin_object, casbin_subject, is_owner
-from app.gardens.bed_crud import BedCRUD
-from app.gardens.bed_models import Bed
-from app.gardens.bed_schemas import BedCreate, BedList, BedRead, BedUpdate
 from app.gardens.garden_crud import GardenCRUD
 from app.logging import get_logger, log_handler
 from app.users.user_models import User
@@ -63,7 +63,7 @@ async def create_bed(
     return new_bed
 
 
-@bed_router.get("/{garden_id/", response_model=List[BedList])
+@bed_router.get("/{garden_id}", response_model=List[BedList])
 async def read_beds(
     garden_id: UUID,
     skip: int = 0,
@@ -78,15 +78,34 @@ async def read_beds(
     )
 
 
-@bed_router.get("/{bed_id}", response_model=BedRead)
+@bed_router.get("/{garden_id}/{bed_id}", response_model=BedRead)
 async def read_bed(
+    garden_id: UUID,
     bed_id: UUID,
     session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ):
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
 
     bed = await BedCRUD.get_bed(session=session, bed_id=bed_id)
     if not bed:
         raise HTTPException(status_code=404, detail="Bed not found")
+
+    if bed.garden_id != garden_id:
+        raise HTTPException(status_code=404, detail="Bed not found in specified garden")
+
+    user_subject: str = casbin_subject(current_user.id)
+    garden_resource: str = casbin_object("ga", garden_id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, garden_resource, "read")
+
+    if not allowed and not is_owner(user_subject, garden):
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     return bed
 

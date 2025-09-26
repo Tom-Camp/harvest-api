@@ -1,12 +1,15 @@
 from typing import Dict
 
 import pytest
+from httpx import AsyncClient
+
+from app.users.user_models import User
 
 
 class TestAuthRoutes:
 
     @pytest.mark.asyncio
-    async def test_register(self, client):
+    async def test_register(self, client: AsyncClient):
         payload = {
             "username": "alice",
             "email": "alice@example.com",
@@ -23,7 +26,7 @@ class TestAuthRoutes:
         assert data["email"] == "alice@example.com"
 
     @pytest.mark.asyncio
-    async def test_register_invalid_email(self, client):
+    async def test_register_invalid_email(self, client: AsyncClient):
         payload: Dict[str, str] = {
             "username": "alice",
             "email": "alice@example",
@@ -37,7 +40,7 @@ class TestAuthRoutes:
         assert response.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_register_invalid_username(self, client):
+    async def test_register_invalid_username(self, client: AsyncClient):
         payload: Dict[str, str] = {
             "email": "alice@example",
             "password": "milk prairie island desert",
@@ -50,7 +53,7 @@ class TestAuthRoutes:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_register_invalid_password_length(self, client):
+    async def test_register_invalid_password_length(self, client: AsyncClient):
         payload: Dict[str, str] = {
             "email": "alice@example",
             "password": "6j9ZI43/jcA",
@@ -63,7 +66,7 @@ class TestAuthRoutes:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_register_invalid_password_complexity(self, client):
+    async def test_register_invalid_password_complexity(self, client: AsyncClient):
         payload: Dict[str, str] = {
             "email": "alice@example",
             "password": "lemon meringue pie",
@@ -76,7 +79,7 @@ class TestAuthRoutes:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_register_invalid_password_breach(self, client):
+    async def test_register_invalid_password_breach(self, client: AsyncClient):
         payload: Dict[str, str] = {
             "email": "alice@example",
             "password": "correct horse battery staple",
@@ -89,7 +92,9 @@ class TestAuthRoutes:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_login_for_access_token(self, client, default_user):
+    async def test_login_for_access_token(
+        self, client: AsyncClient, default_user: Dict[str, User]
+    ):
         user = default_user.get("admin")
         payload: Dict[str, str] = {
             "username": user.username,
@@ -102,7 +107,9 @@ class TestAuthRoutes:
         assert "access_token" in response.json()
 
     @pytest.mark.asyncio
-    async def test_login_for_access_token_invalid_password(self, client, default_user):
+    async def test_login_for_access_token_invalid_password(
+        self, client: AsyncClient, default_user: Dict[str, User]
+    ):
         user = default_user.get("admin")
         payload = {
             "username": user.username,
