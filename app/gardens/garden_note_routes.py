@@ -50,9 +50,8 @@ async def create_garden_note(
         note=note,
         session=session,
     )
-    log_handler.log_security_event(
+    log_handler.log_garden_event(
         event="Note create",
-        severity="low",
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
@@ -104,7 +103,6 @@ async def read_notes(
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ):
 
-    logger.info("DEBUG: read_notes start")
     garden = await GardenCRUD.get_garden(session, garden_id)
     if not garden:
         raise HTTPException(status_code=404, detail="Not found")
@@ -158,12 +156,10 @@ async def update_garden_note(
         note_update=note_update,
     )
     if updated_note:
-        log_handler.log_security_event(
+        log_handler.log_garden_event(
             event="Garden Note updated",
-            severity="low",
             context={
                 "actor_id": current_user.id,
-                "event_type": "security",
                 "actor_username": current_user.username,
                 "garden_id": updated_note.garden_id,
                 "note_id": updated_note.id,
@@ -203,11 +199,9 @@ async def delete_note(
     if not await GardenNoteCRUD.delete_note(session, note_id):
         raise HTTPException(status_code=404, detail="Note not found")
 
-    log_handler.log_security_event(
+    log_handler.log_garden_event(
         event="Note deleted",
-        severity="moderate",
         context={
-            "event_type": "security",
             "actor_id": current_user.id,
             "actor_username": current_user.username,
             "garden_id": note.garden_id,

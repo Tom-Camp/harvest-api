@@ -45,9 +45,8 @@ async def create_bed(
         bed=bed,
         session=session,
     )
-    log_handler.log_security_event(
+    log_handler.log_garden_event(
         event="Bed create",
-        severity="low",
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
@@ -146,12 +145,10 @@ async def update_bed(
         bed_update=bed_update,
     )
     if updated_bed:
-        log_handler.log_security_event(
+        log_handler.log_garden_event(
             event="Bed updated",
-            severity="low",
             context={
                 "actor_id": current_user.id,
-                "event_type": "security",
                 "actor_username": current_user.username,
                 "garden_id": updated_bed.garden_id,
                 "bed_id": updated_bed.id,
@@ -192,11 +189,9 @@ async def delete_bed(
     if not await BedCRUD.delete_bed(session, bed_id):
         raise HTTPException(status_code=404, detail="Bed not found")
 
-    log_handler.log_security_event(
+    log_handler.log_garden_event(
         event="Bed deleted",
-        severity="moderate",
         context={
-            "event_type": "security",
             "actor_id": current_user.id,
             "actor_username": current_user.username,
             "garden_id": bed.garden_id,

@@ -34,9 +34,8 @@ async def create_page(
         raise HTTPException(status_code=403, detail="Forbidden")
 
     new_page = await PageCRUD.create_page(session, page, current_user.id)
-    logger.info(
+    log_handler.log_business_event(
         event="Page create",
-        severity="moderate",
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
@@ -111,9 +110,8 @@ async def update_page(
 
     updated_page = await PageCRUD.update_page(session, page_id, page_update)
     if updated_page:
-        log_handler.log_security_event(
+        log_handler.log_business_event(
             event="Page updated",
-            severity="low",
             context={
                 "actor_id": current_user.id,
                 "event_type": "security",
@@ -152,11 +150,9 @@ async def delete_page(
     if not await PageCRUD.delete_page(session, page_id):
         raise HTTPException(status_code=404, detail="Page not found")
 
-    log_handler.log_security_event(
+    log_handler.log_business_event(
         event="Page deleted",
-        severity="moderate",
         context={
-            "event_type": "security",
             "actor_id": current_user.id,
             "actor_username": current_user.username,
             "page_id": page.id,

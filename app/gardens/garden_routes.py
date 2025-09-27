@@ -43,9 +43,8 @@ async def create_garden(
     new_garden = await GardenCRUD.create_garden(
         garden=garden, session=session, user=current_user
     )
-    logger.info(
+    log_handler.log_garden_event(
         event="Garden create",
-        severity="moderate",
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
@@ -140,12 +139,10 @@ async def update_garden(
         garden_update=garden_update,
     )
     if updated_garden:
-        log_handler.log_security_event(
+        log_handler.log_garden_event(
             event="Garden updated",
-            severity="low",
             context={
                 "actor_id": current_user.id,
-                "event_type": "security",
                 "actor_username": current_user.username,
                 "garden_id": updated_garden.id,
                 "garden_name": updated_garden.name,
@@ -181,11 +178,9 @@ async def delete_garden(
     if not await GardenCRUD.delete_garden(session, garden_id):
         raise HTTPException(status_code=404, detail="Garden not found")
 
-    log_handler.log_security_event(
+    log_handler.log_garden_event(
         event="Garden deleted",
-        severity="moderate",
         context={
-            "event_type": "security",
             "actor_id": current_user.id,
             "actor_username": current_user.username,
             "garden_id": garden.id,

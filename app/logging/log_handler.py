@@ -37,6 +37,9 @@ class StructlogHandler:
     def log_business_event(self, event: str, **context: Any) -> None:
         self.logger.info(event, event_type="business", **context)
 
+    def log_garden_event(self, event: str, **context: Any) -> None:
+        self.logger.info(event, event_type="garden", **context)
+
     def log_security_event(
         self, event: str, severity: str = "medium", **context: Any
     ) -> None:
