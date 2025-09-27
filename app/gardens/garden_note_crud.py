@@ -1,11 +1,13 @@
 import time
+from typing import Sequence
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from app.gardens.garden_models import GardenNote
-from app.gardens.garden_note_schemas import GardenNoteCreate, GardenNoteList
+from app.gardens.garden_note_schemas import GardenNoteCreate, GardenNoteUpdate
 from app.logging import get_logger, log_handler
 
 logger = get_logger(__name__)
@@ -51,7 +53,7 @@ class GardenNoteCRUD:
     @staticmethod
     async def get_notes(
         garden_id: UUID, session: AsyncSession, skip: int = 0, limit: int = 100
-    ) -> list[GardenNoteList]:
+    ) -> Sequence[GardenNote]:
         start = time.time()
 
         statement = (
@@ -61,7 +63,7 @@ class GardenNoteCRUD:
             .limit(limit)
         )
         result = await session.execute(statement)
-        note = result.scalars().all()
+        notes = result.scalars().all()
 
         duration_ms = (time.time() - start) * 1000
         log_handler.log_database_operation(
@@ -70,4 +72,20 @@ class GardenNoteCRUD:
             duration_ms=duration_ms,
             garden_id=str(garden_id),
         )
+        return notes
+
+    @staticmethod
+    async def update_note(
+        session: AsyncSession, note_id: UUID, note_update: GardenNoteUpdate
+    ) -> GardenNote:
+        note = await session.get(
+            GardenNote, note_id, options=[selectinload(GardenNote.garden)]
+        )
+        if note:
+            note_data = note_update.model_dump(exclude_unset=True)
+            for field, value in note_data.items():
+                setattr(note, field, value)
+            session.add(note)
+            await session.commit()
+            await session.refresh(note)
         return note

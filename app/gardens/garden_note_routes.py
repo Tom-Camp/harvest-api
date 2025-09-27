@@ -1,3 +1,4 @@
+from typing import Sequence
 from uuid import UUID
 
 from casbin import AsyncEnforcer
@@ -10,7 +11,11 @@ from app.casbin.casbin_helpers import casbin_object, casbin_subject, is_owner
 from app.gardens.garden_crud import GardenCRUD
 from app.gardens.garden_models import GardenNote
 from app.gardens.garden_note_crud import GardenNoteCRUD
-from app.gardens.garden_note_schemas import GardenNoteCreate, GardenNoteList
+from app.gardens.garden_note_schemas import (
+    GardenNoteCreate,
+    GardenNoteList,
+    GardenNoteUpdate,
+)
 from app.logging import get_logger, log_handler
 from app.users.user_models import User
 from app.utils.database import get_db
@@ -89,7 +94,7 @@ async def get_garden_note(
     return note
 
 
-@garden_note_router.get("/notes/{garden_id}", response_model=list[GardenNoteList])
+@garden_note_router.get("/notes/{garden_id}", response_model=Sequence[GardenNoteList])
 async def read_notes(
     garden_id: UUID,
     skip: int = 0,
@@ -97,7 +102,7 @@ async def read_notes(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
-) -> list[GardenNoteList]:
+):
 
     logger.info("DEBUG: read_notes start")
     garden = await GardenCRUD.get_garden(session, garden_id)
@@ -119,3 +124,51 @@ async def read_notes(
         skip=skip,
         limit=limit,
     )
+
+
+@garden_note_router.put("/{note_id}", response_model=GardenNote)
+async def update_garden_note(
+    note_id: UUID,
+    note_update: GardenNoteUpdate,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> GardenNote:
+
+    note = await GardenNoteCRUD.get_note(note_id=note_id, session=session)
+    if not note:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    garden = await GardenCRUD.get_garden(session, note.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    user_subject: str = casbin_subject(current_user.id)
+    garden_resource: str = casbin_object("ga", garden.id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, garden_resource, "update")
+
+    if not allowed and not is_owner(user_subject, garden):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    updated_note = await GardenNoteCRUD.update_note(
+        session=session,
+        note_id=note_id,
+        note_update=note_update,
+    )
+    if updated_note:
+        log_handler.log_security_event(
+            event="Garden Note updated",
+            severity="low",
+            context={
+                "actor_id": current_user.id,
+                "event_type": "security",
+                "actor_username": current_user.username,
+                "garden_id": updated_note.garden_id,
+                "note_id": updated_note.id,
+                "action": "update_note",
+                "resource": "garden_note_routes",
+            },
+        )
+    return updated_note
