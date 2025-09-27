@@ -54,11 +54,13 @@ class GardenCRUD:
         garden = result.scalars().first()
 
         duration_ms = (time.time() - start) * 1000
+        gid = str(garden.id) if isinstance(garden, Garden) else "none"
+
         log_handler.log_database_operation(
             operation="get_garden",
             table="garden",
             duration_ms=duration_ms,
-            garden_id=str(garden.id),
+            garden_id=gid,
         )
         return garden
 

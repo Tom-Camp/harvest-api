@@ -45,13 +45,14 @@ class BedCRUD:
 
         result = await session.execute(statement)
         bed = result.scalars().first()
+        bid = str(bed.id) if isinstance(bed, Bed) else "none"
 
         duration_ms = (time.time() - start) * 1000
         log_handler.log_database_operation(
             operation="get_bed",
             table="bed",
             duration_ms=duration_ms,
-            bed_id=str(bed.id),
+            bed_id=bid,
         )
         return bed
 

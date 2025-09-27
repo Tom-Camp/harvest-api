@@ -69,6 +69,10 @@ async def read_beds(
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
 ):
+    garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
     return await BedCRUD.get_beds(
         garden_id=garden_id,
         session=session,
