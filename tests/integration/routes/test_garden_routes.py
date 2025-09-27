@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from httpx import AsyncClient
 
@@ -109,6 +111,22 @@ class TestGardenRoutes:
         assert response.status_code == 307
 
     @pytest.mark.asyncio
+    async def test_read_user_gardens_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.get(
+            url=f"/api/gardens/user/{bad_id}",
+            headers=headers,
+        )
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
@@ -182,6 +200,22 @@ class TestGardenRoutes:
                 headers=headers,
             )
             assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_read_garden_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.get(
+            url=f"/api/gardens/{bad_id}",
+            headers=headers,
+        )
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -276,6 +310,26 @@ class TestGardenRoutes:
             assert response.status_code == 401
 
     @pytest.mark.asyncio
+    async def test_update_garden_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.put(
+            url=f"/api/gardens/{bad_id}",
+            json={
+                "name": "Bad ID's updated garden",
+                "description": "This has been Updated",
+            },
+            headers=headers,
+        )
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
@@ -358,3 +412,19 @@ class TestGardenRoutes:
                 headers=headers,
             )
             assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_delete_garden_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.delete(
+            url=f"/api/gardens/{bad_id}",
+            headers=headers,
+        )
+        assert response.status_code == 404
