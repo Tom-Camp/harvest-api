@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from httpx import AsyncClient
 
@@ -43,6 +45,27 @@ class TestAdminRoutes:
             pytest.fail("No User found for user authenticated")
 
     @pytest.mark.asyncio
+    async def test_assign_role_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.post(
+            url="/api/admin/assign-role",
+            json={
+                "user_id": str(bad_id),
+                "username": "bad_id",
+                "role_name": "moderator",
+            },
+            headers=headers,
+        )
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
@@ -76,6 +99,27 @@ class TestAdminRoutes:
             assert response.status_code == expected_status
         else:
             pytest.fail("No User found for user authenticated")
+
+    @pytest.mark.asyncio
+    async def test_remove_role_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.post(
+            url="/api/admin/remove-role",
+            json={
+                "user_id": str(bad_id),
+                "username": "bad_id",
+                "role_name": "moderator",
+            },
+            headers=headers,
+        )
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -114,6 +158,28 @@ class TestAdminRoutes:
             pytest.fail("No User found for user authenticated")
 
     @pytest.mark.asyncio
+    async def test_check_permissions_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.post(
+            url="/api/admin/check-permission",
+            json={
+                "user_id": str(bad_id),
+                "username": "bad_id",
+                "resource": "policy",
+                "action": "read",
+            },
+            headers=headers,
+        )
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
@@ -142,6 +208,22 @@ class TestAdminRoutes:
             assert response.status_code == expected_status
         else:
             pytest.fail("No User found for user moderator")
+
+    @pytest.mark.asyncio
+    async def test_get_user_roles_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.get(
+            url=f"/api/admin/user-roles/{bad_id}",
+            headers=headers,
+        )
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(

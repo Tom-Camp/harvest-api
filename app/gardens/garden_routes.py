@@ -17,6 +17,7 @@ from app.gardens.garden_schemas import (
     GardenUpdate,
 )
 from app.logging import get_logger, log_handler
+from app.users.user_crud import UserCRUD
 from app.users.user_models import User
 from app.utils.database import get_db
 
@@ -75,6 +76,9 @@ async def read_user_gardens(
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
 ):
+    user = await UserCRUD.get_user(session=session, user_id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
     return await GardenCRUD.get_user_gardens(
         session=session, user_id=user_id, skip=skip, limit=limit

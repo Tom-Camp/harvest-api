@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from httpx import AsyncClient
 
@@ -98,6 +100,16 @@ class TestPageRoutes:
         assert page_response.json().get("title") == default_pages[0].title
 
     @pytest.mark.asyncio
+    async def test_read_page_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        bad_id = uuid.uuid4()
+        response = await client.get(url=f"/api/pages/{bad_id}")
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
@@ -130,6 +142,23 @@ class TestPageRoutes:
         assert response.status_code == expected_status
 
     @pytest.mark.asyncio
+    async def test_update_page_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.put(
+            url=f"/api/pages/{bad_id}",
+            json={"title": f"Updated by {username}"},
+            headers=headers,
+        )
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
@@ -160,7 +189,20 @@ class TestPageRoutes:
         test_as = default_user.get(user_name, "")
         username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
-        delete_garden = await client.delete(
+        delete_page = await client.delete(
             url=f"/api/pages/{to_delete.get('id', '')}", headers=headers
         )
-        assert delete_garden.status_code == expected_status
+        assert delete_page.status_code == expected_status
+
+    @pytest.mark.asyncio
+    async def test_delete_page_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.delete(url=f"/api/pages/{bad_id}", headers=headers)
+        assert response.status_code == 404

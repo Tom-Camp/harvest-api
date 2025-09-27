@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from httpx import AsyncClient
 
@@ -69,6 +71,19 @@ class TestUserRoutes:
             assert response.json()["username"] == read_user.username
 
     @pytest.mark.asyncio
+    async def test_read_user_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.get(url=f"/api/users/{bad_id}", headers=headers)
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
@@ -104,6 +119,24 @@ class TestUserRoutes:
                 response.json()["first_name"]
                 == f"{read_user.username} updated by {username}"
             )
+
+    @pytest.mark.asyncio
+    async def test_update_user_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        payload: dict[str, str] = {
+            "first_name": "Updated by Bad ID",
+        }
+        response = await client.put(
+            url=f"/api/users/{bad_id}", json=payload, headers=headers
+        )
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -193,3 +226,19 @@ class TestUserRoutes:
             assert response.status_code == 401
         else:
             pytest.fail("No user found for user test_user")
+
+    @pytest.mark.asyncio
+    async def test_delete_user_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.delete(
+            url=f"/api/users/{bad_id}",
+            headers=headers,
+        )
+        assert response.status_code == 404

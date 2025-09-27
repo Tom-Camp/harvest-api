@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from httpx import AsyncClient
 
@@ -76,6 +78,19 @@ class TestBedRoutes:
             pytest.fail("No garden found for user authenticated")
 
     @pytest.mark.asyncio
+    async def test_read_beds_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.get(url=f"/api/beds/{bad_id}", headers=headers)
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
@@ -106,6 +121,23 @@ class TestBedRoutes:
             assert response.status_code == expected_status
         else:
             pytest.fail("No garden found for user tester")
+
+    @pytest.mark.asyncio
+    async def test_read_bed_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        garden_id = uuid.uuid4()
+
+        response = await client.get(
+            url=f"/api/beds/{garden_id}/{bad_id}", headers=headers
+        )
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_read_bed_unauthenticated(
@@ -162,6 +194,25 @@ class TestBedRoutes:
                 assert data.get("name") == f"Updated by {username}"
         else:
             pytest.fail("No garden found for user tester")
+
+    @pytest.mark.asyncio
+    async def test_update_bed_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.put(
+            url=f"/api/beds/{bad_id}",
+            json={
+                "name": f"Updated by {username}",
+            },
+            headers=headers,
+        )
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -301,3 +352,19 @@ class TestBedRoutes:
                 assert data.get("message") == "Bed deleted successfully"
         else:
             pytest.fail("No garden found for user tester")
+
+    @pytest.mark.asyncio
+    async def test_delete_bed_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.delete(
+            url=f"/api/beds/{bad_id}",
+            headers=headers,
+        )
+        assert response.status_code == 404

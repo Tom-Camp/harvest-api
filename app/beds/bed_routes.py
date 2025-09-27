@@ -45,9 +45,9 @@ async def create_bed(
         bed=bed,
         session=session,
     )
-    logger.info(
+    log_handler.log_security_event(
         event="Bed create",
-        severity="moderate",
+        severity="low",
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
@@ -69,6 +69,10 @@ async def read_beds(
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
 ):
+    garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
     return await BedCRUD.get_beds(
         garden_id=garden_id,
         session=session,
@@ -179,7 +183,7 @@ async def delete_bed(
     bed_resource = casbin_object("be", bed.id)
 
     # Check RBAC permissions
-    allowed = enforcer.enforce(user_subject, bed_resource, "update")
+    allowed = enforcer.enforce(user_subject, bed_resource, "delete")
 
     # If RBAC fails, check ownership manually
     if not allowed and not is_owner(user_subject, garden):

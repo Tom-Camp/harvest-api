@@ -1,10 +1,11 @@
+import time
 from typing import Sequence
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.logging import get_logger
+from app.logging import get_logger, log_handler
 from app.pages.page_models import Page
 from app.pages.page_schemas import PageCreate, PageUpdate
 
@@ -17,9 +18,20 @@ class PageCRUD:
         session: AsyncSession, page: PageCreate, user_id: UUID
     ) -> Page:
         db_page = Page(**page.model_dump(), user_id=user_id)
+
+        start = time.time()
+
         session.add(db_page)
         await session.commit()
         await session.refresh(db_page)
+
+        duration_ms = (time.time() - start) * 1000
+        log_handler.log_database_operation(
+            operation="create_page",
+            table="page",
+            duration_ms=duration_ms,
+            page_id=str(db_page.id),
+        )
         return db_page
 
     @staticmethod
@@ -31,8 +43,19 @@ class PageCRUD:
         session: AsyncSession, skip: int = 0, limit: int = 100
     ) -> Sequence[Page]:
         statement = select(Page).offset(skip).limit(limit)
+
+        start = time.time()
+
         result = await session.execute(statement)
         pages = result.scalars().all()
+
+        duration_ms = (time.time() - start) * 1000
+        log_handler.log_database_operation(
+            operation="get_pages",
+            table="page",
+            duration_ms=duration_ms,
+            list_length=len(pages),
+        )
         return pages
 
     @staticmethod
@@ -45,8 +68,18 @@ class PageCRUD:
             .offset(skip)
             .limit(limit)
         )
+        start = time.time()
+
         result = await session.execute(statement)
         pages = result.scalars().all()
+
+        duration_ms = (time.time() - start) * 1000
+        log_handler.log_database_operation(
+            operation="get_user_pages",
+            table="page",
+            duration_ms=duration_ms,
+            list_length=len(pages),
+        )
         return pages
 
     @staticmethod
@@ -58,17 +91,37 @@ class PageCRUD:
             page_data = page_update.model_dump(exclude_unset=True)
             for field, value in page_data.items():
                 setattr(page, field, value)
-            page.update_timestamp()
+
+            start = time.time()
+
             session.add(page)
             await session.commit()
             await session.refresh(page)
+
+            duration_ms = (time.time() - start) * 1000
+            log_handler.log_database_operation(
+                operation="update_page",
+                table="page",
+                duration_ms=duration_ms,
+                page_id=str(page_id),
+            )
         return page
 
     @staticmethod
     async def delete_page(session: AsyncSession, page_id: UUID) -> bool:
         page = await session.get(Page, page_id)
         if page:
+            start = time.time()
+
             await session.delete(page)
             await session.commit()
+
+            duration_ms = (time.time() - start) * 1000
+            log_handler.log_database_operation(
+                operation="delete_page",
+                table="page",
+                duration_ms=duration_ms,
+                page_id=str(page_id),
+            )
             return True
         return False

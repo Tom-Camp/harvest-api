@@ -2,13 +2,16 @@ from uuid import UUID
 
 from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin.permission_schemas import PermissionCheck, RoleRequest
 from app.auth.auth import get_current_active_user
 from app.casbin.casbin_config import get_casbin_enforcer
 from app.casbin.casbin_helpers import casbin_subject
 from app.logging import get_logger, log_handler
+from app.users.user_crud import UserCRUD
 from app.users.user_models import User
+from app.utils.database import get_db
 
 logger = get_logger(__name__)
 
@@ -19,8 +22,13 @@ admin_router = APIRouter(prefix="/admin")
 async def assign_role(
     role_request: RoleRequest,
     current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+
+    user = await UserCRUD.get_user(session=session, user_id=role_request.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
     allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "add")
     if not allowed:
@@ -53,8 +61,13 @@ async def assign_role(
 async def remove_role(
     role_request: RoleRequest,
     current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+
+    user = await UserCRUD.get_user(session=session, user_id=role_request.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
     allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "delete")
     if not allowed:
@@ -88,8 +101,13 @@ async def remove_role(
 async def check_permission(
     permission_request: PermissionCheck,
     current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+
+    user = await UserCRUD.get_user(session=session, user_id=permission_request.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
     allowed = enforcer.enforce(casbin_subject(current_user.id), "policy", "read")
     if not allowed:
@@ -129,8 +147,13 @@ async def check_permission(
 async def get_user_roles(
     user_id: UUID,
     current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+
+    user = await UserCRUD.get_user(session=session, user_id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not foond")
 
     allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "read")
     if not allowed:

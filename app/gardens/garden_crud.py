@@ -1,3 +1,4 @@
+import time
 from typing import Sequence
 from uuid import UUID
 
@@ -8,7 +9,7 @@ from sqlmodel import select
 from app.beds.bed_models import Bed
 from app.gardens.garden_models import Garden
 from app.gardens.garden_schemas import GardenCreate, GardenUpdate
-from app.logging import get_logger
+from app.logging import get_logger, log_handler
 from app.users.user_models import User
 
 logger = get_logger(__name__)
@@ -20,14 +21,24 @@ class GardenCRUD:
     async def create_garden(
         garden: GardenCreate, session: AsyncSession, user: User
     ) -> Garden:
+        start = time.time()
+
         db_garden = Garden(**garden.model_dump(), user=user)
         session.add(db_garden)
         await session.commit()
         await session.refresh(db_garden)
+
+        duration_ms = (time.time() - start) * 1000
+        log_handler.log_database_operation(
+            operation="create_garden",
+            table="garden",
+            duration_ms=duration_ms,
+            garden_id=str(db_garden.id),
+        )
         return db_garden
 
     @staticmethod
-    async def get_garden(session: AsyncSession, garden_id: UUID) -> Garden | None:
+    async def get_garden(session: AsyncSession, garden_id: UUID) -> Garden:
         statement = (
             select(Garden)
             .options(
@@ -37,8 +48,20 @@ class GardenCRUD:
             )
             .where(Garden.id == garden_id)
         )
+        start = time.time()
+
         result = await session.execute(statement)
         garden = result.scalars().first()
+
+        duration_ms = (time.time() - start) * 1000
+        gid = str(garden.id) if isinstance(garden, Garden) else "none"
+
+        log_handler.log_database_operation(
+            operation="get_garden",
+            table="garden",
+            duration_ms=duration_ms,
+            garden_id=gid,
+        )
         return garden
 
     @staticmethod
@@ -46,8 +69,19 @@ class GardenCRUD:
         session: AsyncSession, skip: int = 0, limit: int = 100
     ) -> Sequence[Garden]:
         statement = select(Garden).offset(skip).limit(limit)
+
+        start = time.time()
+
         result = await session.execute(statement)
         garden = result.scalars().all()
+
+        duration_ms = (time.time() - start) * 1000
+        log_handler.log_database_operation(
+            operation="get_gardens",
+            table="garden",
+            duration_ms=duration_ms,
+            list_length=len(garden),
+        )
         return garden
 
     @staticmethod
@@ -57,8 +91,20 @@ class GardenCRUD:
         statement = (
             select(Garden).where(Garden.user_id == user_id).offset(skip).limit(limit)
         )
+
+        start = time.time()
+
         result = await session.execute(statement)
         gardens = result.scalars().all()
+
+        duration_ms = (time.time() - start) * 1000
+        log_handler.log_database_operation(
+            operation="get_user_gardens",
+            table="garden",
+            duration_ms=duration_ms,
+            user_id=user_id,
+            list_length=len(gardens),
+        )
         return gardens
 
     @staticmethod
@@ -70,17 +116,38 @@ class GardenCRUD:
             garden_data = garden_update.model_dump(exclude_unset=True)
             for field, value in garden_data.items():
                 setattr(garden, field, value)
-            garden.update_timestamp()
+
+            start = time.time()
+
             session.add(garden)
             await session.commit()
             await session.refresh(garden)
+
+            duration_ms = (time.time() - start) * 1000
+            log_handler.log_database_operation(
+                operation="update_garden",
+                table="garden",
+                duration_ms=duration_ms,
+                garden_id=str(garden.id),
+            )
         return garden
 
     @staticmethod
     async def delete_garden(session: AsyncSession, garden_id: UUID) -> bool:
+        return_value: bool = False
         garden = await session.get(Garden, garden_id)
         if garden:
+            start = time.time()
+
             await session.delete(garden)
             await session.commit()
-            return True
-        return False
+            return_value = True
+
+            duration_ms = (time.time() - start) * 1000
+            log_handler.log_database_operation(
+                operation="delete_garden",
+                table="garden",
+                duration_ms=duration_ms,
+                garden_id=str(garden.id),
+            )
+        return return_value
