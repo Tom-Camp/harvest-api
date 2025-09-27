@@ -10,7 +10,7 @@ from app.casbin.casbin_helpers import casbin_object, casbin_subject, is_owner
 from app.gardens.garden_crud import GardenCRUD
 from app.gardens.garden_models import GardenNote
 from app.gardens.garden_note_crud import GardenNoteCRUD
-from app.gardens.garden_note_schemas import GardenNoteCreate
+from app.gardens.garden_note_schemas import GardenNoteCreate, GardenNoteList
 from app.logging import get_logger, log_handler
 from app.users.user_models import User
 from app.utils.database import get_db
@@ -87,3 +87,35 @@ async def get_garden_note(
         raise HTTPException(status_code=403, detail="Forbidden")
 
     return note
+
+
+@garden_note_router.get("/notes/{garden_id}", response_model=list[GardenNoteList])
+async def read_notes(
+    garden_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> list[GardenNoteList]:
+
+    logger.info("DEBUG: read_notes start")
+    garden = await GardenCRUD.get_garden(session, garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    user_subject: str = casbin_subject(current_user.id)
+    garden_resource: str = casbin_object("ga", garden.id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, garden_resource, "read")
+
+    if not allowed and not is_owner(user_subject, garden):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return await GardenNoteCRUD.get_notes(
+        garden_id=garden_id,
+        session=session,
+        skip=skip,
+        limit=limit,
+    )

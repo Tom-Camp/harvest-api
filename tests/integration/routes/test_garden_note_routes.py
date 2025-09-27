@@ -132,3 +132,54 @@ class TestGardenNoteRoutes:
                 assert note.get("note") == "this is the first note"
         else:
             pytest.fail("No garden found for user tester")
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "user_name,expected_status",
+        [
+            ("admin", 200),
+            ("moderator", 200),
+            ("authenticated", 200),
+        ],
+    )
+    async def test_get_garden_notes(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+        default_gardens: dict[str, Garden],
+        user_name: str,
+        expected_status: int,
+    ):
+        test_as = default_user.get(user_name, "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        garden = default_gardens.get(user_name)
+        if isinstance(garden, Garden):
+            response = await client.get(
+                url=f"/api/garden-notes/notes/{garden.id}",
+                headers=headers,
+            )
+            assert response.status_code == expected_status
+            assert isinstance(response.json(), list)
+
+        else:
+            pytest.fail(f"No garden found for user {user_name}")
+
+    @pytest.mark.asyncio
+    async def test_get_garden_notes_unauthenticated(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+        default_gardens: dict[str, Garden],
+    ):
+        headers = await get_auth_headers(client=client, user_name="")
+        garden = default_gardens.get("authenticated")
+        if isinstance(garden, Garden):
+            garden_id = garden.id
+            response = await client.get(
+                url=f"/api/garden-notes/notes/{garden_id}",
+                headers=headers,
+            )
+            assert response.status_code == 401
+        else:
+            pytest.fail("No garden found for user tester")

@@ -44,7 +44,7 @@ class GardenNoteCRUD:
             operation="garden_note get_note",
             table="garden_note",
             duration_ms=duration_ms,
-            note_id=str(note.id),
+            note_id=note_id,
         )
         return note
 
