@@ -57,7 +57,7 @@ async def create_garden_note(
             "actor_id": current_user.id,
             "actor_username": current_user.username,
             "garden_id": new_note.garden_id,
-            "bed_id": new_note.id,
+            "note_id": new_note.id,
             "action": "create_garden_note",
             "resource": "garden_note_routes",
         },
@@ -172,3 +172,49 @@ async def update_garden_note(
             },
         )
     return updated_note
+
+
+@garden_note_router.delete("/{note_id}")
+async def delete_note(
+    note_id: UUID,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> dict:
+
+    note = await GardenNoteCRUD.get_note(session=session, note_id=note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=note.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    user_subject = casbin_subject(current_user.id)
+    note_resource = casbin_object("ga", note.id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, note_resource, "delete")
+
+    # If RBAC fails, check ownership manually
+    if not allowed and not is_owner(user_subject, garden):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    if not await GardenNoteCRUD.delete_note(session, note_id):
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    log_handler.log_security_event(
+        event="Note deleted",
+        severity="moderate",
+        context={
+            "event_type": "security",
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "garden_id": note.garden_id,
+            "note_id": note.id,
+            "action": "delete_note",
+            "resource": "garden_note_routes",
+        },
+    )
+
+    return {"message": "Note deleted successfully"}

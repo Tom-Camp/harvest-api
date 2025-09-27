@@ -262,3 +262,45 @@ class TestGardenNoteRoutes:
 
         else:
             pytest.fail("No garden found for user tester")
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "user_name,expected_status",
+        [
+            ("", 401),
+            ("admin", 200),
+            ("moderator", 403),
+            ("authenticated", 403),
+        ],
+    )
+    async def test_delete_garden_note(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+        default_gardens: dict[str, Garden],
+        user_name: str,
+        expected_status: int,
+    ):
+        create_as = default_user.get("tester", "")
+        username = create_as.username if isinstance(create_as, User) else ""
+        create_headers = await get_auth_headers(client=client, user_name=username)
+        garden = default_gardens.get("tester")
+        if isinstance(garden, Garden):
+            create_response = await client.post(
+                url="/api/garden-notes/",
+                json={"note": "My new garden note", "garden_id": str(garden.id)},
+                headers=create_headers,
+            )
+            note = create_response.json()
+
+            test_as = default_user.get(user_name, "")
+            username = test_as.username if isinstance(test_as, User) else ""
+            headers = await get_auth_headers(client=client, user_name=username)
+
+            delete_note = await client.delete(
+                url=f"/api/garden-notes/{note.get('id')}", headers=headers
+            )
+            assert delete_note.status_code == expected_status
+
+        else:
+            pytest.fail("No garden found for user tester")
