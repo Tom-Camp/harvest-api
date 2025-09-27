@@ -24,6 +24,42 @@ class TestAuthRoutes:
         assert data["email"] == "alice@example.com"
 
     @pytest.mark.asyncio
+    async def test_register_username_taken(
+        self, client: AsyncClient, default_user: dict[str, User]
+    ):
+        payload = {
+            "username": "test_user_user",
+            "email": "testuser@example.com",
+            "password": "milk prairie island desert",
+        }
+        response = await client.post(
+            url="/api/auth/register",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        data = response.json()
+        assert response.status_code == 400
+        assert data.get("detail") == "Username already registered"
+
+    @pytest.mark.asyncio
+    async def test_register_email_taken(
+        self, client: AsyncClient, default_user: dict[str, User]
+    ):
+        payload = {
+            "username": "not_test_user_user",
+            "email": "test_user@example.com",
+            "password": "milk prairie island desert",
+        }
+        response = await client.post(
+            url="/api/auth/register",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        data = response.json()
+        assert response.status_code == 400
+        assert data.get("detail") == "Email already registered"
+
+    @pytest.mark.asyncio
     async def test_register_invalid_email(self, client: AsyncClient):
         payload: dict[str, str] = {
             "username": "alice",
@@ -40,7 +76,7 @@ class TestAuthRoutes:
     @pytest.mark.asyncio
     async def test_register_invalid_username(self, client: AsyncClient):
         payload: dict[str, str] = {
-            "email": "alice@example",
+            "email": "alice@example.com",
             "password": "milk prairie island desert",
         }
         response = await client.post(
