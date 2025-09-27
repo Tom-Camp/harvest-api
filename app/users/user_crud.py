@@ -44,13 +44,14 @@ class UserCRUD:
         start = time.time()
 
         user = await session.get(User, user_id)
+        uid = str(user.id) if isinstance(user, User) else "none"
 
         duration_ms = (time.time() - start) * 1000
         log_handler.log_database_operation(
             operation="get_user",
             table="user",
             duration_ms=duration_ms,
-            user_id=str(user.id),
+            user_id=uid,
         )
 
         return user
