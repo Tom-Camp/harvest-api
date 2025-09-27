@@ -17,9 +17,9 @@ class GardenNoteCRUD:
 
     @staticmethod
     async def create_note(note: GardenNoteCreate, session: AsyncSession) -> GardenNote:
+        new_note = GardenNote(**note.model_dump())
         start = time.time()
 
-        new_note = GardenNote(**note.model_dump())
         session.add(new_note)
         await session.commit()
         await session.refresh(new_note)
@@ -35,9 +35,10 @@ class GardenNoteCRUD:
 
     @staticmethod
     async def get_note(session: AsyncSession, note_id: UUID) -> GardenNote | None:
+        statement = select(GardenNote).where(GardenNote.id == note_id)
+
         start = time.time()
 
-        statement = select(GardenNote).where(GardenNote.id == note_id)
         result = await session.execute(statement)
         note = result.scalars().first()
 
@@ -54,14 +55,15 @@ class GardenNoteCRUD:
     async def get_notes(
         garden_id: UUID, session: AsyncSession, skip: int = 0, limit: int = 100
     ) -> Sequence[GardenNote]:
-        start = time.time()
-
         statement = (
             select(GardenNote)
             .where(GardenNote.garden_id == garden_id)
             .offset(skip)
             .limit(limit)
         )
+
+        start = time.time()
+
         result = await session.execute(statement)
         notes = result.scalars().all()
 
@@ -78,8 +80,6 @@ class GardenNoteCRUD:
     async def update_note(
         session: AsyncSession, note_id: UUID, note_update: GardenNoteUpdate
     ) -> GardenNote:
-        start = time.time()
-
         note = await session.get(
             GardenNote, note_id, options=[selectinload(GardenNote.garden)]
         )
@@ -87,35 +87,38 @@ class GardenNoteCRUD:
             note_data = note_update.model_dump(exclude_unset=True)
             for field, value in note_data.items():
                 setattr(note, field, value)
+            start = time.time()
+
             session.add(note)
             await session.commit()
             await session.refresh(note)
 
-        duration_ms = (time.time() - start) * 1000
-        log_handler.log_database_operation(
-            operation="garden_note update_note",
-            table="garden_note",
-            duration_ms=duration_ms,
-            garden_id=str(note_id),
-        )
+            duration_ms = (time.time() - start) * 1000
+            log_handler.log_database_operation(
+                operation="garden_note update_note",
+                table="garden_note",
+                duration_ms=duration_ms,
+                garden_id=str(note_id),
+            )
         return note
 
     @staticmethod
     async def delete_note(session: AsyncSession, note_id: UUID) -> bool:
-        start = time.time()
         return_value: bool = False
 
         note = await session.get(GardenNote, note_id)
         if note:
+            start = time.time()
+
             await session.delete(note)
             await session.commit()
             return_value = True
 
-        duration_ms = (time.time() - start) * 1000
-        log_handler.log_database_operation(
-            operation="garden_note delete_note",
-            table="garden_note",
-            duration_ms=duration_ms,
-            note_id=str(note_id),
-        )
+            duration_ms = (time.time() - start) * 1000
+            log_handler.log_database_operation(
+                operation="garden_note delete_note",
+                table="garden_note",
+                duration_ms=duration_ms,
+                note_id=str(note_id),
+            )
         return return_value

@@ -17,21 +17,22 @@ logger = get_logger(__name__)
 class UserCRUD:
     @staticmethod
     async def create_user(session: AsyncSession, user: UserCreate) -> User:
-        start = time.time()
-
         hashed_password = get_password_hash(user.password)
         db_user = User(
             username=user.username,
             email=user.email,
             hashed_password=hashed_password,
         )
+
+        start = time.time()
+
         session.add(db_user)
         await session.commit()
         await session.refresh(db_user)
 
         duration_ms = (time.time() - start) * 1000
         log_handler.log_database_operation(
-            operation="create user",
+            operation="create_user",
             table="user",
             duration_ms=duration_ms,
             user_id=str(db_user.id),
@@ -46,7 +47,7 @@ class UserCRUD:
 
         duration_ms = (time.time() - start) * 1000
         log_handler.log_database_operation(
-            operation="get user",
+            operation="get_user",
             table="user",
             duration_ms=duration_ms,
             user_id=str(user.id),
@@ -56,16 +57,17 @@ class UserCRUD:
 
     @staticmethod
     async def get_user_by_username(session: AsyncSession, username: str) -> User | None:
+        statement = select(User).where(User.username == username)
+
         start = time.time()
 
-        statement = select(User).where(User.username == username)
         result = await session.execute(statement)
         user = result.scalars().first()
         uid = str(user.id) if isinstance(user, User) else "none"
 
         duration_ms = (time.time() - start) * 1000
         log_handler.log_database_operation(
-            operation="get user by username",
+            operation="get_user_by_username",
             table="user",
             duration_ms=duration_ms,
             user_id=uid,
@@ -74,16 +76,17 @@ class UserCRUD:
 
     @staticmethod
     async def get_user_by_email(session: AsyncSession, email: EmailStr) -> User | None:
+        statement = select(User).where(User.email == email)
+
         start = time.time()
 
-        statement = select(User).where(User.email == email)
         result = await session.execute(statement)
         user = result.scalars().first()
         uid = str(user.id) if isinstance(user, User) else "none"
 
         duration_ms = (time.time() - start) * 1000
         log_handler.log_database_operation(
-            operation="get user by email",
+            operation="get_user_by_email",
             table="user",
             duration_ms=duration_ms,
             user_id=uid,
@@ -94,15 +97,16 @@ class UserCRUD:
     async def get_users(
         session: AsyncSession, skip: int = 0, limit: int = 100
     ) -> Sequence[User]:
+        statement = select(User).offset(skip).limit(limit)
+
         start = time.time()
 
-        statement = select(User).offset(skip).limit(limit)
         result = await session.execute(statement)
         users = result.scalars().all()
 
         duration_ms = (time.time() - start) * 1000
         log_handler.log_database_operation(
-            operation="get users",
+            operation="get_users",
             table="user",
             duration_ms=duration_ms,
             list_length=len(users),
@@ -113,39 +117,41 @@ class UserCRUD:
     async def update_user(
         session: AsyncSession, user_id: UUID, user_update: UserUpdate
     ) -> User | None:
-        start = time.time()
-
         user = await session.get(User, user_id)
         if user:
             user_data = user_update.model_dump(exclude_unset=True)
             for field, value in user_data.items():
                 setattr(user, field, value)
+
+            start = time.time()
+
             session.add(user)
             await session.commit()
             await session.refresh(user)
 
-        duration_ms = (time.time() - start) * 1000
-        log_handler.log_database_operation(
-            operation="get user",
-            table="user",
-            duration_ms=duration_ms,
-            user_id=str(user.id),
-        )
+            duration_ms = (time.time() - start) * 1000
+            log_handler.log_database_operation(
+                operation="update_user",
+                table="user",
+                duration_ms=duration_ms,
+                user_id=str(user.id),
+            )
         return user
 
     @staticmethod
     async def delete_user(session: AsyncSession, user_id: UUID) -> bool:
-        start = time.time()
-
         user = await session.get(User, user_id)
         if not isinstance(user, User):
             return False
+
+        start = time.time()
+
         await session.delete(user)
         await session.commit()
 
         duration_ms = (time.time() - start) * 1000
         log_handler.log_database_operation(
-            operation="delete user",
+            operation="delete_user",
             table="user",
             duration_ms=duration_ms,
             user_id=str(user.id),
