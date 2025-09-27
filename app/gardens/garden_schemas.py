@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from app.beds.bed_schemas import BedRead
+from app.gardens.garden_models import GardenNote
 
 
 class GardenCreate(BaseModel):
@@ -34,6 +35,6 @@ class GardenRead(BaseModel):
     updated_date: datetime
     name: str
     description: str | None = None
-    notes: list[str] | None = None
+    notes: list[GardenNote] | None = None
     beds: list[BedRead] | None = None
     is_private: bool
