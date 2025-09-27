@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,3 +59,31 @@ async def create_garden_note(
     )
 
     return new_note
+
+
+@garden_note_router.get("/{note_id}", response_model=GardenNote)
+async def get_garden_note(
+    note_id: UUID,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> GardenNote:
+
+    note = await GardenNoteCRUD.get_note(note_id=note_id, session=session)
+    if not note:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    garden = await GardenCRUD.get_garden(session, note.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    user_subject: str = casbin_subject(current_user.id)
+    garden_resource: str = casbin_object("ga", garden.id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, garden_resource, "read")
+
+    if not allowed and not is_owner(user_subject, garden):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return note
