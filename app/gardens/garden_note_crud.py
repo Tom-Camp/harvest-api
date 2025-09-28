@@ -26,7 +26,7 @@ class GardenNoteCRUD:
 
         duration_ms = (time.time() - start) * 1000
         log_handler.log_database_operation(
-            operation="create garden note",
+            operation="create_note",
             table="garden_note",
             duration_ms=duration_ms,
             note_id=str(new_note.id),
@@ -44,7 +44,7 @@ class GardenNoteCRUD:
 
         duration_ms = (time.time() - start) * 1000
         log_handler.log_database_operation(
-            operation="garden_note get_note",
+            operation="get_note",
             table="garden_note",
             duration_ms=duration_ms,
             note_id=note_id,
@@ -69,7 +69,7 @@ class GardenNoteCRUD:
 
         duration_ms = (time.time() - start) * 1000
         log_handler.log_database_operation(
-            operation="garden_note get_notes",
+            operation="get_notes",
             table="garden_note",
             duration_ms=duration_ms,
             garden_id=str(garden_id),
@@ -95,7 +95,7 @@ class GardenNoteCRUD:
 
             duration_ms = (time.time() - start) * 1000
             log_handler.log_database_operation(
-                operation="garden_note update_note",
+                operation="update_note",
                 table="garden_note",
                 duration_ms=duration_ms,
                 garden_id=str(note_id),
@@ -116,7 +116,7 @@ class GardenNoteCRUD:
 
             duration_ms = (time.time() - start) * 1000
             log_handler.log_database_operation(
-                operation="garden_note delete_note",
+                operation="delete_note",
                 table="garden_note",
                 duration_ms=duration_ms,
                 note_id=str(note_id),
