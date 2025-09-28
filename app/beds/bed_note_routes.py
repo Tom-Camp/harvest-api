@@ -6,34 +6,35 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
+from app.beds.bed_crud import BedCRUD
+from app.beds.bed_models import BedNote
+from app.beds.bed_note_crud import BedNoteCRUD
+from app.beds.bed_note_schemas import BedNoteCreate, BedNoteList, BedNoteUpdate
 from app.casbin.casbin_config import get_casbin_enforcer
 from app.casbin.casbin_helpers import casbin_object, casbin_subject, is_owner
 from app.gardens.garden_crud import GardenCRUD
-from app.gardens.garden_models import GardenNote
-from app.gardens.garden_note_crud import GardenNoteCRUD
-from app.gardens.garden_note_schemas import (
-    GardenNoteCreate,
-    GardenNoteList,
-    GardenNoteUpdate,
-)
 from app.logging import get_logger, log_handler
 from app.users.user_models import User
 from app.utils.database import get_db
 
 logger = get_logger(__name__)
 
-garden_note_router = APIRouter(prefix="/garden-notes")
+bed_note_router = APIRouter(prefix="/bed-notes")
 
 
-@garden_note_router.post("/", response_model=GardenNote)
-async def create_garden_note(
-    note: GardenNoteCreate,
+@bed_note_router.post("/", response_model=BedNote)
+async def create_bed_note(
+    note: BedNoteCreate,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
-) -> GardenNote:
+) -> BedNote:
 
-    garden = await GardenCRUD.get_garden(session, note.garden_id)
+    bed = await BedCRUD.get_bed(session=session, bed_id=note.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    garden = await GardenCRUD.get_garden(session, bed.garden_id)
     if not garden:
         raise HTTPException(status_code=404, detail="Not found")
 
@@ -46,7 +47,7 @@ async def create_garden_note(
     if not allowed and not is_owner(user_subject, garden):
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    new_note = await GardenNoteCRUD.create_note(
+    new_note = await BedNoteCRUD.create_note(
         note=note,
         session=session,
     )
@@ -55,29 +56,34 @@ async def create_garden_note(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "garden_id": new_note.garden_id,
+            "garden_id": garden.id,
+            "bed": new_note.bed_id,
             "note_id": new_note.id,
-            "action": "create_garden_note",
-            "resource": "garden_note_routes",
+            "action": "create_bed_note",
+            "resource": "bed_note_routes",
         },
     )
 
     return new_note
 
 
-@garden_note_router.get("/{note_id}", response_model=GardenNote)
-async def get_garden_note(
+@bed_note_router.get("/{note_id}", response_model=BedNote)
+async def get_bed_note(
     note_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
-) -> GardenNote:
+) -> BedNote:
 
-    note = await GardenNoteCRUD.get_note(note_id=note_id, session=session)
+    note = await BedNoteCRUD.get_note(note_id=note_id, session=session)
     if not note:
         raise HTTPException(status_code=404, detail="Not found")
 
-    garden = await GardenCRUD.get_garden(session, note.garden_id)
+    bed = await BedCRUD.get_bed(session=session, bed_id=note.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    garden = await GardenCRUD.get_garden(session, bed.garden_id)
     if not garden:
         raise HTTPException(status_code=404, detail="Not found")
 
@@ -93,9 +99,9 @@ async def get_garden_note(
     return note
 
 
-@garden_note_router.get("/notes/{garden_id}", response_model=Sequence[GardenNoteList])
-async def read_garden_notes(
-    garden_id: UUID,
+@bed_note_router.get("/notes/{bed_id}", response_model=Sequence[BedNoteList])
+async def read_bed_notes(
+    bed_id: UUID,
     skip: int = 0,
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
@@ -103,7 +109,11 @@ async def read_garden_notes(
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ):
 
-    garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
+    bed = await BedCRUD.get_bed(session=session, bed_id=bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
     if not garden:
         raise HTTPException(status_code=404, detail="Not found")
 
@@ -116,28 +126,32 @@ async def read_garden_notes(
     if not allowed and not is_owner(user_subject, garden):
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    return await GardenNoteCRUD.get_notes(
-        garden_id=garden_id,
+    return await BedNoteCRUD.get_notes(
+        bed_id=bed_id,
         session=session,
         skip=skip,
         limit=limit,
     )
 
 
-@garden_note_router.put("/{note_id}", response_model=GardenNote)
-async def update_garden_note(
+@bed_note_router.put("/{note_id}", response_model=BedNote)
+async def update_bed_note(
     note_id: UUID,
-    note_update: GardenNoteUpdate,
+    note_update: BedNoteUpdate,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
-) -> GardenNote:
+) -> BedNote:
 
-    note = await GardenNoteCRUD.get_note(note_id=note_id, session=session)
+    note = await BedNoteCRUD.get_note(note_id=note_id, session=session)
     if not note:
         raise HTTPException(status_code=404, detail="Not found")
 
-    garden = await GardenCRUD.get_garden(session=session, garden_id=note.garden_id)
+    bed = await BedCRUD.get_bed(session=session, bed_id=note.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
     if not garden:
         raise HTTPException(status_code=404, detail="Not found")
 
@@ -150,27 +164,28 @@ async def update_garden_note(
     if not allowed and not is_owner(user_subject, garden):
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    updated_note = await GardenNoteCRUD.update_note(
+    updated_note = await BedNoteCRUD.update_note(
         session=session,
         note_id=note_id,
         note_update=note_update,
     )
     if updated_note:
         log_handler.log_garden_event(
-            event="Note updated",
+            event="Bed Note updated",
             context={
                 "actor_id": current_user.id,
                 "actor_username": current_user.username,
-                "garden_id": updated_note.garden_id,
+                "garden_id": garden.id,
+                "bed_id": updated_note.bed_id,
                 "note_id": updated_note.id,
                 "action": "update_note",
-                "resource": "garden_note_routes",
+                "resource": "bed_note_routes",
             },
         )
     return updated_note
 
 
-@garden_note_router.delete("/{note_id}")
+@bed_note_router.delete("/{note_id}")
 async def delete_note(
     note_id: UUID,
     session: AsyncSession = Depends(get_db),
@@ -178,11 +193,15 @@ async def delete_note(
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
 
-    note = await GardenNoteCRUD.get_note(session=session, note_id=note_id)
+    note = await BedNoteCRUD.get_note(session=session, note_id=note_id)
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
 
-    garden = await GardenCRUD.get_garden(session=session, garden_id=note.garden_id)
+    bed = await BedCRUD.get_bed(session=session, bed_id=note.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
     if not garden:
         raise HTTPException(status_code=404, detail="Garden not found")
 
@@ -196,7 +215,7 @@ async def delete_note(
     if not allowed and not is_owner(user_subject, garden):
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    if not await GardenNoteCRUD.delete_note(session, note_id):
+    if not await BedNoteCRUD.delete_note(session, note_id):
         raise HTTPException(status_code=404, detail="Note not found")
 
     log_handler.log_garden_event(
@@ -204,10 +223,11 @@ async def delete_note(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "garden_id": note.garden_id,
+            "garden_id": bed.garden_id,
+            "bed_id": bed.id,
             "note_id": note.id,
             "action": "delete_note",
-            "resource": "garden_note_routes",
+            "resource": "bed_note_routes",
         },
     )
 

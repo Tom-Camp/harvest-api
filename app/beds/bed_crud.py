@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from app.beds.bed_models import Bed
-from app.beds.bed_schemas import BedCreate, BedUpdate
+from app.beds.bed_schemas import BedCreate, BedRead, BedUpdate
 from app.logging import get_logger, log_handler
 
 logger = get_logger(__name__)
@@ -38,7 +38,7 @@ class BedCRUD:
         return db_bed
 
     @staticmethod
-    async def get_bed(session: AsyncSession, bed_id: UUID) -> Bed | None:
+    async def get_bed(session: AsyncSession, bed_id: UUID) -> BedRead | None:
         statement = select(Bed).options(selectinload(Bed.notes)).where(Bed.id == bed_id)
 
         start = time.time()
