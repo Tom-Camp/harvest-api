@@ -137,7 +137,7 @@ async def update_garden_note(
     if not note:
         raise HTTPException(status_code=404, detail="Not found")
 
-    garden = await GardenCRUD.get_garden(session, note.garden_id)
+    garden = await GardenCRUD.get_garden(session=session, garden_id=note.garden_id)
     if not garden:
         raise HTTPException(status_code=404, detail="Not found")
 

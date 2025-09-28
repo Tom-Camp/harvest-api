@@ -3,10 +3,11 @@ from typing import Sequence
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from app.beds.bed_models import BedNote
-from app.beds.bed_note_schemas import BedNoteCreate
+from app.beds.bed_note_schemas import BedNoteCreate, BedNoteUpdate
 from app.logging import get_logger, log_handler
 
 logger = get_logger(__name__)
@@ -71,3 +72,28 @@ class BedNoteCRUD:
             garden_id=str(bed_id),
         )
         return notes
+
+    @staticmethod
+    async def update_note(
+        session: AsyncSession, note_id: UUID, note_update: BedNoteUpdate
+    ) -> BedNote:
+        note = await session.get(BedNote, note_id, options=[selectinload(BedNote.bed)])
+        if note:
+            note_data = note_update.model_dump(exclude_unset=True)
+            for field, value in note_data.items():
+                setattr(note, field, value)
+            start = time.time()
+
+            session.add(note)
+            await session.commit()
+            await session.refresh(note)
+
+            duration_ms = (time.time() - start) * 1000
+            log_handler.log_database_operation(
+                operation="update_note",
+                table="bed_note",
+                duration_ms=duration_ms,
+                bed_id=str(note.bed_id),
+                garden_id=str(note_id),
+            )
+        return note

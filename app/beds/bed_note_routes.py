@@ -9,7 +9,7 @@ from app.auth.auth import get_current_active_user
 from app.beds.bed_crud import BedCRUD
 from app.beds.bed_models import BedNote
 from app.beds.bed_note_crud import BedNoteCRUD
-from app.beds.bed_note_schemas import BedNoteCreate, BedNoteList
+from app.beds.bed_note_schemas import BedNoteCreate, BedNoteList, BedNoteUpdate
 from app.casbin.casbin_config import get_casbin_enforcer
 from app.casbin.casbin_helpers import casbin_object, casbin_subject, is_owner
 from app.gardens.garden_crud import GardenCRUD
@@ -132,3 +132,54 @@ async def read_notes(
         skip=skip,
         limit=limit,
     )
+
+
+@bed_note_router.put("/{note_id}", response_model=BedNote)
+async def update_garden_note(
+    note_id: UUID,
+    note_update: BedNoteUpdate,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> BedNote:
+
+    note = await BedNoteCRUD.get_note(note_id=note_id, session=session)
+    if not note:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    bed = await BedCRUD.get_bed(session=session, bed_id=note.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    user_subject: str = casbin_subject(current_user.id)
+    garden_resource: str = casbin_object("ga", garden.id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, garden_resource, "update")
+
+    if not allowed and not is_owner(user_subject, garden):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    updated_note = await BedNoteCRUD.update_note(
+        session=session,
+        note_id=note_id,
+        note_update=note_update,
+    )
+    if updated_note:
+        log_handler.log_garden_event(
+            event="Garden Note updated",
+            context={
+                "actor_id": current_user.id,
+                "actor_username": current_user.username,
+                "garden_id": garden.id,
+                "bed_id": updated_note.bed_id,
+                "note_id": updated_note.id,
+                "action": "update_note",
+                "resource": "bed_note_routes",
+            },
+        )
+    return updated_note
