@@ -1,4 +1,5 @@
 import time
+from typing import Sequence
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,3 +49,25 @@ class BedNoteCRUD:
             note_id=note_id,
         )
         return note
+
+    @staticmethod
+    async def get_notes(
+        bed_id: UUID, session: AsyncSession, skip: int = 0, limit: int = 100
+    ) -> Sequence[BedNote]:
+        statement = (
+            select(BedNote).where(BedNote.bed_id == bed_id).offset(skip).limit(limit)
+        )
+
+        start = time.time()
+
+        result = await session.execute(statement)
+        notes = result.scalars().all()
+
+        duration_ms = (time.time() - start) * 1000
+        log_handler.log_database_operation(
+            operation="get_notes",
+            table="bed_note",
+            duration_ms=duration_ms,
+            garden_id=str(bed_id),
+        )
+        return notes

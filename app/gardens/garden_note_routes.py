@@ -103,7 +103,7 @@ async def read_notes(
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ):
 
-    garden = await GardenCRUD.get_garden(session, garden_id)
+    garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
     if not garden:
         raise HTTPException(status_code=404, detail="Not found")
 

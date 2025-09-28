@@ -1,3 +1,4 @@
+from typing import Sequence
 from uuid import UUID
 
 from casbin import AsyncEnforcer
@@ -8,7 +9,7 @@ from app.auth.auth import get_current_active_user
 from app.beds.bed_crud import BedCRUD
 from app.beds.bed_models import BedNote
 from app.beds.bed_note_crud import BedNoteCRUD
-from app.beds.bed_note_schemas import BedNoteCreate
+from app.beds.bed_note_schemas import BedNoteCreate, BedNoteList
 from app.casbin.casbin_config import get_casbin_enforcer
 from app.casbin.casbin_helpers import casbin_object, casbin_subject, is_owner
 from app.gardens.garden_crud import GardenCRUD
@@ -96,3 +97,38 @@ async def get_bed_note(
         raise HTTPException(status_code=403, detail="Forbidden")
 
     return note
+
+
+@bed_note_router.get("/notes/{bed_id}", response_model=Sequence[BedNoteList])
+async def read_notes(
+    bed_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+):
+
+    bed = await BedCRUD.get_bed(session=session, bed_id=bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    user_subject: str = casbin_subject(current_user.id)
+    garden_resource: str = casbin_object("ga", garden.id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, garden_resource, "read")
+
+    if not allowed and not is_owner(user_subject, garden):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return await BedNoteCRUD.get_notes(
+        bed_id=bed_id,
+        session=session,
+        skip=skip,
+        limit=limit,
+    )

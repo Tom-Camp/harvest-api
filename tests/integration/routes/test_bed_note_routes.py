@@ -168,3 +168,71 @@ class TestBedNoteRoutes:
             headers=headers,
         )
         assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "user_name,expected_status",
+        [
+            ("admin", 200),
+            ("moderator", 200),
+            ("authenticated", 200),
+        ],
+    )
+    async def test_get_bed_notes(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+        default_gardens: dict[str, Garden],
+        user_name: str,
+        expected_status: int,
+    ):
+        test_as = default_user.get(user_name, "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        garden = default_gardens.get(user_name)
+        if isinstance(garden, Garden):
+            bed_id = garden.beds[0].id
+            response = await client.get(
+                url=f"/api/bed-notes/notes/{bed_id}",
+                headers=headers,
+            )
+            assert response.status_code == expected_status
+            assert isinstance(response.json(), list)
+
+        else:
+            pytest.fail(f"No garden found for user {user_name}")
+
+    @pytest.mark.asyncio
+    async def test_get_bed_notes_unauthenticated(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+        default_gardens: dict[str, Garden],
+    ):
+        headers = await get_auth_headers(client=client, user_name="")
+        garden = default_gardens.get("authenticated")
+        if isinstance(garden, Garden):
+            bed_id = garden.beds[0].id
+            response = await client.get(
+                url=f"/api/bed-notes/notes/{bed_id}",
+                headers=headers,
+            )
+            assert response.status_code == 401
+        else:
+            pytest.fail("No garden found for user tester")
+
+    @pytest.mark.asyncio
+    async def test_get_bed_notes_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.get(
+            url=f"/api/bed-notes/notes/{bad_id}",
+            headers=headers,
+        )
+        assert response.status_code == 404
