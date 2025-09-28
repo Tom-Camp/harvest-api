@@ -97,3 +97,24 @@ class BedNoteCRUD:
                 garden_id=str(note_id),
             )
         return note
+
+    @staticmethod
+    async def delete_note(session: AsyncSession, note_id: UUID) -> bool:
+        return_value: bool = False
+
+        note = await session.get(BedNote, note_id)
+        if note:
+            start = time.time()
+
+            await session.delete(note)
+            await session.commit()
+            return_value = True
+
+            duration_ms = (time.time() - start) * 1000
+            log_handler.log_database_operation(
+                operation="delete_note",
+                table="bed_note",
+                duration_ms=duration_ms,
+                note_id=str(note_id),
+            )
+        return return_value

@@ -100,7 +100,7 @@ async def get_bed_note(
 
 
 @bed_note_router.get("/notes/{bed_id}", response_model=Sequence[BedNoteList])
-async def read_notes(
+async def read_bed_notes(
     bed_id: UUID,
     skip: int = 0,
     limit: int = 100,
@@ -135,7 +135,7 @@ async def read_notes(
 
 
 @bed_note_router.put("/{note_id}", response_model=BedNote)
-async def update_garden_note(
+async def update_bed_note(
     note_id: UUID,
     note_update: BedNoteUpdate,
     session: AsyncSession = Depends(get_db),
@@ -171,7 +171,7 @@ async def update_garden_note(
     )
     if updated_note:
         log_handler.log_garden_event(
-            event="Garden Note updated",
+            event="Bed Note updated",
             context={
                 "actor_id": current_user.id,
                 "actor_username": current_user.username,
@@ -183,3 +183,52 @@ async def update_garden_note(
             },
         )
     return updated_note
+
+
+@bed_note_router.delete("/{note_id}")
+async def delete_note(
+    note_id: UUID,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> dict:
+
+    note = await BedNoteCRUD.get_note(session=session, note_id=note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    bed = await BedCRUD.get_bed(session=session, bed_id=note.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    user_subject = casbin_subject(current_user.id)
+    note_resource = casbin_object("ga", note.id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, note_resource, "delete")
+
+    # If RBAC fails, check ownership manually
+    if not allowed and not is_owner(user_subject, garden):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    if not await BedNoteCRUD.delete_note(session, note_id):
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    log_handler.log_garden_event(
+        event="Note deleted",
+        context={
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "garden_id": bed.garden_id,
+            "bed_id": bed.id,
+            "note_id": note.id,
+            "action": "delete_note",
+            "resource": "bed_note_routes",
+        },
+    )
+
+    return {"message": "Note deleted successfully"}

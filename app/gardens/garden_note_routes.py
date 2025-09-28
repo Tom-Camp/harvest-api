@@ -94,7 +94,7 @@ async def get_garden_note(
 
 
 @garden_note_router.get("/notes/{garden_id}", response_model=Sequence[GardenNoteList])
-async def read_notes(
+async def read_garden_notes(
     garden_id: UUID,
     skip: int = 0,
     limit: int = 100,
@@ -157,7 +157,7 @@ async def update_garden_note(
     )
     if updated_note:
         log_handler.log_garden_event(
-            event="Garden Note updated",
+            event="Note updated",
             context={
                 "actor_id": current_user.id,
                 "actor_username": current_user.username,
