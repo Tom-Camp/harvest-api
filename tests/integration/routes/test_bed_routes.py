@@ -71,7 +71,9 @@ class TestBedRoutes:
         headers = await get_auth_headers(client=client, user_name=username)
         garden = default_gardens.get("authenticated")
         if isinstance(garden, Garden):
-            response = await client.get(url=f"/api/beds/{garden.id}", headers=headers)
+            response = await client.get(
+                url=f"/api/beds/garden/{garden.id}", headers=headers
+            )
             assert response.status_code == expected_status
             assert isinstance(response.json(), list)
         else:
@@ -87,7 +89,7 @@ class TestBedRoutes:
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
-        response = await client.get(url=f"/api/beds/{bad_id}", headers=headers)
+        response = await client.get(url=f"/api/beds/garden/{bad_id}", headers=headers)
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -114,9 +116,7 @@ class TestBedRoutes:
         garden = default_gardens.get("tester", "")
         if isinstance(garden, Garden):
             bed = garden.beds[0]
-            response = await client.get(
-                url=f"/api/beds/{garden.id}/{bed.id}", headers=headers
-            )
+            response = await client.get(url=f"/api/beds/{bed.id}", headers=headers)
 
             assert response.status_code == expected_status
         else:
@@ -132,11 +132,8 @@ class TestBedRoutes:
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
-        garden_id = uuid.uuid4()
 
-        response = await client.get(
-            url=f"/api/beds/{garden_id}/{bad_id}", headers=headers
-        )
+        response = await client.get(url=f"/api/beds/{bad_id}", headers=headers)
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -150,9 +147,7 @@ class TestBedRoutes:
         garden = default_gardens.get("tester", "")
         if isinstance(garden, Garden):
             bed = garden.beds[0]
-            response = await client.get(
-                url=f"/api/beds/{garden.id}/{bed.id}", headers=headers
-            )
+            response = await client.get(url=f"/api/beds/{bed.id}", headers=headers)
 
             assert response.status_code == 401
         else:

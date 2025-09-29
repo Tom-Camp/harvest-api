@@ -24,6 +24,7 @@ class BedList(BaseModel):
 class BedRead(BaseModel):
     id: UUID
     name: str
+    garden_id: UUID
     description: str | None = None
     notes: list[BedNote] | None = None
 

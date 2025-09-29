@@ -70,7 +70,7 @@ async def create_bed(
     return new_bed
 
 
-@bed_router.get("/{garden_id}", response_model=list[BedList])
+@bed_router.get("/garden/{garden_id}", response_model=list[BedList])
 async def read_beds(
     garden_id: UUID,
     skip: int = 0,
@@ -99,9 +99,8 @@ async def read_beds(
     return [BedList.model_validate(bed) for bed in beds]
 
 
-@bed_router.get("/{garden_id}/{bed_id}", response_model=BedRead)
+@bed_router.get("/{bed_id}", response_model=BedRead)
 async def read_bed(
-    garden_id: UUID,
     bed_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -118,19 +117,17 @@ async def read_bed(
     :return: BedRead; beds/bed_schema.py
     """
 
-    garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
-    if not garden:
-        raise HTTPException(status_code=404, detail="Garden not found")
-
     bed = await BedCRUD.get_bed(session=session, bed_id=bed_id)
     if not bed:
         raise HTTPException(status_code=404, detail="Bed not found")
 
-    if bed.garden_id != garden_id:
-        raise HTTPException(status_code=404, detail="Bed not found in specified garden")
+    logger.info(f"GARDEN ID: {bed.garden_id}")
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
 
     user_subject: str = casbin_subject(current_user.id)
-    garden_resource: str = casbin_object("ga", garden_id)
+    garden_resource: str = casbin_object("ga", garden.id)
 
     # Check RBAC permissions
     allowed = enforcer.enforce(user_subject, garden_resource, "read")

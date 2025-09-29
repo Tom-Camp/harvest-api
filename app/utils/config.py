@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     POSTGRES_USER: str | None = None
     SECRET_KEY: str | None = None
     SITE_EMAIL: EmailStr | None = None
+    GEMINI_API_KEY: str | None = None
+    GEMINI_MODEL: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
