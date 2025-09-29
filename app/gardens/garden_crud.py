@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from app.beds.bed_models import Bed
 from app.gardens.garden_models import Garden
 from app.gardens.garden_schemas import GardenCreate, GardenUpdate
 from app.logging import get_logger, log_handler
@@ -42,7 +41,7 @@ class GardenCRUD:
         statement = (
             select(Garden)
             .options(
-                selectinload(Garden.beds).selectinload(Bed.notes),
+                selectinload(Garden.beds),
                 selectinload(Garden.user),
                 selectinload(Garden.notes),
             )

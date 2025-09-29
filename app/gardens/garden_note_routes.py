@@ -1,4 +1,3 @@
-from typing import Sequence
 from uuid import UUID
 
 from casbin import AsyncEnforcer
@@ -93,7 +92,7 @@ async def get_garden_note(
     return note
 
 
-@garden_note_router.get("/notes/{garden_id}", response_model=Sequence[GardenNoteList])
+@garden_note_router.get("/notes/{garden_id}", response_model=list[GardenNoteList])
 async def read_garden_notes(
     garden_id: UUID,
     skip: int = 0,
@@ -101,7 +100,7 @@ async def read_garden_notes(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
-):
+) -> list[GardenNoteList]:
 
     garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
     if not garden:
@@ -116,12 +115,13 @@ async def read_garden_notes(
     if not allowed and not is_owner(user_subject, garden):
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    return await GardenNoteCRUD.get_notes(
+    notes = await GardenNoteCRUD.get_notes(
         garden_id=garden_id,
         session=session,
         skip=skip,
         limit=limit,
     )
+    return [GardenNoteList.model_validate(note) for note in notes]
 
 
 @garden_note_router.put("/{note_id}", response_model=GardenNote)

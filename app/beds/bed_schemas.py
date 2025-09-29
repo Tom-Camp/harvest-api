@@ -12,12 +12,13 @@ class BedCreate(BaseModel):
 
 
 class BedList(BaseModel):
+    id: UUID
     name: str
     description: str | None = None
-    garden_id: UUID
 
 
 class BedRead(BaseModel):
+    id: UUID
     name: str
     description: str | None = None
     notes: list[BedNote] | None = None
