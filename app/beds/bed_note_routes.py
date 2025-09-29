@@ -1,4 +1,3 @@
-from typing import Sequence
 from uuid import UUID
 
 from casbin import AsyncEnforcer
@@ -9,7 +8,12 @@ from app.auth.auth import get_current_active_user
 from app.beds.bed_crud import BedCRUD
 from app.beds.bed_models import BedNote
 from app.beds.bed_note_crud import BedNoteCRUD
-from app.beds.bed_note_schemas import BedNoteCreate, BedNoteList, BedNoteUpdate
+from app.beds.bed_note_schemas import (
+    BedNoteCreate,
+    BedNoteList,
+    BedNoteRead,
+    BedNoteUpdate,
+)
 from app.casbin.casbin_config import get_casbin_enforcer
 from app.casbin.casbin_helpers import casbin_object, casbin_subject, is_owner
 from app.gardens.garden_crud import GardenCRUD
@@ -67,13 +71,13 @@ async def create_bed_note(
     return new_note
 
 
-@bed_note_router.get("/{note_id}", response_model=BedNote)
+@bed_note_router.get("/{note_id}", response_model=BedNoteRead)
 async def get_bed_note(
     note_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
-) -> BedNote:
+) -> BedNoteRead:
 
     note = await BedNoteCRUD.get_note(note_id=note_id, session=session)
     if not note:
@@ -99,7 +103,7 @@ async def get_bed_note(
     return note
 
 
-@bed_note_router.get("/notes/{bed_id}", response_model=Sequence[BedNoteList])
+@bed_note_router.get("/notes/{bed_id}", response_model=list[BedNoteList])
 async def read_bed_notes(
     bed_id: UUID,
     skip: int = 0,
@@ -107,7 +111,7 @@ async def read_bed_notes(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
-):
+) -> list[BedNoteList]:
 
     bed = await BedCRUD.get_bed(session=session, bed_id=bed_id)
     if not bed:
@@ -126,12 +130,13 @@ async def read_bed_notes(
     if not allowed and not is_owner(user_subject, garden):
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    return await BedNoteCRUD.get_notes(
+    notes = await BedNoteCRUD.get_notes(
         bed_id=bed_id,
         session=session,
         skip=skip,
         limit=limit,
     )
+    return [BedNoteList.model_validate(note) for note in notes]
 
 
 @bed_note_router.put("/{note_id}", response_model=BedNote)

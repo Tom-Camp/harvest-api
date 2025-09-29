@@ -1,4 +1,3 @@
-from typing import Sequence
 from uuid import UUID
 
 from casbin import AsyncEnforcer
@@ -24,7 +23,7 @@ async def read_users_me(
     current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
-) -> User | None:
+) -> UserRead | None:
 
     user = await UserCRUD.get_user(
         session=session,
@@ -42,10 +41,10 @@ async def read_users(
     skip: int = 0,
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
-) -> Sequence:
+) -> list[UserRead]:
 
     users = await UserCRUD.get_users(session, skip=skip, limit=limit)
-    return users
+    return [UserRead.model_validate(user) for user in users]
 
 
 @user_router.get("/{user_id}", response_model=UserRead)
@@ -54,7 +53,7 @@ async def read_user(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
-) -> User:
+) -> UserRead:
 
     allowed = enforcer.enforce(
         casbin_subject(current_user.id), casbin_object("us", user_id), "read"
@@ -77,7 +76,7 @@ async def update_user(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
-) -> User:
+) -> UserRead:
 
     existing_user = await UserCRUD.get_user(session, user_id)
     if not existing_user:

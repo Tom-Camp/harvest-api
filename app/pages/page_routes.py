@@ -1,4 +1,3 @@
-from typing import Sequence
 from uuid import UUID
 
 from casbin import AsyncEnforcer
@@ -54,9 +53,10 @@ async def read_pages(
     skip: int = 0,
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
-):
+) -> list[PageList]:
 
-    return await PageCRUD.get_pages(session, skip=skip, limit=limit)
+    pages = await PageCRUD.get_pages(session, skip=skip, limit=limit)
+    return [PageList.model_validate(page) for page in pages]
 
 
 @page_router.get("/my", response_model=list[PageList])
@@ -65,18 +65,19 @@ async def read_my_pages(
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-) -> Sequence:
+) -> list[PageList]:
 
-    return await PageCRUD.get_user_pages(
+    pages = await PageCRUD.get_user_pages(
         session, current_user.id, skip=skip, limit=limit
     )
+    return [PageList.model_validate(page) for page in pages]
 
 
 @page_router.get("/{page_id}", response_model=PageRead)
 async def read_page(
     page_id: UUID,
     session: AsyncSession = Depends(get_db),
-):
+) -> PageRead:
 
     page = await PageCRUD.get_page(session, page_id)
     if not page:

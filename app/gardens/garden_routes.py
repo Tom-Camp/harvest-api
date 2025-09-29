@@ -1,4 +1,3 @@
-from typing import Sequence
 from uuid import UUID
 
 from casbin import AsyncEnforcer
@@ -63,9 +62,10 @@ async def read_gardens(
     skip: int = 0,
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
-):
+) -> list[GardenList]:
 
-    return await GardenCRUD.get_gardens(session, skip=skip, limit=limit)
+    gardens = await GardenCRUD.get_gardens(session, skip=skip, limit=limit)
+    return [GardenList.model_validate(garden) for garden in gardens]
 
 
 @garden_router.get("/user/{user_id}", response_model=list[GardenList])
@@ -74,14 +74,15 @@ async def read_user_gardens(
     skip: int = 0,
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
-):
+) -> list[GardenList]:
     user = await UserCRUD.get_user(session=session, user_id=user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return await GardenCRUD.get_user_gardens(
+    gardens = await GardenCRUD.get_user_gardens(
         session=session, user_id=user_id, skip=skip, limit=limit
     )
+    return [GardenList.model_validate(garden) for garden in gardens]
 
 
 @garden_router.get("/my", response_model=list[GardenList])
@@ -90,18 +91,19 @@ async def read_my_gardens(
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-) -> Sequence:
+) -> list[GardenList]:
 
-    return await GardenCRUD.get_user_gardens(
+    gardens = await GardenCRUD.get_user_gardens(
         session, current_user.id, skip=skip, limit=limit
     )
+    return [GardenList.model_validate(garden) for garden in gardens]
 
 
 @garden_router.get("/{garden_id}", response_model=GardenRead)
 async def read_garden(
     garden_id: UUID,
     session: AsyncSession = Depends(get_db),
-):
+) -> GardenRead:
 
     garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
     if not garden:
