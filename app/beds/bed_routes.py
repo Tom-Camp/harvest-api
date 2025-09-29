@@ -67,17 +67,18 @@ async def read_beds(
     skip: int = 0,
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
-):
+) -> list[BedList]:
     garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
     if not garden:
         raise HTTPException(status_code=404, detail="Garden not found")
 
-    return await BedCRUD.get_beds(
+    beds = await BedCRUD.get_beds(
         garden_id=garden_id,
         session=session,
         skip=skip,
         limit=limit,
     )
+    return [BedList.model_validate(bed) for bed in beds]
 
 
 @bed_router.get("/{garden_id}/{bed_id}", response_model=BedRead)
@@ -87,7 +88,7 @@ async def read_bed(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
-):
+) -> BedRead:
 
     garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
     if not garden:
