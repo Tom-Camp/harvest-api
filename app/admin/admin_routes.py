@@ -25,6 +25,14 @@ async def assign_role(
     session: AsyncSession = Depends(get_db),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+    """
+    Casbin operation: Assign a role to user.
+
+    :param role_request: Role to assign
+    :param current_user: Current user User object
+    :param session: SQLAlchemy asyncio session
+    :param enforcer: Casbin AsyncEnforcer object
+    """
 
     user = await UserCRUD.get_user(session=session, user_id=role_request.user_id)
     if not user:
@@ -64,6 +72,14 @@ async def remove_role(
     session: AsyncSession = Depends(get_db),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+    """
+    Casbin operation: Remove a role from a user.
+
+    :param role_request: Role to remove
+    :param current_user: Current user User object
+    :param session: SQLAlchemy asyncio session
+    :param enforcer: Casbin AsyncEnforcer object
+    """
 
     user = await UserCRUD.get_user(session=session, user_id=role_request.user_id)
     if not user:
@@ -104,6 +120,14 @@ async def check_permission(
     session: AsyncSession = Depends(get_db),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+    """
+    Casbin operation: Check user permissions.
+
+    :param permission_request: PermissionCheck object containing the User ID, permission, and action
+    :param current_user: Current user User object
+    :param session: SQLAlchemy asyncio session
+    :param enforcer: Casbin AsyncEnforcer object
+    """
 
     user = await UserCRUD.get_user(session=session, user_id=permission_request.user_id)
     if not user:
@@ -150,6 +174,14 @@ async def get_user_roles(
     session: AsyncSession = Depends(get_db),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+    """
+    Casbin operation: Get a user's roles.
+
+    :param user_id: The UUID of the user whose roles to return
+    :param current_user: Current user User object
+    :param session: SQLAlchemy asyncio session
+    :param enforcer: Casbin AsyncEnforcer object
+    """
 
     user = await UserCRUD.get_user(session=session, user_id=user_id)
     if not user:
@@ -182,6 +214,13 @@ async def get_role_users(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+    """
+    Casbin operation: Return a list of users with the given role.
+
+    :param role_name: PermissionCheck object containing the User ID, permission, and action
+    :param current_user: Current user User object
+    :param enforcer: Casbin AsyncEnforcer object
+    """
 
     allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "read")
     if not allowed:
