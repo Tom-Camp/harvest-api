@@ -31,6 +31,15 @@ async def create_garden_note(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> GardenNote:
+    """
+    A Route to create a GardenNote
+
+    :param note: The GardenNoteCreate object; gardens/garden_note_schema.py
+    :param session: The SQLAlchemy asyncio AsyncSession
+    :param current_user: The current user
+    :param enforcer: The Casbin AsyncEnforcer
+    :return: The created GardenNote
+    """
 
     garden = await GardenCRUD.get_garden(session, note.garden_id)
     if not garden:
@@ -71,6 +80,15 @@ async def get_garden_note(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> GardenNote:
+    """
+    Route to get a GardenNote
+
+    :param note_id: The note object ID
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: The current user
+    :param enforcer: The Casbin AsyncEnforcer
+    :return: A GardenNote
+    """
 
     note = await GardenNoteCRUD.get_note(note_id=note_id, session=session)
     if not note:
@@ -101,6 +119,17 @@ async def read_garden_notes(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> list[GardenNoteList]:
+    """
+    Route to get a list of GardenNotes
+
+    :param garden_id: The ID of the Garden to retrieve notes
+    :param skip: The rows to skip
+    :param limit: The number of rows to return
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: The current user
+    :param enforcer: The Casbin AsyncEnforcer
+    :return: A list of GardenNotes
+    """
 
     garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
     if not garden:
@@ -132,6 +161,16 @@ async def update_garden_note(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> GardenNote:
+    """
+    Route to update a GardenNote
+
+    :param note_id: The ID of the GardenNote to update
+    :param note_update: The GardenNoteUpdate object; garden/garden_note_schemas.py
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: The current user
+    :param enforcer: The Casbin AsyncEnforcer
+    :return: The updated GardenNote
+    """
 
     note = await GardenNoteCRUD.get_note(note_id=note_id, session=session)
     if not note:
@@ -177,6 +216,15 @@ async def delete_note(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+    """
+    A route to delete a GardenNote
+
+    :param note_id: The ID of the GardenNote to delete
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: The current user
+    :param enforcer: The Casbin AsyncEnforcer
+    :return: The deleted GardenNote
+    """
 
     note = await GardenNoteCRUD.get_note(session=session, note_id=note_id)
     if not note:

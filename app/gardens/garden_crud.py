@@ -20,6 +20,15 @@ class GardenCRUD:
     async def create_garden(
         garden: GardenCreate, session: AsyncSession, user: User
     ) -> Garden:
+        """
+        Create a new Garden
+
+        :param garden: GardenCreate object; gardens/garden_schemas.py
+        :param session: SQLAlchemy asyncio AsyncSession
+        :param user: User object
+        :return: Garden object
+        """
+
         start = time.time()
 
         db_garden = Garden(**garden.model_dump(), user=user)
@@ -38,6 +47,14 @@ class GardenCRUD:
 
     @staticmethod
     async def get_garden(session: AsyncSession, garden_id: UUID) -> Garden:
+        """
+        Get a Garden by ID
+
+        :param session: SQLAlchemy asyncio AsyncSession
+        :param garden_id: UUID
+        :return: Garden object
+        """
+
         statement = (
             select(Garden)
             .options(
@@ -67,6 +84,15 @@ class GardenCRUD:
     async def get_gardens(
         session: AsyncSession, skip: int = 0, limit: int = 100
     ) -> Sequence[Garden]:
+        """
+        Get all Gardens
+
+        :param session: SQLAlchemy asyncio AsyncSession
+        :param skip: the rows to skip
+        :param limit: the number of rows to return
+        :return: list of Garden objects
+        """
+
         statement = select(Garden).offset(skip).limit(limit)
 
         start = time.time()
@@ -87,6 +113,16 @@ class GardenCRUD:
     async def get_user_gardens(
         session: AsyncSession, user_id: UUID, skip: int = 0, limit: int = 100
     ) -> Sequence[Garden]:
+        """
+        Get all Gardens for a given user
+
+        :param session: SQLAlchemy asyncio AsyncSession
+        :param user_id: The ID for the user
+        :param skip: the rows to skip
+        :param limit: the number of rows to return
+        :return: list of Garden objects
+        """
+
         statement = (
             select(Garden).where(Garden.user_id == user_id).offset(skip).limit(limit)
         )
@@ -110,6 +146,15 @@ class GardenCRUD:
     async def update_garden(
         session: AsyncSession, garden_id: UUID, garden_update: GardenUpdate
     ) -> Garden | None:
+        """
+        Update a Garden by ID
+
+        :param session: SQLAlchemy asyncio AsyncSession
+        :param garden_id: The ID of the garden to update
+        :param garden_update: The GardenUpdate object; gardens/garden_schemas.py
+        :return: Garden object
+        """
+
         garden: Garden | None = await session.get(Garden, garden_id)
         if garden:
             garden_data = garden_update.model_dump(exclude_unset=True)
@@ -133,6 +178,14 @@ class GardenCRUD:
 
     @staticmethod
     async def delete_garden(session: AsyncSession, garden_id: UUID) -> bool:
+        """
+        Delete a garden
+
+        :param session: SQLAlchemy asyncio AsyncSession
+        :param garden_id: The ID of the garden to delete
+        :return: boolean
+        """
+
         return_value: bool = False
         garden = await session.get(Garden, garden_id)
         if garden:
