@@ -27,6 +27,15 @@ async def create_bed(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Bed:
+    """
+    Route to create a new bed in casbin.
+
+    :param bed: BedCreate object; beds/bed_models.py
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: User
+    :param enforcer: Casbin AsyncEnforcer
+    :return: Bed
+    """
 
     garden = await GardenCRUD.get_garden(session, bed.garden_id)
     if not garden:
@@ -68,6 +77,15 @@ async def read_beds(
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
 ) -> list[BedList]:
+    """
+    Route to get all bed routes associated with a given garden.
+
+    :param garden_id: UUID
+    :param skip: rows to skip
+    :param limit: limit the number of rows
+    :param session: SQLAlchemy asyncio AsyncSession
+    :return: list[BedList]; beds/bed_schema.py
+    """
     garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
     if not garden:
         raise HTTPException(status_code=404, detail="Garden not found")
@@ -89,6 +107,16 @@ async def read_bed(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> BedRead:
+    """
+    Route to get a bed route associated with a given garden and bed id.
+
+    :param garden_id: Garden UUID
+    :param bed_id: Bed UUID
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: User
+    :param enforcer: Casbin AsyncEnforcer
+    :return: BedRead; beds/bed_schema.py
+    """
 
     garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
     if not garden:
@@ -121,6 +149,16 @@ async def update_bed(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Bed | None:
+    """
+    Route to update a bed
+
+    :param bed_id: Bed UUID
+    :param bed_update: BedUpdate object; beds/bed_schemas.py
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: User
+    :param enforcer: Casbin AsyncEnforcer
+    :return: Bed
+    """
 
     bed = await BedCRUD.get_bed(session=session, bed_id=bed_id)
     if not bed:
@@ -168,6 +206,15 @@ async def delete_bed(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+    """
+    Route to delete a bed
+
+    :param bed_id: Bed UUID
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: User
+    :param enforcer: Casbin AsyncEnforcer
+    :return: dict
+    """
 
     bed = await BedCRUD.get_bed(session=session, bed_id=bed_id)
     if not bed:

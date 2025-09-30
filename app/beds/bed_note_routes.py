@@ -33,6 +33,15 @@ async def create_bed_note(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> BedNote:
+    """
+    Route for creating a bed note.
+
+    :param note: BedNoteCreate; beds/bednote_schemas.py
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: User
+    :param enforcer: Casbin AsyncEnforcer
+    :return: BedNote
+    """
 
     bed = await BedCRUD.get_bed(session=session, bed_id=note.bed_id)
     if not bed:
@@ -78,6 +87,15 @@ async def get_bed_note(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> BedNoteRead:
+    """
+    Route for getting a bed note.
+
+    :param note_id: UUID
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: User
+    :param enforcer: Casbin AsyncEnforcer
+    :return: BedNoteRead; beds/bednote_schemas.py
+    """
 
     note = await BedNoteCRUD.get_note(note_id=note_id, session=session)
     if not note:
@@ -112,6 +130,15 @@ async def read_bed_notes(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> list[BedNoteList]:
+    """
+    Route for getting a list of bed notes.
+
+    :param bed_id: UUID
+    :param skip: number of rows to skip
+    :param limit: limit number of rows to return
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: User
+    """
 
     bed = await BedCRUD.get_bed(session=session, bed_id=bed_id)
     if not bed:
@@ -147,6 +174,16 @@ async def update_bed_note(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> BedNote:
+    """
+    Route for updating a bed note.
+
+    :param note_id: UUID
+    :param note_update: BedNoteUpdate object; beds/bednote_schemas.py
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: User
+    :param enforcer: Casbin AsyncEnforcer
+    :return: BedNote
+    """
 
     note = await BedNoteCRUD.get_note(note_id=note_id, session=session)
     if not note:
@@ -197,6 +234,15 @@ async def delete_note(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+    """
+    Route to delete bed note.
+
+    :param note_id: UUID
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: User
+    :param enforcer: Casbin AsyncEnforcer
+    :return: dict
+    """
 
     note = await BedNoteCRUD.get_note(session=session, note_id=note_id)
     if not note:

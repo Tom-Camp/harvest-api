@@ -15,7 +15,12 @@ MODEL_PATH = os.path.join(os.path.dirname(__file__), "casbin_model.conf")
 
 
 async def create_casbin_enforcer(db_url: str) -> AsyncEnforcer:
-    """Create Casbin enforcer with database adapter"""
+    """
+    Create Casbin enforcer with database adapter
+
+    :param db_url: str
+    :return: Casbin AsyncEnforcer
+    """
     adapter = AsyncAdapter(db_url)
     enforcer = AsyncEnforcer(MODEL_PATH, adapter)
     enforcer.add_function("is_owner", is_owner)
@@ -27,7 +32,11 @@ async def create_casbin_enforcer(db_url: str) -> AsyncEnforcer:
 
 
 async def initialize_default_policies(enforcer: AsyncEnforcer):
-    """Initialize default policies from single source"""
+    """
+    Initialize default policies from single source
+
+    :param enforcer: Casbin AsyncEnforcer
+    """
     logger.info("Initializing default policies...")
 
     for policy in DEFAULT_POLICIES:
@@ -60,7 +69,12 @@ async def initialize_default_policies(enforcer: AsyncEnforcer):
 async def setup_admin_users(
     enforcer: AsyncEnforcer, admin_user_ids: list | None = None
 ):
-    """Setup admin users with admin role"""
+    """
+    Setup admin users with admin role
+
+    :param enforcer: Casbin AsyncEnforcer
+    :param admin_user_ids: list
+    """
     admin_ids = admin_user_ids or DEFAULT_ADMIN_USERS
 
     for admin_id in admin_ids:
@@ -114,7 +128,13 @@ async def setup_admin_users(
 
 
 async def startup_casbin(app, db_url: str, admin_user_ids: list | None = None):
-    """Complete Casbin initialization for FastAPI startup"""
+    """
+    Complete Casbin initialization for FastAPI startup
+
+    :param app: FastAPI FastAPI
+    :param db_url: str
+    :param admin_user_ids: list
+    """
     try:
         logger.info("=== Casbin Initialization ===")
 

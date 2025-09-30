@@ -17,6 +17,14 @@ class GardenNoteCRUD:
 
     @staticmethod
     async def create_note(note: GardenNoteCreate, session: AsyncSession) -> GardenNote:
+        """
+        Create a new GardenNote
+
+        :param note: A GardenNoteCreate object; gardens/garden_note_schemas.py
+        :param session: A SQLAlchemy asyncio AsyncSession
+        :return: GardenNote
+        """
+
         new_note = GardenNote(**note.model_dump())
         start = time.time()
 
@@ -35,6 +43,14 @@ class GardenNoteCRUD:
 
     @staticmethod
     async def get_note(session: AsyncSession, note_id: UUID) -> GardenNote | None:
+        """
+        Get a GardenNote by ID
+
+        :param session: A SQLAlchemy asyncio AsyncSession
+        :param note_id: The ID of the GardenNote to retrieve
+        :return: GardenNote | None
+        """
+
         statement = select(GardenNote).where(GardenNote.id == note_id)
 
         start = time.time()
@@ -55,6 +71,16 @@ class GardenNoteCRUD:
     async def get_notes(
         garden_id: UUID, session: AsyncSession, skip: int = 0, limit: int = 100
     ) -> Sequence[GardenNote]:
+        """
+        Get all GardenNotes by ID
+
+        :param garden_id: The ID of the GardenNote to retrieve
+        :param session: A SQLAlchemy asyncio AsyncSession
+        :param skip: The number of rows to skip
+        :param limit: The number of rows to return
+        :return: Sequence[GardenNote]
+        """
+
         statement = (
             select(GardenNote)
             .where(GardenNote.garden_id == garden_id)
@@ -80,6 +106,15 @@ class GardenNoteCRUD:
     async def update_note(
         session: AsyncSession, note_id: UUID, note_update: GardenNoteUpdate
     ) -> GardenNote:
+        """
+        Update a GardenNote by ID
+
+        :param session: a SQLAlchemy asyncio AsyncSession
+        :param note_id: The ID of the GardenNote to update
+        :param note_update: The GardenNoteUpdate object; gardens/garden_note_schemas.py
+        :return: GardenNote
+        """
+
         note = await session.get(
             GardenNote, note_id, options=[selectinload(GardenNote.garden)]
         )
@@ -104,6 +139,14 @@ class GardenNoteCRUD:
 
     @staticmethod
     async def delete_note(session: AsyncSession, note_id: UUID) -> bool:
+        """
+        Delete a GardenNote by ID
+
+        :param session: a SQLAlchemy asyncio AsyncSession
+        :param note_id: The ID of the GardenNote to delete
+        :return: boolean
+        """
+
         return_value: bool = False
 
         note = await session.get(GardenNote, note_id)

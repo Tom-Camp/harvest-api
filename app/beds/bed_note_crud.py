@@ -17,6 +17,14 @@ class BedNoteCRUD:
 
     @staticmethod
     async def create_note(note: BedNoteCreate, session: AsyncSession) -> BedNote:
+        """
+        Create a new BedNote
+
+        :param note: BedNoteCreate; beds/bednote_schema.py
+        :param session: SQLAlchemy asyncio AsyncSession
+        :return: BedNote
+        """
+
         new_note = BedNote(**note.model_dump())
         start = time.time()
 
@@ -35,6 +43,14 @@ class BedNoteCRUD:
 
     @staticmethod
     async def get_note(session: AsyncSession, note_id: UUID) -> BedNote | None:
+        """
+        Get a BedNote by ID
+
+        :param session: SQLAlchemy asyncio AsyncSession
+        :param note_id: Bed UUID
+        :return: BedNote or None
+        """
+
         statement = select(BedNote).where(BedNote.id == note_id)
 
         start = time.time()
@@ -55,6 +71,15 @@ class BedNoteCRUD:
     async def get_notes(
         bed_id: UUID, session: AsyncSession, skip: int = 0, limit: int = 100
     ) -> Sequence[BedNote]:
+        """
+        Get all BedNotes by the Bed ID
+
+        :param bed_id: Bed UUID
+        :param session: SQLAlchemy asyncio AsyncSession
+        :param skip: Number of rows to skip
+        :param limit: Number of rows to return
+        :return: Sequence[BedNote]
+        """
         statement = (
             select(BedNote).where(BedNote.bed_id == bed_id).offset(skip).limit(limit)
         )
@@ -77,6 +102,14 @@ class BedNoteCRUD:
     async def update_note(
         session: AsyncSession, note_id: UUID, note_update: BedNoteUpdate
     ) -> BedNote:
+        """
+        Update a BedNote by ID
+
+        :param session: SQLAlchemy asyncio AsyncSession
+        :param note_id: Bed UUID
+        :param note_update: BedNoteUpdate
+        :return: BedNote
+        """
         note = await session.get(BedNote, note_id, options=[selectinload(BedNote.bed)])
         if note:
             note_data = note_update.model_dump(exclude_unset=True)
@@ -100,6 +133,13 @@ class BedNoteCRUD:
 
     @staticmethod
     async def delete_note(session: AsyncSession, note_id: UUID) -> bool:
+        """
+        Delete a BedNote by ID
+
+        :param session: SQLAlchemy asyncio AsyncSession
+        :param note_id: Bed UUID
+        :return: bool
+        """
         return_value: bool = False
 
         note = await session.get(BedNote, note_id)

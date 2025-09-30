@@ -17,6 +17,14 @@ logger = get_logger(__name__)
 class UserCRUD:
     @staticmethod
     async def create_user(session: AsyncSession, user: UserCreate) -> User:
+        """
+        Create a new user
+
+        :param session: The SQLAlchemy asyncio AsyncSession
+        :param user: The UserCreate object; users/user_schemas.py
+        :return: User
+        """
+
         hashed_password = get_password_hash(user.password)
         db_user = User(
             username=user.username,
@@ -41,6 +49,13 @@ class UserCRUD:
 
     @staticmethod
     async def get_user(session: AsyncSession, user_id: UUID) -> User | None:
+        """
+        Get a user
+
+        :param session: The SQLAlchemy asyncio AsyncSession
+        :param user_id: The UUID of the user
+        :return: The User or None
+        """
         start = time.time()
 
         user = await session.get(User, user_id)
@@ -58,6 +73,14 @@ class UserCRUD:
 
     @staticmethod
     async def get_user_by_username(session: AsyncSession, username: str) -> User | None:
+        """
+        Get a user by username
+
+        :param session: The SQLAlchemy asyncio AsyncSession
+        :param username: The username
+        :return: The User or None
+        """
+
         statement = select(User).where(User.username == username)
 
         start = time.time()
@@ -77,6 +100,14 @@ class UserCRUD:
 
     @staticmethod
     async def get_user_by_email(session: AsyncSession, email: EmailStr) -> User | None:
+        """
+        Get a user by email
+
+        :param session: The SQLAlchemy asyncio AsyncSession
+        :param email: The email
+        :return: The User or None
+        """
+
         statement = select(User).where(User.email == email)
 
         start = time.time()
@@ -98,6 +129,15 @@ class UserCRUD:
     async def get_users(
         session: AsyncSession, skip: int = 0, limit: int = 100
     ) -> Sequence[User]:
+        """
+        Get all users
+
+        :param session: The SQLAlchemy asyncio AsyncSession
+        :param skip: The number of users to skip
+        :param limit: The number of users to return
+        :return: The list of Users
+        """
+
         statement = select(User).offset(skip).limit(limit)
 
         start = time.time()
@@ -118,6 +158,15 @@ class UserCRUD:
     async def update_user(
         session: AsyncSession, user_id: UUID, user_update: UserUpdate
     ) -> User | None:
+        """
+        Update a user
+
+        :param session: The SQLAlchemy asyncio AsyncSession
+        :param user_id: The UUID of the user
+        :param user_update: The UserUpdate object
+        :return: The User or None
+        """
+
         user = await session.get(User, user_id)
         if user:
             user_data = user_update.model_dump(exclude_unset=True)
@@ -141,6 +190,13 @@ class UserCRUD:
 
     @staticmethod
     async def delete_user(session: AsyncSession, user_id: UUID) -> bool:
+        """
+        Delete a user
+
+        :param session: The SQLAlchemy asyncio AsyncSession
+        :param user_id: The UUID of the user
+        :return: bool
+        """
         user = await session.get(User, user_id)
         if not isinstance(user, User):
             return False

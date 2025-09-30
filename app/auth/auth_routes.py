@@ -32,6 +32,13 @@ auth_router = APIRouter(prefix="/auth")
 
 
 async def add_default_bed(session: AsyncSession, garden_id: UUID):
+    """
+    Add a default bed to the default garden for a new User.
+
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param garden_id: The garden UUID
+    """
+
     bed = BedCreate(
         name="Default bed",
         description="A garden bed",
@@ -41,6 +48,13 @@ async def add_default_bed(session: AsyncSession, garden_id: UUID):
 
 
 async def add_default_garden(user: User, session: AsyncSession):
+    """
+    Add a default garden for a new User.
+
+    :param user: The new User object
+    :param session: SQLAlchemy asyncio AsyncSession
+    """
+
     garden = GardenCreate(
         name="Default garden",
         description="Garden added when user created",
@@ -86,6 +100,14 @@ async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: AsyncSession = Depends(get_db),
 ) -> dict:
+    """
+    Login route to obtain access token.
+
+    :param request: Request
+    :param form_data: OAuth2PasswordRequestForm containing username and password
+    :param session: SQLAlchemy asyncio AsyncSession
+    """
+
     user = await authenticate_user(session, form_data.username, form_data.password)
     if not user:
         log_handler.log_security_event(
@@ -134,6 +156,15 @@ async def register(
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
     session: AsyncSession = Depends(get_db),
 ) -> User:
+    """
+    User Registration route.
+
+    :param request: Request
+    :param user: UserCreate object; users/user_schemas.py
+    :param enforcer: Casbin AsyncEnforcer
+    :param session: SQLAlchemy asyncio AsyncSession
+    """
+
     if username := await UserCRUD.get_user_by_username(session, user.username):
         logger.info("Username %s already taken" % username)
         raise HTTPException(
