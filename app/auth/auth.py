@@ -29,6 +29,13 @@ HIBP_RANGE_URL = "https://api.pwnedpasswords.com/range/"
 
 
 async def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Verify a password against a hashed password.
+
+    :param plain_password: The plain-text password to verify
+    :param hashed_password: The hashed password to compare to
+    """
+
     try:
         ph.verify(hashed_password, plain_password)
         return True
@@ -38,12 +45,26 @@ async def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def get_password_hash(password: str) -> str:
+    """
+    Return the hashed password from the plain-text password.
+
+    :param password: The password to hash
+    """
+
     return ph.hash(password)
 
 
 async def authenticate_user(
     session: AsyncSession, username: str, password: str
 ) -> User | None:
+    """
+    Authenticate a user using the username and password.
+
+    :param session: The SQLAchemy asyncio database session
+    :param username: The username
+    :param password: The password
+    """
+
     statement = select(User).where(User.__table__.c.username == username)
     result = await session.execute(statement)
     user = result.scalars().first()
@@ -58,6 +79,12 @@ async def authenticate_user(
 
 
 async def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    """
+    Create an access token for an API request.
+
+    :param data: The data to encode
+    :param expires_delta: The expiration time
+    """
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(timezone.utc).replace(tzinfo=None) + expires_delta
@@ -72,6 +99,13 @@ async def create_access_token(data: dict, expires_delta: timedelta | None = None
 async def get_current_user(
     token: str = Depends(oauth2_scheme), session: AsyncSession = Depends(get_db)
 ) -> User:
+    """
+    Get the current user from the database.
+
+    :param token: The token
+    :param session: The SQLAlchemy asyncio session
+    """
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -98,12 +132,25 @@ async def get_current_user(
 async def get_current_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
+    """
+    Get an active user from the database.
+
+    :param current_user: The current user
+    """
+
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
 
 async def hibp_breach_count(password: str, timeout: float = 10.0) -> int:
+    """
+    Check if the password is associated with a known breach
+
+    :param password: The password to check
+    :param timeout: The timeout in seconds
+    """
+
     sha1 = hashlib.sha1(password.encode("utf-8")).hexdigest().upper()  # nosec B324
     prefix, suffix = sha1[:5], sha1[5:]
 
@@ -130,6 +177,12 @@ async def hibp_breach_count(password: str, timeout: float = 10.0) -> int:
 
 
 async def failed_password_messages(reasons: dict) -> list:
+    """
+    Return a list of failed password messages
+
+    :param reasons: The reasons for the failed password messages
+    """
+
     message: list = []
     if reasons.get("pwned_count"):
         message.append(
@@ -145,6 +198,11 @@ async def failed_password_messages(reasons: dict) -> list:
 
 
 async def assess_password(password: str) -> dict:
+    """
+    Assess the password complexity using the zxcvbn algorithm.
+
+    :param password: The password to check
+    """
     # zxcvbn score 0..4
     score = int(zxcvbn(password).score)
     pwned = await hibp_breach_count(password)
