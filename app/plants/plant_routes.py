@@ -118,7 +118,7 @@ async def create_plant(
 
 
 @plant_router.get("/{plant_id}", response_model=PlantRead)
-async def read_bed(
+async def read_plant(
     plant_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
