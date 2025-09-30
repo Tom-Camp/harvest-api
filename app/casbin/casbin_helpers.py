@@ -7,10 +7,25 @@ logger = get_logger(__name__)
 
 
 def casbin_subject(user_id: UUID) -> str:
+    """
+    Create a Casbin Subject string.
+
+    :param user_id: UUID
+    :return: string
+    """
+
     return f"user:{user_id}"
 
 
 def casbin_object(kind: str, object_id: UUID) -> str:
+    """
+    Create a Casbin Object string.
+
+    :param kind: str
+    :param object_id: UUID
+    :return: string
+    """
+
     # kind = "u" for user, "p" for page, etc.
     return f"{kind}:{object_id}"
 
@@ -24,6 +39,10 @@ def is_owner(subject_id: str, check_object: Any) -> bool:
       * a User instance (owner is the user itself)
       * any other domain object that defines an `user_id` association.
       * a string in format "kind:uuid" (e.g., "p:uuid" or "u:uuid")
+
+    :param subject_id: str The subject ID to check
+    :param check_object: The object to check
+    :return: boolean
     """
     try:
         _, sub_uuid = subject_id.split(":")
@@ -65,5 +84,9 @@ def can_access_page(subject_id: str, page_obj: Any) -> bool:
     """
     Helper function to check if a user can access a specific page.
     This should be used for page-specific ownership checks.
+
+    :param subject_id: str
+    :param page_obj: Page
+    :return: boolean
     """
     return is_owner(subject_id, page_obj)
