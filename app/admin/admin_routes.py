@@ -127,6 +127,7 @@ async def check_permission(
     :param current_user: Current user User object
     :param session: SQLAlchemy asyncio session
     :param enforcer: Casbin AsyncEnforcer object
+    :return: dict
     """
 
     user = await UserCRUD.get_user(session=session, user_id=permission_request.user_id)
@@ -181,6 +182,7 @@ async def get_user_roles(
     :param current_user: Current user User object
     :param session: SQLAlchemy asyncio session
     :param enforcer: Casbin AsyncEnforcer object
+    :return: dict
     """
 
     user = await UserCRUD.get_user(session=session, user_id=user_id)
@@ -220,6 +222,7 @@ async def get_role_users(
     :param role_name: PermissionCheck object containing the User ID, permission, and action
     :param current_user: Current user User object
     :param enforcer: Casbin AsyncEnforcer object
+    :return: dict
     """
 
     allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "read")

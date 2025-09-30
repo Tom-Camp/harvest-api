@@ -20,6 +20,13 @@ class BedCRUD:
         bed: BedCreate,
         session: AsyncSession,
     ) -> Bed:
+        """
+        Create a new bed in database.
+
+        :param bed: BedCreate object; beds/bed_schema.py
+        :param session: SQLAlchemy asyncio AsyncSession
+        :return: Bed object; beds/bed_models.py
+        """
         db_bed = Bed(**bed.model_dump())
 
         start = time.time()
@@ -39,6 +46,14 @@ class BedCRUD:
 
     @staticmethod
     async def get_bed(session: AsyncSession, bed_id: UUID) -> BedRead | None:
+        """
+        Get bed object by bed_id
+
+        :param session: SQLAlchemy asyncio AsyncSession
+        :param bed_id: The Bed UUID
+        :return: Bed object; beds/bed_schema.py
+        """
+
         statement = select(Bed).options(selectinload(Bed.notes)).where(Bed.id == bed_id)
 
         start = time.time()
@@ -60,6 +75,15 @@ class BedCRUD:
     async def get_beds(
         garden_id: UUID, session: AsyncSession, skip: int = 0, limit: int = 100
     ) -> Sequence[Bed]:
+        """
+        Get all Bed objects in garden
+
+        :param garden_id: Garden UUID
+        :param session: SQLAlchemy asyncio AsyncSession
+        :param skip: Number of rows to skip
+        :param limit: Number of rows to return
+        :return: Sequence[Bed]
+        """
         statement = (
             select(Bed).where(Bed.garden_id == garden_id).offset(skip).limit(limit)
         )
@@ -82,6 +106,14 @@ class BedCRUD:
     async def update_bed(
         session: AsyncSession, bed_id: UUID, bed_update: BedUpdate
     ) -> Bed | None:
+        """
+        Update bed object by bed_id
+
+        :param session: SQLAlchemy asyncio AsyncSession
+        :param bed_id: Bed UUID
+        :param bed_update: BedUpdate object beds/bed_schema.py
+        :return: Bed object; beds/bed_schema.py
+        """
         bed: Bed | None = await session.get(Bed, bed_id)
         if bed:
             bed_data = bed_update.model_dump(exclude_unset=True)
@@ -105,6 +137,13 @@ class BedCRUD:
 
     @staticmethod
     async def delete_bed(session: AsyncSession, bed_id: UUID) -> bool:
+        """
+        Delete bed object by bed_id
+
+        :param session: SQLAlchemy asyncio AsyncSession
+        :param bed_id: Bed UUID
+        :return: bool
+        """
         bed = await session.get(Bed, bed_id)
         if bed:
             start = time.time()

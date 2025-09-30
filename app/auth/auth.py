@@ -34,6 +34,7 @@ async def verify_password(plain_password: str, hashed_password: str) -> bool:
 
     :param plain_password: The plain-text password to verify
     :param hashed_password: The hashed password to compare to
+    :return: bool
     """
 
     try:
@@ -49,6 +50,7 @@ def get_password_hash(password: str) -> str:
     Return the hashed password from the plain-text password.
 
     :param password: The password to hash
+    :return: The hashed password
     """
 
     return ph.hash(password)
@@ -63,6 +65,7 @@ async def authenticate_user(
     :param session: The SQLAchemy asyncio database session
     :param username: The username
     :param password: The password
+    :return: User or None
     """
 
     statement = select(User).where(User.__table__.c.username == username)
@@ -84,6 +87,7 @@ async def create_access_token(data: dict, expires_delta: timedelta | None = None
 
     :param data: The data to encode
     :param expires_delta: The expiration time
+    :return: The access token string
     """
     to_encode = data.copy()
     if expires_delta:
@@ -104,6 +108,7 @@ async def get_current_user(
 
     :param token: The token
     :param session: The SQLAlchemy asyncio session
+    :return: User object
     """
 
     credentials_exception = HTTPException(
@@ -136,6 +141,7 @@ async def get_current_active_user(
     Get an active user from the database.
 
     :param current_user: The current user
+    :return: The active user User object
     """
 
     if not current_user.is_active:
@@ -149,6 +155,7 @@ async def hibp_breach_count(password: str, timeout: float = 10.0) -> int:
 
     :param password: The password to check
     :param timeout: The timeout in seconds
+    :return: The number of breaches
     """
 
     sha1 = hashlib.sha1(password.encode("utf-8")).hexdigest().upper()  # nosec B324
@@ -181,6 +188,7 @@ async def failed_password_messages(reasons: dict) -> list:
     Return a list of failed password messages
 
     :param reasons: The reasons for the failed password messages
+    :return: list of messages
     """
 
     message: list = []
@@ -199,11 +207,12 @@ async def failed_password_messages(reasons: dict) -> list:
 
 async def assess_password(password: str) -> dict:
     """
-    Assess the password complexity using the zxcvbn algorithm.
+    Assess the password complexity using the zxcvbn algorithm. zxcvbn score 0..4
 
     :param password: The password to check
+    :return: dict
     """
-    # zxcvbn score 0..4
+
     score = int(zxcvbn(password).score)
     pwned = await hibp_breach_count(password)
     ok = (len(password) >= 12) and (score >= 3) and (pwned == 0)
