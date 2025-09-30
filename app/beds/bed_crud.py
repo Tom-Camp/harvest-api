@@ -46,15 +46,14 @@ class BedCRUD:
 
     @staticmethod
     async def get_bed(session: AsyncSession, bed_id: UUID) -> BedRead | None:
-        """
-        Get bed object by bed_id
-
-        :param session: SQLAlchemy asyncio AsyncSession
-        :param bed_id: The Bed UUID
-        :return: Bed object; beds/bed_schema.py
-        """
-
-        statement = select(Bed).options(selectinload(Bed.notes)).where(Bed.id == bed_id)
+        statement = (
+            select(Bed)
+            .options(
+                selectinload(Bed.notes),
+                selectinload(Bed.plants),
+            )
+            .where(Bed.id == bed_id)
+        )
 
         start = time.time()
 

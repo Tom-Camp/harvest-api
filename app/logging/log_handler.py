@@ -73,6 +73,22 @@ class StructlogHandler:
 
         self.logger.info(f"Database {operation}", **log_data)
 
+    def log_ai_operation(
+        self,
+        operation: str,
+        model: str | None = None,
+        duration_ms: float | None = None,
+        **context: Any,
+    ) -> None:
+        log_data: dict = {"event_type": "database", "operation": operation, **context}
+
+        if model:
+            log_data["table"] = model
+        if duration_ms is not None:
+            log_data["duration_ms"] = duration_ms
+
+        self.logger.info(f"AI request {operation}", **log_data)
+
     def log_external_api_call(
         self,
         service: str,

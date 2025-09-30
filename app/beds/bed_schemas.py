@@ -3,6 +3,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 from app.beds.bed_models import BedNote
+from app.plants.plant_models import Plant
 
 
 class BedCreate(BaseModel):
@@ -27,6 +28,7 @@ class BedRead(BaseModel):
     garden_id: UUID
     description: str | None = None
     notes: list[BedNote] | None = None
+    plants: list[Plant] | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
