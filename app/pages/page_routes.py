@@ -26,6 +26,15 @@ async def create_page(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Page:
+    """
+    A route to create a new page
+
+    :param session: The SQLAlchemy asyncio AsyncSession
+    :param page: The PageCreate object; pages/page_schemas.py
+    :param current_user: The current user
+    :param enforcer: The Casbin AsyncEnforcer
+    :return: Page
+    """
 
     subject: str = casbin_subject(current_user.id)
     allowed = enforcer.enforce(subject, "page", "create")
@@ -54,6 +63,14 @@ async def read_pages(
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
 ) -> list[PageList]:
+    """
+    A route to get all pages
+
+    :param skip: The number of pages to skip
+    :param limit: The number of pages to return
+    :param session: The SQLAlchemy asyncio AsyncSession
+    :return: list of PageList objects
+    """
 
     pages = await PageCRUD.get_pages(session, skip=skip, limit=limit)
     return [PageList.model_validate(page) for page in pages]
@@ -66,6 +83,15 @@ async def read_my_pages(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> list[PageList]:
+    """
+    A route to get all pages
+
+    :param skip: The number of pages to skip
+    :param limit: The number of pages to return
+    :param session: The SQLAlchemy asyncio AsyncSession
+    :param current_user: The current user
+    :return: list of PageList objects
+    """
 
     pages = await PageCRUD.get_user_pages(
         session, current_user.id, skip=skip, limit=limit
@@ -78,6 +104,13 @@ async def read_page(
     page_id: UUID,
     session: AsyncSession = Depends(get_db),
 ) -> PageRead:
+    """
+    A route to get a single page
+
+    :param page_id: The UUID of the page
+    :param session: The SQLAlchemy asyncio AsyncSession
+    :return: PageRead object; pages/page_schemas.py
+    """
 
     page = await PageCRUD.get_page(session, page_id)
     if not page:
@@ -94,6 +127,16 @@ async def update_page(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Page | None:
+    """
+    A route to update a single page
+
+    :param page_id: The UUID of the page
+    :param page_update: The PageUpdate object; pages/page_schemas.py
+    :param session: The SQLAlchemy asyncio AsyncSession
+    :param current_user: The current user
+    :param enforcer: The Casbin AsyncEnforcer
+    :return: Page or None
+    """
 
     page = await PageCRUD.get_page(session, page_id)
     if not page:
@@ -133,6 +176,15 @@ async def delete_page(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+    """
+    A route to delete a single page
+
+    :param page_id: The UUID of the page
+    :param session: The SQLAlchemy asyncio AsyncSession
+    :param current_user: The current user
+    :param enforcer: The Casbin AsyncEnforcer
+    :return: dict
+    """
 
     page = await PageCRUD.get_page(session, page_id)
     if not page:
