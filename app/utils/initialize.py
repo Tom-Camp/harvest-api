@@ -11,6 +11,13 @@ logger = get_logger(__name__)
 
 
 async def setup_initial_admin(session: AsyncSession) -> UUID:
+    """
+    Sets up the initial admin user
+
+    :param session: The SQLAlchemy asyncio AsyncSession
+    :return: UUID
+    """
+
     admin_data = {
         "username": settings.INITIAL_USER_NAME,
         "email": settings.INITIAL_USER_MAIL,
