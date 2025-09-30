@@ -24,6 +24,14 @@ async def read_users_me(
     session: AsyncSession = Depends(get_db),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> UserRead | None:
+    """
+    A route to return a User object for the current user
+
+    :param current_user: The current user
+    :param session: The SQLAlchemy asyncio AsyncSession
+    :param enforcer: The Casbin AsyncEnforcer
+    :return: User or None
+    """
 
     user = await UserCRUD.get_user(
         session=session,
@@ -42,6 +50,14 @@ async def read_users(
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
 ) -> list[UserRead]:
+    """
+    A route to return a list of User objects for the current user
+
+    :param skip: The number of users to skip
+    :param limit: The number of users to return
+    :param session: The SQLAlchemy asyncio AsyncSession
+    :return: list[UserRead]; users/user_schemas.py
+    """
 
     users = await UserCRUD.get_users(session, skip=skip, limit=limit)
     return [UserRead.model_validate(user) for user in users]
@@ -54,6 +70,15 @@ async def read_user(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> UserRead:
+    """
+    A route to return a User object for the current user
+
+    :param user_id: The UUID of the user
+    :param session: The SQLAlchemy asyncio AsyncSession
+    :param current_user: The current user
+    :param enforcer: The Casbin AsyncEnforcer
+    :return: UserRead or None
+    """
 
     allowed = enforcer.enforce(
         casbin_subject(current_user.id), casbin_object("us", user_id), "read"
@@ -77,6 +102,16 @@ async def update_user(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> UserRead:
+    """
+    A route to update a User object for the current user
+
+    :param user_id: The UUID of the user
+    :param user_update: The UserUpdate object; users/user_schemas.py
+    :param session: The SQLAlchemy asyncio AsyncSession
+    :param current_user: The current user
+    :param enforcer: The Casbin AsyncEnforcer
+    :return: UserRead or None
+    """
 
     existing_user = await UserCRUD.get_user(session, user_id)
     if not existing_user:
@@ -105,6 +140,15 @@ async def delete_user(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
+    """
+    A route to delete a User object
+
+    :param user_id: The UUID of the user
+    :param session: The SQLAlchemy asyncio AsyncSession
+    :param current_user: The current user
+    :param enforcer: The Casbin AsyncEnforcer
+    :return: dict
+    """
 
     existing_user = await UserCRUD.get_user(session, user_id)
     if not existing_user:
