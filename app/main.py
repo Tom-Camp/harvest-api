@@ -17,6 +17,7 @@ from app.logging import get_logger
 from app.logging.log_config import configure_structlog
 from app.logging.log_middleware import LoggingMiddleware
 from app.pages.page_routes import page_router
+from app.plants.plant_routes import plant_router
 from app.users.user_routes import user_router
 from app.utils import database as db
 from app.utils.config import settings
@@ -71,6 +72,7 @@ app.include_router(bed_note_router, prefix="/api", tags=["gardens"])
 app.include_router(garden_router, prefix="/api", tags=["gardens"])
 app.include_router(garden_note_router, prefix="/api", tags=["gardens", "notes"])
 app.include_router(page_router, prefix="/api", tags=["pages"])
+app.include_router(plant_router, prefix="/api", tags=["gardens"])
 app.include_router(user_router, prefix="/api", tags=["users"])
 
 

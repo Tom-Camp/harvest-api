@@ -56,7 +56,7 @@ async def read_users(
     :param skip: The number of users to skip
     :param limit: The number of users to return
     :param session: The SQLAlchemy asyncio AsyncSession
-    :return: list[UserRead]; users/user_schemas.py
+    :return: list[UserRead]; users.user_schemas.UserRead
     """
 
     users = await UserCRUD.get_users(session, skip=skip, limit=limit)
@@ -106,7 +106,7 @@ async def update_user(
     A route to update a User object for the current user
 
     :param user_id: The UUID of the user
-    :param user_update: The UserUpdate object; users/user_schemas.py
+    :param user_update: The UserUpdate object; users.user_schemas.UserUpdate
     :param session: The SQLAlchemy asyncio AsyncSession
     :param current_user: The current user
     :param enforcer: The Casbin AsyncEnforcer

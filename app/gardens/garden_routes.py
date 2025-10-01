@@ -35,11 +35,11 @@ async def create_garden(
     """
     A route to create a Garden object
 
-    :param garden: The GardenCreate object; gardens/garden_schemas.py
+    :param garden: The GardenCreate object; gardens.garden_schemas.GardenCreate
     :param session: The SQLAlchemy asyncio AsyncSession
     :param current_user: The current user
     :param enforcer: The Casbin AsyncEnforcer
-    :return: The created Garden
+    :return: Garden; garden.garden_models.Garden
     """
 
     subject: str = casbin_subject(current_user.id)
@@ -78,7 +78,7 @@ async def read_gardens(
     :param skip: The number of Garden objects to skip
     :param limit: The number of Garden objects to return
     :param session: The SQLAlchemy asyncio AsyncSession
-    :return: The list of GardenList objects; gardens/garden_schemas.py
+    :return: The list of GardenList objects; gardens.garden_schemas.GardenList
     """
 
     gardens = await GardenCRUD.get_gardens(session, skip=skip, limit=limit)
@@ -99,7 +99,7 @@ async def read_user_gardens(
     :param skip: The number of Garden objects to skip
     :param limit: The number of Garden objects to return
     :param session: The SQLAlchemy asyncio AsyncSession
-    :return: The list of GardenList objects; gardens/garden_schemas.py
+    :return: The list of GardenList objects; gardens.garden_schemas.GardenList
     """
     user = await UserCRUD.get_user(session=session, user_id=user_id)
     if not user:
@@ -124,7 +124,7 @@ async def read_my_gardens(
     :param skip: The number of Garden objects to skip
     :param limit: The number of Garden objects to return
     :param session: The SQLAlchemy asyncio AsyncSession
-    :return: The list of GardenList objects; gardens/garden_schemas.py
+    :return: The list of GardenList objects; gardens.garden_schemas.GardenList
     """
 
     gardens = await GardenCRUD.get_user_gardens(
@@ -143,7 +143,7 @@ async def read_garden(
 
     :param garden_id: The ID of the Garden object
     :param session: The SQLAlchemy asyncio AsyncSession
-    :return: The GardenRead object; gardens/garden_schemas.py
+    :return: The GardenRead object; gardens.garden_schemas.GardenRead
     """
 
     garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
@@ -165,11 +165,11 @@ async def update_garden(
     A route to update a Garden object
 
     :param garden_id: The ID of the Garden object
-    :param garden_update: The GardenUpdate object; gardens/garden_schemas.py
+    :param garden_update: The GardenUpdate object; gardens.garden_schemas.GardenUpdate
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: The current user
     :param enforcer: The Casbin AsyncEnforcer
-    :return: The updated Garden object; gardens/garden_models.py
+    :return: The updated Garden object; gardens.garden_models.Garden
     """
 
     garden = await GardenCRUD.get_garden(session, garden_id)

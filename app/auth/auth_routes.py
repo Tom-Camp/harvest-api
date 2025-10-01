@@ -160,7 +160,7 @@ async def register(
     User Registration route.
 
     :param request: Request
-    :param user: UserCreate object; users/user_schemas.py
+    :param user: UserCreate object; users.user_schemas.UserCreate
     :param enforcer: Casbin AsyncEnforcer
     :param session: SQLAlchemy asyncio AsyncSession
     """

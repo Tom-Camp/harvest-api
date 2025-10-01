@@ -23,10 +23,10 @@ class GardenCRUD:
         """
         Create a new Garden
 
-        :param garden: GardenCreate object; gardens/garden_schemas.py
+        :param garden: GardenCreate object; gardens.garden_schemas.GardenCreate
         :param session: SQLAlchemy asyncio AsyncSession
-        :param user: User object
-        :return: Garden object
+        :param user: User object; users.user_models.User
+        :return: Garden object; gardens.garden_models.Garden
         """
 
         start = time.time()
@@ -52,7 +52,7 @@ class GardenCRUD:
 
         :param session: SQLAlchemy asyncio AsyncSession
         :param garden_id: UUID
-        :return: Garden object
+        :return: Garden object; garden.garden_models.Garden
         """
 
         statement = (
@@ -90,7 +90,7 @@ class GardenCRUD:
         :param session: SQLAlchemy asyncio AsyncSession
         :param skip: the rows to skip
         :param limit: the number of rows to return
-        :return: list of Garden objects
+        :return: list of Garden objects; garden.garden_models.Garden
         """
 
         statement = select(Garden).offset(skip).limit(limit)
@@ -120,7 +120,7 @@ class GardenCRUD:
         :param user_id: The ID for the user
         :param skip: the rows to skip
         :param limit: the number of rows to return
-        :return: list of Garden objects
+        :return: list of Garden objects; garden.garden_models.Garden
         """
 
         statement = (
@@ -151,8 +151,8 @@ class GardenCRUD:
 
         :param session: SQLAlchemy asyncio AsyncSession
         :param garden_id: The ID of the garden to update
-        :param garden_update: The GardenUpdate object; gardens/garden_schemas.py
-        :return: Garden object
+        :param garden_update: The GardenUpdate object; gardens.garden_schemas.GardenUpdate
+        :return: Garden object; garden.garden_models.Garden
         """
 
         garden: Garden | None = await session.get(Garden, garden_id)

@@ -2,6 +2,30 @@ from typing import Dict
 
 from httpx import AsyncClient
 
+from app.ai.models.ai_recommendation_model import (
+    AIRecommendations,
+    CareInstructions,
+    LifeCycle,
+    PlantingWindow,
+)
+
+dummy_ai_recommendations = AIRecommendations(
+    life_cycle=LifeCycle.ANNUAL,
+    days_to_harvest=60,
+    companion_plants="basil",
+    growing_tips=[],
+    planting_window=PlantingWindow(
+        season="winter",
+        temperature_range="70 to 80 degrees",
+    ),
+    care_instructions=CareInstructions(
+        watering_frequency="daily",
+        sunlight_needs="full sun",
+        soil_type="loam",
+    ),
+    pests=[],
+)
+
 
 async def get_auth_headers(
     client: AsyncClient, user_name: str | None

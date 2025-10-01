@@ -23,10 +23,11 @@ class BedCRUD:
         """
         Create a new bed in database.
 
-        :param bed: BedCreate object; beds/bed_schema.py
+        :param bed: BedCreate object; beds.bed_schemas.BedCreate
         :param session: SQLAlchemy asyncio AsyncSession
-        :return: Bed object; beds/bed_models.py
+        :return: Bed object; beds.bed_models.Bed
         """
+
         db_bed = Bed(**bed.model_dump())
 
         start = time.time()
@@ -47,14 +48,21 @@ class BedCRUD:
     @staticmethod
     async def get_bed(session: AsyncSession, bed_id: UUID) -> BedRead | None:
         """
-        Get bed object by bed_id
+        Get a Bed object given a bed_id
 
         :param session: SQLAlchemy asyncio AsyncSession
-        :param bed_id: The Bed UUID
-        :return: Bed object; beds/bed_schema.py
+        :param bed_id: a Bed unique identifier
+        :return: BedRead object; beds.bed_schemas.BedRead
         """
 
-        statement = select(Bed).options(selectinload(Bed.notes)).where(Bed.id == bed_id)
+        statement = (
+            select(Bed)
+            .options(
+                selectinload(Bed.notes),
+                selectinload(Bed.plants),
+            )
+            .where(Bed.id == bed_id)
+        )
 
         start = time.time()
 
@@ -82,8 +90,9 @@ class BedCRUD:
         :param session: SQLAlchemy asyncio AsyncSession
         :param skip: Number of rows to skip
         :param limit: Number of rows to return
-        :return: Sequence[Bed]
+        :return: Sequence[Bed]; beds.bed_models.Bed
         """
+
         statement = (
             select(Bed).where(Bed.garden_id == garden_id).offset(skip).limit(limit)
         )
@@ -111,9 +120,10 @@ class BedCRUD:
 
         :param session: SQLAlchemy asyncio AsyncSession
         :param bed_id: Bed UUID
-        :param bed_update: BedUpdate object beds/bed_schema.py
-        :return: Bed object; beds/bed_schema.py
+        :param bed_update: BedUpdate object beds.bed_schema.BedUpdate
+        :return: Bed object; beds.bed_models.Bed
         """
+
         bed: Bed | None = await session.get(Bed, bed_id)
         if bed:
             bed_data = bed_update.model_dump(exclude_unset=True)
@@ -144,6 +154,7 @@ class BedCRUD:
         :param bed_id: Bed UUID
         :return: bool
         """
+
         bed = await session.get(Bed, bed_id)
         if bed:
             start = time.time()

@@ -107,7 +107,7 @@ async def default_pages(default_user):
     yield pages_list
 
 
-@pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=True)
+@pytest_asyncio.fixture(loop_scope="function", scope="function", autouse=True)
 async def default_gardens(default_user):
     from app.auth.auth_routes import add_default_garden
     from app.gardens.garden_models import Garden

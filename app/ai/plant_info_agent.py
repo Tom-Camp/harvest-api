@@ -1,36 +1,52 @@
-import os
+import time
 
-from dotenv import load_dotenv
 from pydantic_ai import Agent
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.providers.google import GoogleProvider
 
+from app.ai.models.ai_recommendation_model import AIRecommendations
 from app.ai.prompts.new_plant import new_plant_prompt
-from app.helpers.garden import PlantInfo
+from app.logging import get_logger, log_handler
+from app.utils.config import settings
 
-load_dotenv()
-
-
-def create_model_with_env_token() -> GoogleModel:
-    model = GoogleModel(
-        model_name=os.getenv("HF_MODEL"),
-        provider=GoogleProvider(api_key=os.getenv("HF_TOKEN")),
-    )
-    return model
+logger = get_logger(__name__)
 
 
-def get_plant_info(plant: str) -> Agent:
-    prompt, instructions = new_plant_prompt(plant)
+model = GoogleModel(
+    model_name=settings.GEMINI_MODEL,
+    provider=GoogleProvider(api_key=settings.GEMINI_API_KEY),
+)
+
+
+async def get_plant_info(plant: str, location: str) -> AIRecommendations:
+    prompt, instructions = new_plant_prompt(plant=plant, location=location)
     plant_agent = Agent(
-        model=create_model_with_env_token(),
-        output_type=PlantInfo,
+        model=model,
+        output_type=AIRecommendations,
         system_prompt=prompt,
         instructions="\n".join(instructions),
         retries=3,
     )
-    return plant_agent
 
+    start = time.time()
+    results = await plant_agent.run(user_prompt=prompt)
+    duration_ms = (time.time() - start) * 1000
 
-def get_general_response() -> Agent:
-    zone_agent = Agent(model=create_model_with_env_token(), retries=3)
-    return zone_agent
+    if isinstance(results.output, AIRecommendations):
+        log_handler.log_ai_operation(
+            operation="get_plant_info",
+            model=settings.GEMINI_MODEL,
+            duration_ms=duration_ms,
+            agent="plant_info_agent",
+            result="success",
+        )
+    else:
+        log_handler.log_ai_operation(
+            operation="get_plant_info",
+            model=settings.GEMINI_MODEL,
+            duration_ms=duration_ms,
+            agent="plant_info_agent",
+            result="failure",
+            output=results.all_messages(),
+        )
+    return results.output

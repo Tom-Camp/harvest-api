@@ -21,7 +21,7 @@ class PageCRUD:
         Create a new page
 
         :param session: The SQLAlchemy asyncio AsyncSession
-        :param page: The PageCreate object; pages/page_schemas.py
+        :param page: The PageCreate object; pages.page_schemas.PageCreate
         :param user_id: The UUID of the user
         :return: Page
         """

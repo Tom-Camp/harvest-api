@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlmodel import Field, Relationship
 
 from app.helpers.model_base import ModelBase
+from app.plants.plant_models import Plant
 
 if TYPE_CHECKING:
     from app.gardens.garden_models import Garden  # noqa: F401
@@ -19,6 +20,10 @@ class Bed(ModelBase, table=True):  # type: ignore
     name: str
     description: str | None = None
     notes: list[BedNote] = Relationship(
+        back_populates="bed",
+        sa_relationship_kwargs={"cascade": "all, delete"},
+    )
+    plants: list[Plant] = Relationship(
         back_populates="bed",
         sa_relationship_kwargs={"cascade": "all, delete"},
     )
