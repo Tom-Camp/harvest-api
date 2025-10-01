@@ -30,7 +30,7 @@ async def create_page(
     A route to create a new page
 
     :param session: The SQLAlchemy asyncio AsyncSession
-    :param page: The PageCreate object; pages/page_schemas.py
+    :param page: The PageCreate object; pages.page_schemas.PageCreate
     :param current_user: The current user
     :param enforcer: The Casbin AsyncEnforcer
     :return: Page
@@ -109,7 +109,7 @@ async def read_page(
 
     :param page_id: The UUID of the page
     :param session: The SQLAlchemy asyncio AsyncSession
-    :return: PageRead object; pages/page_schemas.py
+    :return: PageRead object; pages.page_schemas.PageRead
     """
 
     page = await PageCRUD.get_page(session, page_id)
@@ -131,7 +131,7 @@ async def update_page(
     A route to update a single page
 
     :param page_id: The UUID of the page
-    :param page_update: The PageUpdate object; pages/page_schemas.py
+    :param page_update: The PageUpdate object; pages.page_schemas.PageUpdate
     :param session: The SQLAlchemy asyncio AsyncSession
     :param current_user: The current user
     :param enforcer: The Casbin AsyncEnforcer

@@ -20,9 +20,9 @@ class GardenNoteCRUD:
         """
         Create a new GardenNote
 
-        :param note: A GardenNoteCreate object; gardens/garden_note_schemas.py
+        :param note: A GardenNoteCreate object; gardens.garden_note_schemas.GardenNoteCreate
         :param session: A SQLAlchemy asyncio AsyncSession
-        :return: GardenNote
+        :return: GardenNote; garden.garden_models.GardenNote
         """
 
         new_note = GardenNote(**note.model_dump())
@@ -48,7 +48,7 @@ class GardenNoteCRUD:
 
         :param session: A SQLAlchemy asyncio AsyncSession
         :param note_id: The ID of the GardenNote to retrieve
-        :return: GardenNote | None
+        :return: GardenNote | None; garden.garden_models.GardenNote
         """
 
         statement = select(GardenNote).where(GardenNote.id == note_id)
@@ -78,7 +78,7 @@ class GardenNoteCRUD:
         :param session: A SQLAlchemy asyncio AsyncSession
         :param skip: The number of rows to skip
         :param limit: The number of rows to return
-        :return: Sequence[GardenNote]
+        :return: Sequence[GardenNote]; garden.garden_models.Garden
         """
 
         statement = (
@@ -111,8 +111,8 @@ class GardenNoteCRUD:
 
         :param session: a SQLAlchemy asyncio AsyncSession
         :param note_id: The ID of the GardenNote to update
-        :param note_update: The GardenNoteUpdate object; gardens/garden_note_schemas.py
-        :return: GardenNote
+        :param note_update: The GardenNoteUpdate object; gardens.garden_note_schemas.GardenNoteUpdate
+        :return: GardenNote; gardens.garden_models.GardenNote
         """
 
         note = await session.get(

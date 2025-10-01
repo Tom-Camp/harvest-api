@@ -30,11 +30,11 @@ async def create_bed(
     """
     Route to create a new bed in casbin.
 
-    :param bed: BedCreate object; beds/bed_models.py
+    :param bed: BedCreate object; beds.bed_schemas.BedCreate
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
     :param enforcer: Casbin AsyncEnforcer
-    :return: Bed
+    :return: Bed; beds.bed_models.Bed
     """
 
     garden = await GardenCRUD.get_garden(session, bed.garden_id)
@@ -84,7 +84,7 @@ async def read_beds(
     :param skip: rows to skip
     :param limit: limit the number of rows
     :param session: SQLAlchemy asyncio AsyncSession
-    :return: list[BedList]; beds/bed_schema.py
+    :return: list[BedList]; beds.bed_schema.BedList
     """
     garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
     if not garden:
@@ -114,7 +114,7 @@ async def read_bed(
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
     :param enforcer: Casbin AsyncEnforcer
-    :return: BedRead; beds/bed_schema.py
+    :return: BedRead; beds.bed_schema.BedRead
     """
 
     bed = await BedCRUD.get_bed(session=session, bed_id=bed_id)
@@ -150,11 +150,11 @@ async def update_bed(
     Route to update a bed
 
     :param bed_id: Bed UUID
-    :param bed_update: BedUpdate object; beds/bed_schemas.py
+    :param bed_update: BedUpdate object; beds.bed_schemas.BedUpdate
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
     :param enforcer: Casbin AsyncEnforcer
-    :return: Bed
+    :return: Bed; beds.bed_models.Bed
     """
 
     bed = await BedCRUD.get_bed(session=session, bed_id=bed_id)
@@ -166,10 +166,10 @@ async def update_bed(
         raise HTTPException(status_code=404, detail="Garden not found")
 
     user_subject = casbin_subject(current_user.id)
-    bed_resource = casbin_object("be", bed.id)
+    garden_resource = casbin_object("ga", garden.id)
 
     # Check RBAC permissions
-    allowed = enforcer.enforce(user_subject, bed_resource, "update")
+    allowed = enforcer.enforce(user_subject, garden_resource, "update")
 
     # If RBAC fails, check ownership manually
     if not allowed and not is_owner(user_subject, garden):
@@ -222,10 +222,10 @@ async def delete_bed(
         raise HTTPException(status_code=404, detail="Garden not found")
 
     user_subject = casbin_subject(current_user.id)
-    bed_resource = casbin_object("be", bed.id)
+    garden_resource = casbin_object("ga", garden.id)
 
     # Check RBAC permissions
-    allowed = enforcer.enforce(user_subject, bed_resource, "delete")
+    allowed = enforcer.enforce(user_subject, garden_resource, "delete")
 
     # If RBAC fails, check ownership manually
     if not allowed and not is_owner(user_subject, garden):

@@ -36,7 +36,7 @@ async def create_bed_note(
     """
     Route for creating a bed note.
 
-    :param note: BedNoteCreate; beds/bednote_schemas.py
+    :param note: BedNoteCreate; beds.bed_note_schemas.BedNoteCreate
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
     :param enforcer: Casbin AsyncEnforcer
@@ -94,7 +94,7 @@ async def get_bed_note(
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
     :param enforcer: Casbin AsyncEnforcer
-    :return: BedNoteRead; beds/bednote_schemas.py
+    :return: BedNoteRead; beds.bed_note_schemas.BedNoteRead
     """
 
     note = await BedNoteCRUD.get_note(note_id=note_id, session=session)
@@ -178,7 +178,7 @@ async def update_bed_note(
     Route for updating a bed note.
 
     :param note_id: UUID
-    :param note_update: BedNoteUpdate object; beds/bednote_schemas.py
+    :param note_update: BedNoteUpdate object; beds.bed_note_schemas.BedNoteUpdate
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
     :param enforcer: Casbin AsyncEnforcer

@@ -20,7 +20,7 @@ class BedNoteCRUD:
         """
         Create a new BedNote
 
-        :param note: BedNoteCreate; beds/bednote_schema.py
+        :param note: BedNoteCreate; beds.bed_note_schema.BedNoteCreate
         :param session: SQLAlchemy asyncio AsyncSession
         :return: BedNote
         """

@@ -14,7 +14,7 @@ from app.gardens.garden_crud import GardenCRUD
 from app.logging import get_logger, log_handler
 from app.plants.plant_crud import PlantCRUD
 from app.plants.plant_models import Plant
-from app.plants.plant_schema import PlantCreate, PlantRead
+from app.plants.plant_schema import PlantCreate, PlantRead, PlantUpdate
 from app.plants.recommendation_model import (
     CareInstructions,
     GrowingTips,
@@ -33,6 +33,13 @@ plant_router = APIRouter(prefix="/plants")
 async def map_ai_response_to_plant(
     plant_id: UUID, ai_recommendations: AIRecommendations
 ) -> Recommendations:
+    """
+    Map the AIRecommendation object to the Plant Recommendations model.
+
+    :param plant_id: The unique ID for the plant
+    :param ai_recommendations: The AIRecommendations object; ai.modes.ai_recommendations.AIRecommendations
+    :return: Recommendations object; plants.recommendations_model.Recommendations
+    """
     growing_tips = [
         GrowingTips(tips=tip.tips) for tip in ai_recommendations.growing_tips
     ]
@@ -68,6 +75,16 @@ async def create_plant(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Plant:
+    """
+    Create a Plant object
+
+    :param plant: a PlantCreate object; plants.plant_schema.PlantCreate
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: User object for the user accessing the route.
+    :param enforcer: Casbin AsyncEnforcer
+    :return: Plant object; plants.plant_models.Plant
+    """
+
     bed = await BedCRUD.get_bed(session=session, bed_id=plant.bed_id)
     if not bed:
         raise HTTPException(status_code=404, detail="Bed Not found")
@@ -124,6 +141,15 @@ async def read_plant(
     current_user: User = Depends(get_current_active_user),
     enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> PlantRead:
+    """
+    Return a PlantRead object by the Plant ID
+
+    :param plant_id: Unique ID for the plant
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: User object for the user accessing the route.
+    :param enforcer: Casbin AsyncEnforcer
+    :return: PlantRead object; plants.plant_schemas.PlantRead
+    """
 
     plant = await PlantCRUD.get_plant(session=session, plant_id=plant_id)
     if not plant:
@@ -147,3 +173,82 @@ async def read_plant(
         raise HTTPException(status_code=403, detail="Forbidden")
 
     return plant
+
+
+@plant_router.put("/{plant_id}", response_model=PlantRead)
+async def update_plant(
+    plant_id: UUID,
+    plant_update: PlantUpdate,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> Plant | None:
+    """
+    A route for updating a Plant object
+
+    :param plant_id: the Plant unique ID
+    :param plant_update: a PlantUpdate object; plants.plant_schemas.PlantUpdate
+    :param session: SQLAlchemy asnycio AsyncSession
+    :param current_user: the User making the request
+    :param enforcer: Casbin AsyncEnforcer
+    :return: PlantRead object; plants.plant_schemas.PlantRead
+    """
+
+    plant = await PlantCRUD.get_plant(session=session, plant_id=plant_id)
+    if not plant:
+        raise HTTPException(status_code=404, detail="Plant not found")
+
+    bed = await BedCRUD.get_bed(session=session, bed_id=plant.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    user_subject = casbin_subject(current_user.id)
+    garden_resource = casbin_object("ga", bed.id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, garden_resource, "update")
+
+    # If RBAC fails, check ownership manually
+    if not allowed and not is_owner(user_subject, garden):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    updated_plant = await PlantCRUD.update_plant(
+        session=session, plant_id=plant_id, plant_update=plant_update
+    )
+    if (
+        updated_plant
+        and hasattr(updated_plant, "variety")
+        and updated_plant.variety != plant.variety
+    ):
+        location: str = garden.location
+        check_plant: str = (
+            f"{updated_plant.variety} {updated_plant.species}"
+            if updated_plant.variety
+            else updated_plant.species
+        )
+        plant_info = await get_plant_info(plant=check_plant, location=location)
+        plant_info_mapped = await map_ai_response_to_plant(
+            plant_id=updated_plant.id, ai_recommendations=plant_info
+        )
+        session.add(plant_info_mapped)
+        await session.commit()
+        await session.refresh(updated_plant)
+
+    if updated_plant:
+        log_handler.log_garden_event(
+            event="Plant updated",
+            context={
+                "actor_id": current_user.id,
+                "actor_username": current_user.username,
+                "garden_id": garden.id,
+                "bed_id": bed.id,
+                "plant_id": updated_plant.id,
+                "action": "update_plant",
+                "resource": "plant_routes",
+            },
+        )
+    return updated_plant

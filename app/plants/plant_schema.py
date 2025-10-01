@@ -18,11 +18,9 @@ class PlantCreate(BaseModel):
 
 
 class PlantUpdate(BaseModel):
-    species: str
     variety: str | None = None
     germination_date: datetime | None = None
     planted_date: datetime | None = None
-    bed_id: UUID
 
     model_config = ConfigDict(from_attributes=True)
 
