@@ -101,6 +101,7 @@ class PlantCRUD:
         :param plant_update: PlantUpdate object plants.plant_schemas.PlantUpdate
         :return: Plant object
         """
+
         plant: Plant | None = await session.get(Plant, plant_id)
         if plant:
             plant_data = plant_update.model_dump(exclude_unset=True)
@@ -121,3 +122,30 @@ class PlantCRUD:
                 plant_id=str(plant.id),
             )
         return plant
+
+    @staticmethod
+    async def delete_plant(session: AsyncSession, plant_id: UUID) -> bool:
+        """
+        Delete plant object by plant_id
+
+        :param session: SQLAlchemy asyncio AsyncSession
+        :param plant_id: plant UUID
+        :return: bool
+        """
+
+        plant = await session.get(Plant, plant_id)
+        if plant:
+            start = time.time()
+
+            await session.delete(plant)
+            await session.commit()
+
+            duration_ms = (time.time() - start) * 1000
+            log_handler.log_database_operation(
+                operation="delete_plant",
+                table="plant",
+                duration_ms=duration_ms,
+                plant_id=str(plant_id),
+            )
+            return True
+        return False

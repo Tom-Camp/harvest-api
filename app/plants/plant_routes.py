@@ -252,3 +252,61 @@ async def update_plant(
             },
         )
     return updated_plant
+
+
+@plant_router.delete("/{plant_id}")
+async def delete_bed(
+    plant_id: UUID,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> dict:
+    """
+    Route to delete a Plant
+
+    :param plant_id: Plant UUID
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: User
+    :param enforcer: Casbin AsyncEnforcer
+    :return: dict
+    """
+
+    plant = await PlantCRUD.get_plant(session=session, plant_id=plant_id)
+    if not plant:
+        raise HTTPException(status_code=404, detail="Plant not found")
+
+    bed = await BedCRUD.get_bed(session=session, bed_id=plant.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    user_subject = casbin_subject(current_user.id)
+    garden_resource = casbin_object("ga", garden.id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, garden_resource, "delete")
+
+    # If RBAC fails, check ownership manually
+    if not allowed and not is_owner(user_subject, garden):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    if not await PlantCRUD.delete_plant(session, plant_id):
+        raise HTTPException(status_code=404, detail="Plant not found")
+
+    log_handler.log_garden_event(
+        event="Plant deleted",
+        context={
+            "actor_id": current_user.id,
+            "actor_username": current_user.username,
+            "garden_id": bed.garden_id,
+            "bed_id": bed.id,
+            "plant_id": plant.id,
+            "action": "delete_plant",
+            "resource": "plant_routes",
+        },
+    )
+
+    return {"message": "Plant deleted successfully"}
