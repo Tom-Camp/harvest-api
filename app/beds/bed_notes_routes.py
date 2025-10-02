@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.auth import get_current_active_user
 from app.beds.bed_crud import BedCRUD
 from app.beds.bed_models import BedNote
-from app.beds.bed_note_crud import BedNoteCRUD
-from app.beds.bed_note_schemas import (
+from app.beds.bed_notes_crud import BedNoteCRUD
+from app.beds.bed_notes_schemas import (
     BedNoteCreate,
     BedNoteList,
     BedNoteRead,
