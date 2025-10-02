@@ -14,7 +14,7 @@ from tests.helpers.test_helpers import (
 )
 
 
-class TestPlantCreateRoutes:
+class TestPlantNotesCreateRoutes:
 
     @pytest.mark.asyncio
     @patch(

@@ -15,7 +15,7 @@ from tests.helpers.test_helpers import (
 )
 
 
-class TestPlantReadRoutes:
+class TestPlantNotesReadRoutes:
     note_json: dict = {"note": "this is a plant note", "plant_id": ""}
     note_url: str = "/api/plant-notes/"
 
