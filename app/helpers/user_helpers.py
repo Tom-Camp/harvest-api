@@ -44,6 +44,15 @@ async def user_check_access(
     enforcer: AsyncEnforcer,
     action: str,
 ) -> User:
+    """
+    Access control for user routes.
+
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param user_id: The user ID for the user to whom we are adding a role
+    :param current_user: The user adding the role
+    :param enforcer: Casbin AsyncEnforcer
+    :param action: The Casbin action to check
+    """
 
     existing_user = await UserCRUD.get_user(session, user_id)
     if not existing_user:
