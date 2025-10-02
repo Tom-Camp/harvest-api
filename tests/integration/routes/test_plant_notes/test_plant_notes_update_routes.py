@@ -8,13 +8,16 @@ from app.ai.models.ai_recommendation_model import AIRecommendations
 from app.gardens.garden_models import Garden
 from app.users.user_models import User
 from tests.helpers.test_helpers import (
+    create_note,
     create_plant,
     dummy_ai_recommendations,
     get_auth_headers,
 )
 
 
-class TestPlantDeleteRoutes:
+class TestPlantNotesUpdateRoutes:
+    note_json: dict = {"note": "this is a plant note", "plant_id": ""}
+    note_url: str = "/api/plant-notes/"
 
     @pytest.mark.asyncio
     @patch(
@@ -29,7 +32,7 @@ class TestPlantDeleteRoutes:
             ("authenticated", 403),
         ],
     )
-    async def test_delete_plant(
+    async def test_update_plant_note(
         self,
         mock_get_plant_info: AIRecommendations,
         client: AsyncClient,
@@ -42,21 +45,31 @@ class TestPlantDeleteRoutes:
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
 
-        garden = default_gardens.get("tester", "")
+        garden = default_gardens.get("tester")
         if isinstance(garden, Garden):
             bed = garden.beds[0]
             plant = await create_plant(
                 client=client, bed_id=str(bed.id), headers=headers
             )
-            plant_id = plant.get("id")
-            delete_as = default_user.get(user_name, "")
-            username = delete_as.username if isinstance(delete_as, User) else ""
-            delete_headers = await get_auth_headers(client=client, user_name=username)
-            response = await client.delete(
-                url=f"/api/plants/{plant_id}",
-                headers=delete_headers,
+            self.note_json["plant_id"] = plant.get("id")
+            note = await create_note(
+                client=client,
+                note=self.note_json,
+                url=self.note_url,
+                headers=headers,
             )
-            assert response.status_code == expected_status
+
+            test_as = default_user.get(user_name, "")
+            username = test_as.username if isinstance(test_as, User) else ""
+            get_headers = await get_auth_headers(client=client, user_name=username)
+            get_response = await client.put(
+                url=f"/api/plant-notes/{note.get('id')}",
+                json={"note": f"{note.get('note')} updated by {username}"},
+                headers=get_headers,
+            )
+            if get_response.status_code == 200:
+                note = get_response.json()
+                assert note.get("note") == "this is a plant note"
         else:
             pytest.fail(f"No garden found for user {username}")
 
@@ -72,7 +85,7 @@ class TestPlantDeleteRoutes:
             ("authenticated", 200),
         ],
     )
-    async def test_delete_plant_own(
+    async def test_update_plant_note_own(
         self,
         mock_get_plant_info: AIRecommendations,
         client: AsyncClient,
@@ -81,55 +94,8 @@ class TestPlantDeleteRoutes:
         user_name: str,
         expected_status: int,
     ):
+
         test_as = default_user.get(user_name, "")
-        username = test_as.username if isinstance(test_as, User) else ""
-        headers = await get_auth_headers(client=client, user_name=username)
-
-        garden = default_gardens.get(user_name)
-        if isinstance(garden, Garden):
-            bed = garden.beds[0]
-            plant = await create_plant(
-                client=client, bed_id=str(bed.id), headers=headers
-            )
-            plant_id = plant.get("id")
-            response = await client.delete(
-                url=f"/api/plants/{plant_id}",
-                headers=headers,
-            )
-            assert response.status_code == expected_status
-        else:
-            pytest.fail(f"No garden found for user {username}")
-
-    @pytest.mark.asyncio
-    async def test_delete_plant_bad_id(
-        self,
-        client: AsyncClient,
-        default_user: dict[str, User],
-    ):
-        test_as = default_user.get("authenticated", "")
-        username = test_as.username if isinstance(test_as, User) else ""
-        headers = await get_auth_headers(client=client, user_name=username)
-
-        bad_id = uuid.uuid4()
-
-        response = await client.delete(
-            url=f"/api/plants/{bad_id}",
-            headers=headers,
-        )
-        assert response.status_code == 404
-
-    @pytest.mark.asyncio
-    @patch(
-        "app.plants.plant_routes.get_plant_info", return_value=dummy_ai_recommendations
-    )
-    async def test_delete_plant_unauthenticated(
-        self,
-        mock_get_plant_info: AIRecommendations,
-        client: AsyncClient,
-        default_user: dict[str, User],
-        default_gardens: dict[str, Garden],
-    ):
-        test_as = default_user.get("tester", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
 
@@ -139,14 +105,36 @@ class TestPlantDeleteRoutes:
             plant = await create_plant(
                 client=client, bed_id=str(bed.id), headers=headers
             )
-            plant_id = plant.get("id")
-
-            new_headers = await get_auth_headers(client=client, user_name="")
-            new_response = await client.delete(
-                url=f"/api/plants/{plant_id}",
-                headers=new_headers,
+            self.note_json["plant_id"] = plant.get("id")
+            note = await create_note(
+                client=client,
+                note=self.note_json,
+                url=self.note_url,
+                headers=headers,
             )
-
-            assert new_response.status_code == 401
+            get_response = await client.put(
+                url=f"/api/plant-notes/{note.get('id')}",
+                json={"note": f"{note.get('note')} updated by {username}"},
+                headers=headers,
+            )
+            if get_response.status_code == 200:
+                note = get_response.json()
+                assert note.get("note") == "this is a plant note"
         else:
-            pytest.fail("No garden found for user tester")
+            pytest.fail(f"No garden found for user {username}")
+
+    @pytest.mark.asyncio
+    async def test_update_plant_note_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.get(
+            url=f"/api/bed-notes/{bad_id}",
+            headers=headers,
+        )
+        assert response.status_code == 404

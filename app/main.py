@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.admin.admin_routes import admin_router
 from app.auth.auth_routes import auth_router
-from app.beds.bed_note_routes import bed_note_router
+from app.beds.bed_notes_routes import bed_note_router
 from app.beds.bed_routes import bed_router
 from app.casbin.casbin_config import startup_casbin
 from app.gardens.garden_note_routes import garden_note_router
@@ -17,6 +17,7 @@ from app.logging import get_logger
 from app.logging.log_config import configure_structlog
 from app.logging.log_middleware import LoggingMiddleware
 from app.pages.page_routes import page_router
+from app.plants.plant_notes_routes import plant_note_router
 from app.plants.plant_routes import plant_router
 from app.users.user_routes import user_router
 from app.utils import database as db
@@ -73,6 +74,7 @@ app.include_router(garden_router, prefix="/api", tags=["gardens"])
 app.include_router(garden_note_router, prefix="/api", tags=["gardens", "notes"])
 app.include_router(page_router, prefix="/api", tags=["pages"])
 app.include_router(plant_router, prefix="/api", tags=["gardens"])
+app.include_router(plant_note_router, prefix="/api", tags=["gardens", "notes"])
 app.include_router(user_router, prefix="/api", tags=["users"])
 
 

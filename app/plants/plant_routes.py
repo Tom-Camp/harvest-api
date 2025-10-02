@@ -14,7 +14,7 @@ from app.gardens.garden_crud import GardenCRUD
 from app.logging import get_logger, log_handler
 from app.plants.plant_crud import PlantCRUD
 from app.plants.plant_models import Plant
-from app.plants.plant_schema import PlantCreate, PlantRead, PlantUpdate
+from app.plants.plant_schemas import PlantCreate, PlantRead, PlantUpdate
 from app.plants.recommendation_model import (
     CareInstructions,
     GrowingTips,

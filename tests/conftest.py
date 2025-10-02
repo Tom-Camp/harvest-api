@@ -49,7 +49,7 @@ async def client(test_app):
         yield ac
 
 
-@pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=True)
+@pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=False)
 async def default_user(test_app):
     from app.casbin.casbin_helpers import casbin_subject
     from app.users.user_crud import UserCRUD
@@ -83,7 +83,7 @@ async def default_user(test_app):
     yield user_dict
 
 
-@pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=True)
+@pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=False)
 async def default_pages(default_user):
     from app.pages.page_models import Page
     from app.utils import database as db
@@ -107,7 +107,7 @@ async def default_pages(default_user):
     yield pages_list
 
 
-@pytest_asyncio.fixture(loop_scope="function", scope="function", autouse=True)
+@pytest_asyncio.fixture(loop_scope="function", scope="function", autouse=False)
 async def default_gardens(default_user):
     from app.auth.auth_routes import add_default_garden
     from app.gardens.garden_models import Garden

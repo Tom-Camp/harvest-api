@@ -5,10 +5,12 @@ from httpx import AsyncClient
 
 from app.gardens.garden_models import Garden
 from app.users.user_models import User
-from tests.helpers.test_helpers import get_auth_headers
+from tests.helpers.test_helpers import create_note, get_auth_headers
 
 
 class TestBedNoteUpdateRoutes:
+    note_json: dict = {"note": "this is a bed note", "bed_id": ""}
+    note_url: str = "/api/bed-notes/"
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -36,13 +38,13 @@ class TestBedNoteUpdateRoutes:
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         if isinstance(garden, Garden):
-            bed_id = garden.beds[0].id
-            response = await client.post(
-                url="/api/bed-notes/",
-                json={"note": "this is the first note", "bed_id": str(bed_id)},
+            self.note_json["bed_id"] = str(garden.beds[0].id)
+            note = await create_note(
+                client=client,
+                note=self.note_json,
+                url=self.note_url,
                 headers=test_user_header,
             )
-            note = response.json()
             response = await client.put(
                 url=f"/api/bed-notes/{note.get('id')}",
                 json={
@@ -66,19 +68,15 @@ class TestBedNoteUpdateRoutes:
         default_gardens: dict[str, Garden],
     ):
         garden = default_gardens.get("tester")
-        test_user_header = await get_auth_headers(
-            client=client, user_name="test_user_user"
-        )
-
         headers = await get_auth_headers(client=client, user_name="")
         if isinstance(garden, Garden):
-            bed_id = garden.beds[0].id
-            response = await client.post(
-                url="/api/bed-notes/",
-                json={"note": "this is the first note", "bed_id": str(bed_id)},
-                headers=test_user_header,
+            self.note_json["bed_id"] = str(garden.beds[0].id)
+            note = await create_note(
+                client=client,
+                note=self.note_json,
+                url=self.note_url,
+                headers=headers,
             )
-            note = response.json()
             response = await client.put(
                 url=f"/api/bed-notes/{note.get('id')}",
                 json={

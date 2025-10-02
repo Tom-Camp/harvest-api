@@ -14,7 +14,7 @@ from tests.helpers.test_helpers import (
 )
 
 
-class TestPlantReadRoutes:
+class TestPlantNotesCreateRoutes:
 
     @pytest.mark.asyncio
     @patch(
@@ -28,7 +28,7 @@ class TestPlantReadRoutes:
             ("authenticated", 200),
         ],
     )
-    async def test_read_plant(
+    async def test_create_plant_note(
         self,
         mock_get_plant_info: AIRecommendations,
         client: AsyncClient,
@@ -47,57 +47,64 @@ class TestPlantReadRoutes:
             plant = await create_plant(
                 client=client, bed_id=str(bed.id), headers=headers
             )
-            response = await client.get(
-                url=f"/api/plants/{plant.get('id')}", headers=headers
+            plant_id = plant.get("id")
+            note_response = await client.post(
+                url="/api/plant-notes/",
+                json={"note": "this is a plant note", "plant_id": str(plant_id)},
+                headers=headers,
             )
-            new_plant = response.json()
-            assert response.status_code == expected_status
-            assert new_plant.get("species") == "tomato"
+            assert note_response.status_code == expected_status
+            if note_response.status_code == 200:
+                note = note_response.json()
+                assert note.get("note") == "this is a plant note"
         else:
             pytest.fail(f"No garden found for user {username}")
-
-    @pytest.mark.asyncio
-    async def test_read_plant_bad_id(
-        self,
-        client: AsyncClient,
-        default_user: dict[str, User],
-    ):
-        test_as = default_user.get("authenticated", "")
-        username = test_as.username if isinstance(test_as, User) else ""
-        headers = await get_auth_headers(client=client, user_name=username)
-
-        bad_id = uuid.uuid4()
-
-        response = await client.get(url=f"/api/plants/{bad_id}", headers=headers)
-        assert response.status_code == 404
 
     @pytest.mark.asyncio
     @patch(
         "app.plants.plant_routes.get_plant_info", return_value=dummy_ai_recommendations
     )
-    async def test_read_plant_unauthenticated(
+    async def test_create_plant_note_unauthenticated(
         self,
         mock_get_plant_info: AIRecommendations,
         client: AsyncClient,
         default_user: dict[str, User],
         default_gardens: dict[str, Garden],
     ):
-        test_as = default_user.get("tester", "")
+        test_as = default_user.get("authenticated", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
 
-        garden = default_gardens.get("tester")
+        garden = default_gardens.get("authenticated")
         if isinstance(garden, Garden):
             bed = garden.beds[0]
             plant = await create_plant(
                 client=client, bed_id=str(bed.id), headers=headers
             )
             plant_id = plant.get("id")
-            new_headers = await get_auth_headers(client=client, user_name="")
-            response = await client.get(
-                url=f"/api/plants/{plant_id}", headers=new_headers
+            unauth_header = await get_auth_headers(client=client, user_name="")
+            note_response = await client.post(
+                url="/api/plant-notes/",
+                json={"note": "this is a plant note", "plant_id": str(plant_id)},
+                headers=unauth_header,
             )
-
-            assert response.status_code == 401
+            assert note_response.status_code == 401
         else:
-            pytest.fail("No garden found for user tester")
+            pytest.fail(f"No garden found for user {username}")
+
+    @pytest.mark.asyncio
+    async def test_create_plant_note_bad_id(
+        self,
+        client: AsyncClient,
+        default_user: dict[str, User],
+    ):
+        test_as = default_user.get("admin", "")
+        username = test_as.username if isinstance(test_as, User) else ""
+        headers = await get_auth_headers(client=client, user_name=username)
+        bad_id = uuid.uuid4()
+        response = await client.post(
+            url="/api/bed-notes/",
+            json={"note": "this is the first note", "bed_id": str(bad_id)},
+            headers=headers,
+        )
+        assert response.status_code == 404

@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from app.beds.bed_models import BedNote
-from app.beds.bed_note_schemas import BedNoteCreate, BedNoteUpdate
+from app.beds.bed_notes_schemas import BedNoteCreate, BedNoteUpdate
 from app.logging import get_logger, log_handler
 
 logger = get_logger(__name__)

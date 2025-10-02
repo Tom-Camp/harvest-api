@@ -5,10 +5,12 @@ from httpx import AsyncClient
 
 from app.gardens.garden_models import Garden
 from app.users.user_models import User
-from tests.helpers.test_helpers import get_auth_headers
+from tests.helpers.test_helpers import create_note, get_auth_headers
 
 
 class TestBedNoteReadRoutes:
+    note_json: dict = {"note": "this is a bed note", "bed_id": ""}
+    note_url: str = "/api/bed-notes/"
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -32,22 +34,20 @@ class TestBedNoteReadRoutes:
         headers = await get_auth_headers(client=client, user_name=username)
         garden = default_gardens.get(user_name)
         if isinstance(garden, Garden):
-            bed_id = garden.beds[0].id
-            response = await client.post(
-                url="/api/bed-notes/",
-                json={"note": "this is the first note", "bed_id": str(bed_id)},
+            self.note_json["bed_id"] = str(garden.beds[0].id)
+            new_note = await create_note(
+                client=client,
+                note=self.note_json,
+                url=self.note_url,
                 headers=headers,
             )
-            new_note = response.json()
-            assert response.status_code == 200
-            if response.status_code == 200:
-                get_response = await client.get(
-                    url=f"/api/bed-notes/{new_note.get('id')}",
-                    headers=headers,
-                )
-                assert get_response.status_code == expected_status
-                note = response.json()
-                assert note.get("note") == "this is the first note"
+            response = await client.get(
+                url=f"/api/bed-notes/{new_note.get('id')}",
+                headers=headers,
+            )
+            assert response.status_code == expected_status
+            note = response.json()
+            assert note.get("note") == "this is a bed note"
         else:
             pytest.fail(f"No garden found for user {user_name}")
 
@@ -64,22 +64,18 @@ class TestBedNoteReadRoutes:
             post_user = default_user.get("authenticated")
             username = post_user.username if isinstance(post_user, User) else ""
             post_headers = await get_auth_headers(client=client, user_name=username)
-            bed_id = garden.beds[0].id
-            response = await client.post(
-                url="/api/bed-notes/",
-                json={"note": "this is the first note", "bed_id": str(bed_id)},
+            self.note_json["bed_id"] = str(garden.beds[0].id)
+            new_note = await create_note(
+                client=client,
+                note=self.note_json,
+                url=self.note_url,
                 headers=post_headers,
             )
-            new_note = response.json()
-            assert response.status_code == 200
-            if response.status_code == 200:
-                get_response = await client.get(
-                    url=f"/api/bed-notes/{new_note.get('id')}",
-                    headers=headers,
-                )
-                assert get_response.status_code == 401
-                note = response.json()
-                assert note.get("note") == "this is the first note"
+            response = await client.get(
+                url=f"/api/bed-notes/{new_note.get('id')}",
+                headers=headers,
+            )
+            assert response.status_code == 401
         else:
             pytest.fail("No garden found for user tester")
 
