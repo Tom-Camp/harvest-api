@@ -13,7 +13,7 @@ from app.logging import get_logger, log_handler
 from app.plants.plant_crud import PlantCRUD
 from app.plants.plant_models import PlantNote
 from app.plants.plant_notes_crud import PlantNoteCRUD
-from app.plants.plant_notes_schemas import PlantNoteCreate, PlantNoteRead
+from app.plants.plant_notes_schemas import PlantNoteCreate, PlantNoteList, PlantNoteRead
 from app.users.user_models import User
 from app.utils.database import get_db
 
@@ -82,7 +82,7 @@ async def create_plant_note(
 
 
 @plant_note_router.get("/{note_id}", response_model=PlantNoteRead)
-async def get_bed_note(
+async def get_plant_note(
     note_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -95,7 +95,7 @@ async def get_bed_note(
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
     :param enforcer: Casbin AsyncEnforcer
-    :return: BedNoteRead; beds.bed_note_schemas.BedNoteRead
+    :return: PlantNoteRead; plants.plant_note_schemas.PlantNoteRead
     """
 
     note = await PlantNoteCRUD.get_note(note_id=note_id, session=session)
@@ -124,3 +124,52 @@ async def get_bed_note(
         raise HTTPException(status_code=403, detail="Forbidden")
 
     return note
+
+
+@plant_note_router.get("/notes/{plant_id}", response_model=list[PlantNoteList])
+async def read_plant_notes(
+    plant_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> list[PlantNoteList]:
+    """
+    Route for getting a list of plant notes.
+
+    :param plant_id: UUID
+    :param skip: number of rows to skip
+    :param limit: limit number of rows to return
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param current_user: User
+    """
+
+    plant = await PlantCRUD.get_plant(session=session, plant_id=plant_id)
+    if not plant:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    bed = await BedCRUD.get_bed(session=session, bed_id=plant_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    user_subject: str = casbin_subject(current_user.id)
+    garden_resource: str = casbin_object("ga", garden.id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, garden_resource, "read")
+
+    if not allowed and not is_owner(user_subject, garden):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    notes = await PlantNoteCRUD.get_notes(
+        plant_id=plant_id,
+        session=session,
+        skip=skip,
+        limit=limit,
+    )
+    return [PlantNoteList.model_validate(note) for note in notes]

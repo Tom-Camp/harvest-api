@@ -38,3 +38,25 @@ async def get_auth_headers(
         )
         headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
     return headers
+
+
+async def create_plant(client: AsyncClient, bed_id: str, headers: dict):
+    response = await client.post(
+        url="/api/plants/",
+        json={
+            "species": "tomato",
+            "variety": "roma",
+            "bed_id": bed_id,
+        },
+        headers=headers,
+    )
+    return response.json()
+
+
+async def create_note(client, url, note, headers):
+    response = await client.post(
+        url=url,
+        json=note,
+        headers=headers,
+    )
+    return response.json()
