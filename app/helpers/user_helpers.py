@@ -1,0 +1,62 @@
+from uuid import UUID
+
+from casbin import AsyncEnforcer
+from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.casbin.casbin_helpers import casbin_object, casbin_subject, is_owner
+from app.users.user_crud import UserCRUD
+from app.users.user_models import User
+
+
+async def admin_check_access(
+    session: AsyncSession,
+    user_id: UUID,
+    current_user: User,
+    enforcer: AsyncEnforcer,
+    subject: str,
+    action: str,
+):
+    """
+    Access control for admin routes.
+
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param user_id: The user ID for the user to whom we are adding a role
+    :param current_user: The user adding the role
+    :param enforcer: Casbin AsyncEnforcer
+    :param subject: The Casbin subject to check
+    :param action: The Casbin action to check
+    """
+
+    user = await UserCRUD.get_user(session=session, user_id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    allowed = enforcer.enforce(casbin_subject(current_user.id), subject, action)
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+async def user_check_access(
+    session: AsyncSession,
+    user_id: UUID,
+    current_user: User,
+    enforcer: AsyncEnforcer,
+    action: str,
+) -> User:
+
+    existing_user = await UserCRUD.get_user(session, user_id)
+    if not existing_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user_subject = casbin_subject(current_user.id)
+    user_resource = casbin_object("us", user_id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, user_resource, action)
+
+    # If RBAC fails, check ownership manually
+    if not allowed and not is_owner(user_subject, existing_user):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return existing_user
