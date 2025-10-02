@@ -8,8 +8,8 @@ from app.admin.permission_schemas import PermissionCheck, RoleRequest
 from app.auth.auth import get_current_active_user
 from app.casbin.casbin_config import get_casbin_enforcer
 from app.casbin.casbin_helpers import casbin_subject
+from app.helpers.user_helpers import admin_check_access
 from app.logging import get_logger, log_handler
-from app.users.user_crud import UserCRUD
 from app.users.user_models import User
 from app.utils.database import get_db
 
@@ -34,13 +34,14 @@ async def assign_role(
     :param enforcer: Casbin AsyncEnforcer object
     """
 
-    user = await UserCRUD.get_user(session=session, user_id=role_request.user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "add")
-    if not allowed:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    await admin_check_access(
+        session=session,
+        user_id=role_request.user_id,
+        current_user=current_user,
+        enforcer=enforcer,
+        subject="role",
+        action="add",
+    )
 
     await enforcer.add_role_for_user(
         user=casbin_subject(role_request.user_id), role=role_request.role_name
@@ -81,13 +82,14 @@ async def remove_role(
     :param enforcer: Casbin AsyncEnforcer object
     """
 
-    user = await UserCRUD.get_user(session=session, user_id=role_request.user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "delete")
-    if not allowed:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    await admin_check_access(
+        session=session,
+        user_id=role_request.user_id,
+        current_user=current_user,
+        enforcer=enforcer,
+        subject="role",
+        action="delete",
+    )
 
     await enforcer.delete_role_for_user(
         user=casbin_subject(role_request.user_id), role=role_request.role_name
@@ -130,13 +132,14 @@ async def check_permission(
     :return: dict
     """
 
-    user = await UserCRUD.get_user(session=session, user_id=permission_request.user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    allowed = enforcer.enforce(casbin_subject(current_user.id), "policy", "read")
-    if not allowed:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    await admin_check_access(
+        session=session,
+        user_id=permission_request.user_id,
+        current_user=current_user,
+        enforcer=enforcer,
+        subject="policy",
+        action="read",
+    )
 
     has_permission = enforcer.enforce(
         casbin_subject(permission_request.user_id),
@@ -185,13 +188,14 @@ async def get_user_roles(
     :return: dict
     """
 
-    user = await UserCRUD.get_user(session=session, user_id=user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not foond")
-
-    allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "read")
-    if not allowed:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    await admin_check_access(
+        session=session,
+        user_id=user_id,
+        current_user=current_user,
+        enforcer=enforcer,
+        subject="role",
+        action="read",
+    )
 
     roles = await enforcer.get_roles_for_user(casbin_subject(user_id))
 
