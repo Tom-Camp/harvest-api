@@ -69,7 +69,7 @@ class TestPlantNotesUpdateRoutes:
             )
             if get_response.status_code == 200:
                 note = get_response.json()
-                assert note.get("note") == "this is a plant note"
+                assert note.get("note") == f"this is a plant note updated by {username}"
         else:
             pytest.fail(f"No garden found for user {username}")
 
@@ -119,7 +119,7 @@ class TestPlantNotesUpdateRoutes:
             )
             if get_response.status_code == 200:
                 note = get_response.json()
-                assert note.get("note") == "this is a plant note"
+                assert note.get("note") == f"this is a plant note updated by {username}"
         else:
             pytest.fail(f"No garden found for user {username}")
 
@@ -134,7 +134,7 @@ class TestPlantNotesUpdateRoutes:
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
         response = await client.get(
-            url=f"/api/bed-notes/{bad_id}",
+            url=f"/api/plant-notes/{bad_id}",
             headers=headers,
         )
         assert response.status_code == 404

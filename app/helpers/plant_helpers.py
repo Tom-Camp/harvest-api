@@ -10,6 +10,7 @@ from app.beds.bed_schemas import BedRead
 from app.casbin.casbin_helpers import casbin_object, casbin_subject, is_owner
 from app.gardens.garden_crud import GardenCRUD
 from app.gardens.garden_models import Garden
+from app.plants.plant_crud import PlantCRUD
 from app.plants.recommendation_model import (
     CareInstructions,
     GrowingTips,
@@ -77,6 +78,48 @@ async def plant_check_access(
     """
 
     bed = await BedCRUD.get_bed(session=session, bed_id=bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    user_subject: str = casbin_subject(user.id)
+    garden_resource: str = casbin_object("ga", garden.id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, garden_resource, action)
+
+    if not allowed and not is_owner(user_subject, garden):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return bed, garden
+
+
+async def plant_note_check_access(
+    plant_id: UUID,
+    user: User,
+    session: AsyncSession,
+    enforcer: AsyncEnforcer,
+    action: str,
+) -> tuple[BedRead, Garden]:
+    """
+    Access control function for plant routes
+
+    :param plant_id: The unique ID for the Plant that the PlantNote is associated with
+    :param user: the User object for the user accessing the route; users.users_models.User
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param enforcer: Casbin enforcer
+    :param action: The action for the enforcer to check; create, read, update, delete
+    :return: Return the BedRead and Garden objects
+    """
+
+    plant = await PlantCRUD.get_plant(session=session, plant_id=plant_id)
+    if not plant:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    bed = await BedCRUD.get_bed(session=session, bed_id=plant.bed_id)
     if not bed:
         raise HTTPException(status_code=404, detail="Bed not found")
 

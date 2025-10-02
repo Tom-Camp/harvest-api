@@ -81,7 +81,7 @@ async def create_bed_note(
 
 
 @bed_note_router.get("/{note_id}", response_model=BedNoteRead)
-async def get_bed_note(
+async def read_bed_note(
     note_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -228,7 +228,7 @@ async def update_bed_note(
 
 
 @bed_note_router.delete("/{note_id}")
-async def delete_note(
+async def delete_bed_note(
     note_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
