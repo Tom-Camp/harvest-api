@@ -7,7 +7,11 @@ from httpx import AsyncClient
 from app.ai.models.ai_recommendation_model import AIRecommendations
 from app.gardens.garden_models import Garden
 from app.users.user_models import User
-from tests.helpers.test_helpers import dummy_ai_recommendations, get_auth_headers
+from tests.helpers.test_helpers import (
+    create_plant,
+    dummy_ai_recommendations,
+    get_auth_headers,
+)
 
 
 class TestPlantReadRoutes:
@@ -40,16 +44,9 @@ class TestPlantReadRoutes:
         garden = default_gardens.get(user_name)
         if isinstance(garden, Garden):
             bed = garden.beds[0]
-            create_response = await client.post(
-                url="/api/plants/",
-                json={
-                    "species": "tomato",
-                    "variety": "roma",
-                    "bed_id": str(bed.id),
-                },
-                headers=headers,
+            plant = await create_plant(
+                client=client, bed_id=str(bed.id), headers=headers
             )
-            plant = create_response.json()
             response = await client.get(
                 url=f"/api/plants/{plant.get('id')}", headers=headers
             )
@@ -92,16 +89,9 @@ class TestPlantReadRoutes:
         garden = default_gardens.get("tester")
         if isinstance(garden, Garden):
             bed = garden.beds[0]
-            create_response = await client.post(
-                url="/api/plants/",
-                json={
-                    "species": "tomato",
-                    "variety": "roma",
-                    "bed_id": str(bed.id),
-                },
-                headers=headers,
+            plant = await create_plant(
+                client=client, bed_id=str(bed.id), headers=headers
             )
-            plant = create_response.json()
             plant_id = plant.get("id")
             new_headers = await get_auth_headers(client=client, user_name="")
             response = await client.get(
