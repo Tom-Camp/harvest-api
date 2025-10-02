@@ -14,7 +14,7 @@ class TestBedReadRoutes:
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
-            ("", 200),
+            ("", 401),
             ("admin", 200),
             ("moderator", 200),
             ("authenticated", 200),
@@ -37,7 +37,8 @@ class TestBedReadRoutes:
                 url=f"/api/beds/garden/{garden.id}", headers=headers
             )
             assert response.status_code == expected_status
-            assert isinstance(response.json(), list)
+            if expected_status == 200:
+                assert isinstance(response.json(), list)
         else:
             pytest.fail("No garden found for user authenticated")
 
