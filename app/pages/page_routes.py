@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
 from app.casbin.casbin_config import get_casbin_enforcer
-from app.casbin.casbin_helpers import casbin_object, casbin_subject, is_owner
+from app.casbin.casbin_helpers import casbin_subject
+from app.helpers.page_helpers import page_check_access
 from app.logging import get_logger, log_handler
 from app.pages.page_crud import PageCRUD
 from app.pages.page_models import Page
@@ -43,7 +44,7 @@ async def create_page(
 
     new_page = await PageCRUD.create_page(session, page, current_user.id)
     log_handler.log_business_event(
-        event="Page create",
+        event="Create Page",
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
@@ -103,7 +104,7 @@ async def read_my_pages(
 async def read_page(
     page_id: UUID,
     session: AsyncSession = Depends(get_db),
-) -> PageRead:
+) -> Page:
     """
     A route to get a single page
 
@@ -138,24 +139,18 @@ async def update_page(
     :return: Page or None
     """
 
-    page = await PageCRUD.get_page(session, page_id)
-    if not page:
-        raise HTTPException(status_code=404, detail="Page not found")
-
-    user_subject = casbin_subject(current_user.id)
-    page_resource = casbin_object("pa", page.id)
-
-    # Check RBAC permissions
-    allowed = enforcer.enforce(user_subject, page_resource, "update")
-
-    # If RBAC fails, check ownership manually
-    if not allowed and not is_owner(user_subject, page):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    _ = await page_check_access(
+        page_id=page_id,
+        session=session,
+        enforcer=enforcer,
+        current_user=current_user,
+        action="update",
+    )
 
     updated_page = await PageCRUD.update_page(session, page_id, page_update)
     if updated_page:
         log_handler.log_business_event(
-            event="Page updated",
+            event="Update Page",
             context={
                 "actor_id": current_user.id,
                 "event_type": "security",
@@ -186,25 +181,19 @@ async def delete_page(
     :return: dict
     """
 
-    page = await PageCRUD.get_page(session, page_id)
-    if not page:
-        raise HTTPException(status_code=404, detail="Page not found")
-
-    user_subject = casbin_subject(current_user.id)
-    page_resource = casbin_object("pa", page.id)
-
-    # Check RBAC permissions
-    allowed = enforcer.enforce(user_subject, page_resource, "update")
-
-    # If RBAC fails, check ownership manually
-    if not allowed and not is_owner(user_subject, page):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    page = await page_check_access(
+        page_id=page_id,
+        session=session,
+        enforcer=enforcer,
+        current_user=current_user,
+        action="delete",
+    )
 
     if not await PageCRUD.delete_page(session, page_id):
         raise HTTPException(status_code=404, detail="Page not found")
 
     log_handler.log_business_event(
-        event="Page deleted",
+        event="Delete Page",
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
