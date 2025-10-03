@@ -121,7 +121,7 @@ class TestGardenReadRoutes:
         assert response.status_code == expected_status
         if response.status_code == 200:
             assert isinstance(response.json(), list)
-            assert response.json()[0].get("name") == "My new garden"
+            assert response.json()[0].get("name") == "Default garden"
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
