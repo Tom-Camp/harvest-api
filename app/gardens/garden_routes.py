@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
 from app.casbin.casbin_config import get_casbin_enforcer
-from app.casbin.casbin_helpers import casbin_object, casbin_subject, is_owner
+from app.casbin.casbin_helpers import casbin_subject
 from app.gardens.garden_crud import GardenCRUD
 from app.gardens.garden_models import Garden
 from app.gardens.garden_schemas import (
@@ -15,6 +15,7 @@ from app.gardens.garden_schemas import (
     GardenRead,
     GardenUpdate,
 )
+from app.helpers.garden_helpers import garden_check_access
 from app.logging import get_logger, log_handler
 from app.users.user_crud import UserCRUD
 from app.users.user_models import User
@@ -124,6 +125,7 @@ async def read_my_gardens(
     :param skip: The number of Garden objects to skip
     :param limit: The number of Garden objects to return
     :param session: The SQLAlchemy asyncio AsyncSession
+    :param current_user: The User accessing the route
     :return: The list of GardenList objects; gardens.garden_schemas.GardenList
     """
 
@@ -137,14 +139,26 @@ async def read_my_gardens(
 async def read_garden(
     garden_id: UUID,
     session: AsyncSession = Depends(get_db),
-) -> GardenRead:
+    current_user: User = Depends(get_current_active_user),
+    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
+) -> Garden:
     """
     A route to get a Garden object by ID
 
     :param garden_id: The ID of the Garden object
     :param session: The SQLAlchemy asyncio AsyncSession
+    :param current_user: The current user
+    :param enforcer: The Casbin AsyncEnforcer
     :return: The GardenRead object; gardens.garden_schemas.GardenRead
     """
+
+    _ = await garden_check_access(
+        garden_id=garden_id,
+        session=session,
+        enforcer=enforcer,
+        current_user=current_user,
+        action="read",
+    )
 
     garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
     if not garden:
@@ -172,19 +186,13 @@ async def update_garden(
     :return: The updated Garden object; gardens.garden_models.Garden
     """
 
-    garden = await GardenCRUD.get_garden(session, garden_id)
-    if not garden:
-        raise HTTPException(status_code=404, detail="Garden not found")
-
-    user_subject = casbin_subject(current_user.id)
-    garden_resource = casbin_object("ga", garden.id)
-
-    # Check RBAC permissions
-    allowed = enforcer.enforce(user_subject, garden_resource, "update")
-
-    # If RBAC fails, check ownership manually
-    if not allowed and not is_owner(user_subject, garden):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    _ = await garden_check_access(
+        garden_id=garden_id,
+        session=session,
+        enforcer=enforcer,
+        current_user=current_user,
+        action="update",
+    )
 
     updated_garden = await GardenCRUD.update_garden(
         session=session,
@@ -223,25 +231,19 @@ async def delete_garden(
     :return: dict
     """
 
-    garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
-    if not garden:
-        raise HTTPException(status_code=404, detail="Garden not found")
-
-    user_subject = casbin_subject(current_user.id)
-    garden_resource = casbin_object("ga", garden.id)
-
-    # Check RBAC permissions
-    allowed = enforcer.enforce(user_subject, garden_resource, "delete")
-
-    # If RBAC fails, check ownership manually
-    if not allowed and not is_owner(user_subject, garden):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    garden = await garden_check_access(
+        garden_id=garden_id,
+        session=session,
+        enforcer=enforcer,
+        current_user=current_user,
+        action="delete",
+    )
 
     if not await GardenCRUD.delete_garden(session, garden_id):
         raise HTTPException(status_code=404, detail="Garden not found")
 
     log_handler.log_garden_event(
-        event="Garden deleted",
+        event="Delete Garden",
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
