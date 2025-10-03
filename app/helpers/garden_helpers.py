@@ -42,3 +42,35 @@ async def garden_check_access(
         raise HTTPException(status_code=403, detail="Forbidden")
 
     return garden
+
+
+async def garden_note_check_access(
+    garden_id: UUID,
+    session: AsyncSession,
+    enforcer: AsyncEnforcer,
+    current_user: User,
+    action: str,
+):
+    """
+    Access control function for Garden routes
+
+    :param garden_id: Unique ID for the Garden
+    :param session: SQLAlchemy asyncio AsyncSession
+    :param enforcer: Casbin enforcer
+    :param current_user: The user accessing the route
+    :param action: The action for the enforcer to check; create, read, update, delete
+    :return: Return the BedRead and Garden objects
+    """
+
+    garden = await GardenCRUD.get_garden(session, garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    user_subject: str = casbin_subject(current_user.id)
+    garden_resource: str = casbin_object("ga", garden.id)
+
+    # Check RBAC permissions
+    allowed = enforcer.enforce(user_subject, garden_resource, "create")
+
+    if not allowed and not is_owner(user_subject, garden):
+        raise HTTPException(status_code=403, detail="Forbidden")
