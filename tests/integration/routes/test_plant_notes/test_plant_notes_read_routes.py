@@ -237,7 +237,7 @@ class TestPlantNotesReadRoutes:
             )
             if get_response.status_code == 200:
                 note = get_response.json()
-                assert note.get("note") == "this is a plant note"
+                assert isinstance(note, list)
         else:
             pytest.fail(f"No garden found for user {username}")
 

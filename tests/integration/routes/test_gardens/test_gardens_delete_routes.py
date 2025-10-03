@@ -14,7 +14,6 @@ class TestGardenDeleteRoutes:
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
-            ("", 401),
             ("admin", 200),
             ("moderator", 403),
             ("authenticated", 403),

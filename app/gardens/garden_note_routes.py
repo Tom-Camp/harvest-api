@@ -6,8 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
 from app.casbin.casbin_config import get_casbin_enforcer
-from app.casbin.casbin_helpers import casbin_object, casbin_subject, is_owner
-from app.gardens.garden_crud import GardenCRUD
 from app.gardens.garden_models import GardenNote
 from app.gardens.garden_note_crud import GardenNoteCRUD
 from app.gardens.garden_note_schemas import (
@@ -15,6 +13,7 @@ from app.gardens.garden_note_schemas import (
     GardenNoteList,
     GardenNoteUpdate,
 )
+from app.helpers.garden_helpers import garden_note_check_access
 from app.logging import get_logger, log_handler
 from app.users.user_models import User
 from app.utils.database import get_db
@@ -41,18 +40,13 @@ async def create_garden_note(
     :return: GardenNote; gardens.garden_models.GardenNote
     """
 
-    garden = await GardenCRUD.get_garden(session, note.garden_id)
-    if not garden:
-        raise HTTPException(status_code=404, detail="Not found")
-
-    user_subject: str = casbin_subject(current_user.id)
-    garden_resource: str = casbin_object("ga", garden.id)
-
-    # Check RBAC permissions
-    allowed = enforcer.enforce(user_subject, garden_resource, "create")
-
-    if not allowed and not is_owner(user_subject, garden):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    await garden_note_check_access(
+        garden_id=note.garden_id,
+        session=session,
+        enforcer=enforcer,
+        current_user=current_user,
+        action="create",
+    )
 
     new_note = await GardenNoteCRUD.create_note(
         note=note,
@@ -74,7 +68,7 @@ async def create_garden_note(
 
 
 @garden_note_router.get("/{note_id}", response_model=GardenNote)
-async def get_garden_note(
+async def read_garden_note(
     note_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -94,18 +88,13 @@ async def get_garden_note(
     if not note:
         raise HTTPException(status_code=404, detail="Not found")
 
-    garden = await GardenCRUD.get_garden(session, note.garden_id)
-    if not garden:
-        raise HTTPException(status_code=404, detail="Not found")
-
-    user_subject: str = casbin_subject(current_user.id)
-    garden_resource: str = casbin_object("ga", garden.id)
-
-    # Check RBAC permissions
-    allowed = enforcer.enforce(user_subject, garden_resource, "read")
-
-    if not allowed and not is_owner(user_subject, garden):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    await garden_note_check_access(
+        garden_id=note.garden_id,
+        session=session,
+        enforcer=enforcer,
+        current_user=current_user,
+        action="read",
+    )
 
     return note
 
@@ -131,18 +120,13 @@ async def read_garden_notes(
     :return: A list of GardenNote objects; gardens.garden_models.GardenNote
     """
 
-    garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
-    if not garden:
-        raise HTTPException(status_code=404, detail="Not found")
-
-    user_subject: str = casbin_subject(current_user.id)
-    garden_resource: str = casbin_object("ga", garden.id)
-
-    # Check RBAC permissions
-    allowed = enforcer.enforce(user_subject, garden_resource, "read")
-
-    if not allowed and not is_owner(user_subject, garden):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    await garden_note_check_access(
+        garden_id=garden_id,
+        session=session,
+        enforcer=enforcer,
+        current_user=current_user,
+        action="read",
+    )
 
     notes = await GardenNoteCRUD.get_notes(
         garden_id=garden_id,
@@ -176,18 +160,13 @@ async def update_garden_note(
     if not note:
         raise HTTPException(status_code=404, detail="Not found")
 
-    garden = await GardenCRUD.get_garden(session=session, garden_id=note.garden_id)
-    if not garden:
-        raise HTTPException(status_code=404, detail="Not found")
-
-    user_subject: str = casbin_subject(current_user.id)
-    garden_resource: str = casbin_object("ga", garden.id)
-
-    # Check RBAC permissions
-    allowed = enforcer.enforce(user_subject, garden_resource, "update")
-
-    if not allowed and not is_owner(user_subject, garden):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    await garden_note_check_access(
+        garden_id=note.garden_id,
+        session=session,
+        enforcer=enforcer,
+        current_user=current_user,
+        action="read",
+    )
 
     updated_note = await GardenNoteCRUD.update_note(
         session=session,
@@ -230,22 +209,13 @@ async def delete_note(
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
 
-    garden = await GardenCRUD.get_garden(session=session, garden_id=note.garden_id)
-    if not garden:
-        raise HTTPException(status_code=404, detail="Garden not found")
-
-    user_subject = casbin_subject(current_user.id)
-    note_resource = casbin_object("ga", note.id)
-
-    # Check RBAC permissions
-    allowed = enforcer.enforce(user_subject, note_resource, "delete")
-
-    # If RBAC fails, check ownership manually
-    if not allowed and not is_owner(user_subject, garden):
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-    if not await GardenNoteCRUD.delete_note(session, note_id):
-        raise HTTPException(status_code=404, detail="Note not found")
+    await garden_note_check_access(
+        garden_id=note.garden_id,
+        session=session,
+        enforcer=enforcer,
+        current_user=current_user,
+        action="read",
+    )
 
     log_handler.log_garden_event(
         event="Note deleted",
