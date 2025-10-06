@@ -64,6 +64,7 @@ async def initialize_default_policies(enforcer: AsyncEnforcer):
             "resource": "casbin_config",
         },
     )
+    return enforcer
 
 
 async def setup_admin_users(

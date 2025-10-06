@@ -3,7 +3,6 @@ from uuid import UUID
 
 from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import (
@@ -13,7 +12,7 @@ from app.auth.auth import (
     create_access_token,
     failed_password_messages,
 )
-from app.auth.auth_schemas import Token
+from app.auth.auth_schemas import Token, UserLogin
 from app.beds.bed_crud import BedCRUD
 from app.beds.bed_schemas import BedCreate
 from app.casbin.casbin_config import get_casbin_enforcer
@@ -97,25 +96,25 @@ async def add_default_garden(user: User, session: AsyncSession):
 @auth_router.post("/token", response_model=Token)
 async def login_for_access_token(
     request: Request,
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    user_login: UserLogin,
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     """
     Login route to obtain access token.
 
     :param request: Request
-    :param form_data: OAuth2PasswordRequestForm containing username and password
+    :param user_login: UserLogin; auth.auth_schema.UserLogin
     :param session: SQLAlchemy asyncio AsyncSession
     """
 
-    user = await authenticate_user(session, form_data.username, form_data.password)
+    user = await authenticate_user(session, user_login.username, user_login.password)
     if not user:
         log_handler.log_security_event(
             "user_login_failure",
             severity="moderate",
             context={
                 "event_type": "authentication",
-                "username": form_data.username,
+                "username": user_login.username,
                 "client_ip": request.client.host,
                 "user_agent": request.headers.get("user-agent"),
                 "action": "login_for_access_token",

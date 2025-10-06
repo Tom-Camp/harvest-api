@@ -5,17 +5,20 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
+from starlette.middleware.authentication import AuthenticationMiddleware
 
 from app.admin.admin_routes import admin_router
 from app.auth.auth_routes import auth_router
 from app.beds.bed_notes_routes import bed_note_router
 from app.beds.bed_routes import bed_router
 from app.casbin.casbin_config import startup_casbin
+from app.core.middleware import CasbinMiddleware
 from app.gardens.garden_note_routes import garden_note_router
 from app.gardens.garden_routes import garden_router
 from app.logging import get_logger
 from app.logging.log_config import configure_structlog
 from app.logging.log_middleware import LoggingMiddleware
+from app.models.basic_auth import BasicAuth
 from app.pages.page_routes import page_router
 from app.plants.plant_notes_routes import plant_note_router
 from app.plants.plant_routes import plant_router
@@ -39,7 +42,6 @@ async def lifespan(app: FastAPI):
         admin_user = await setup_initial_admin(session=session)
         admin_user_ids.append(admin_user)
         break
-
     await startup_casbin(app, settings.async_database_url, admin_user_ids)
     yield
 
@@ -65,6 +67,9 @@ app.add_middleware(
     include_request_body=False,
     include_response_body=False,
 )
+
+app.add_middleware(CasbinMiddleware, enforcer=lambda: app.state.casbin_enforcer)
+app.add_middleware(AuthenticationMiddleware, backend=BasicAuth())
 
 app.include_router(auth_router, prefix="/api", tags=["authentication", "users"])
 app.include_router(admin_router, prefix="/api", tags=["admin"])
