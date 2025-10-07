@@ -18,7 +18,7 @@ from app.api.v1.plant_notes_routes import plant_note_router
 from app.api.v1.plant_routes import plant_router
 from app.api.v1.user_routes import user_router
 from app.casbin.casbin_config import startup_casbin
-from app.core.middleware import CasbinMiddleware
+from app.casbin.casbin_middleware import CasbinMiddleware
 from app.core.utils import database as db
 from app.core.utils.config import settings
 from app.core.utils.initialize import setup_initial_admin
