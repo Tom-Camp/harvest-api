@@ -7,25 +7,25 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.middleware.authentication import AuthenticationMiddleware
 
-from app.admin.admin_routes import admin_router
-from app.auth.auth_routes import auth_router
-from app.beds.bed_notes_routes import bed_note_router
-from app.beds.bed_routes import bed_router
+from app.api.v1.admin_routes import admin_router
+from app.api.v1.auth_routes import auth_router
+from app.api.v1.bed_notes_routes import bed_note_router
+from app.api.v1.bed_routes import bed_router
+from app.api.v1.garden_note_routes import garden_note_router
+from app.api.v1.garden_routes import garden_router
+from app.api.v1.page_routes import page_router
+from app.api.v1.plant_notes_routes import plant_note_router
+from app.api.v1.plant_routes import plant_router
+from app.api.v1.user_routes import user_router
 from app.casbin.casbin_config import startup_casbin
 from app.core.middleware import CasbinMiddleware
-from app.gardens.garden_note_routes import garden_note_router
-from app.gardens.garden_routes import garden_router
+from app.core.utils import database as db
+from app.core.utils.config import settings
+from app.core.utils.initialize import setup_initial_admin
 from app.logging import get_logger
 from app.logging.log_config import configure_structlog
 from app.logging.log_middleware import LoggingMiddleware
 from app.models.basic_auth import BasicAuth
-from app.pages.page_routes import page_router
-from app.plants.plant_notes_routes import plant_note_router
-from app.plants.plant_routes import plant_router
-from app.users.user_routes import user_router
-from app.utils import database as db
-from app.utils.config import settings
-from app.utils.initialize import setup_initial_admin
 
 configure_structlog()
 logger = get_logger(__name__)
@@ -33,16 +33,16 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # ----------- CREATE TABLES ON STARTUP ----------
     async with db.engine.begin() as conn:
         await conn.run_sync(db.metadata.create_all)
 
     admin_user_ids: list[UUID] = []
-    async for session in db.get_db():
-        admin_user = await setup_initial_admin(session=session)
-        admin_user_ids.append(admin_user)
-        break
+    admin_id = await setup_initial_admin()
+    admin_user_ids.append(admin_id)
+
+    # Initialize Casbin enforcer
     await startup_casbin(app, settings.async_database_url, admin_user_ids)
+
     yield
 
     await db.engine.dispose()

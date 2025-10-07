@@ -14,8 +14,10 @@ DEFAULT_POLICIES = [
     ("authenticated", "us:*", "read", "allow"),
     ("authenticated", "ga:*", "read", "allow"),
     ("authenticated", "pa:*", "read", "allow"),
+    ("authenticated", "/api/users/*", "GET", "allow"),
     ("anonymous", "/api/auth/register", "POST", "allow"),
     ("anonymous", "/api/auth/token", "POST", "allow"),
+    ("anonymous", "/api/users/", "GET", "allow"),
 ]
 
 DEFAULT_ADMIN_USERS: list[UUID] = []

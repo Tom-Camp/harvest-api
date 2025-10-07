@@ -6,8 +6,8 @@ from fastapi import Request
 
 from app.casbin.casbin_helpers import casbin_subject, is_owner
 from app.casbin.default_policies import DEFAULT_ADMIN_USERS, DEFAULT_POLICIES
+from app.core.utils.exceptions import CasbinInitializationError
 from app.logging import get_logger, log_handler
-from app.utils.exceptions import CasbinInitializationError
 
 logger = get_logger(__name__)
 
@@ -132,7 +132,7 @@ async def startup_casbin(app, db_url: str, admin_user_ids: list | None = None):
     """
     Complete Casbin initialization for FastAPI startup
 
-    :param app: FastAPI FastAPI
+    :param app: FastAPI
     :param db_url: str
     :param admin_user_ids: list
     """
