@@ -25,7 +25,7 @@ from app.core.utils.initialize import setup_initial_admin
 from app.logging import get_logger
 from app.logging.log_config import configure_structlog
 from app.logging.log_middleware import LoggingMiddleware
-from app.models.basic_auth import BasicAuth
+from app.models.jwt_auth_model import JWTAuthBackend
 
 configure_structlog()
 logger = get_logger(__name__)
@@ -36,13 +36,12 @@ async def lifespan(app: FastAPI):
     async with db.engine.begin() as conn:
         await conn.run_sync(db.metadata.create_all)
 
-    admin_user_ids: list[UUID] = []
-    admin_id = await setup_initial_admin()
-    admin_user_ids.append(admin_id)
-
     # Initialize Casbin enforcer
-    await startup_casbin(app, settings.async_database_url, admin_user_ids)
+    admin_user_ids: list[UUID] = []
+    admin_user = await setup_initial_admin()
+    admin_user_ids.append(admin_user)
 
+    await startup_casbin(app, settings.async_database_url, admin_user_ids)
     yield
 
     await db.engine.dispose()
@@ -69,7 +68,7 @@ app.add_middleware(
 )
 
 app.add_middleware(CasbinMiddleware, enforcer=lambda: app.state.casbin_enforcer)
-app.add_middleware(AuthenticationMiddleware, backend=BasicAuth())
+app.add_middleware(AuthenticationMiddleware, backend=JWTAuthBackend())
 
 app.include_router(auth_router, prefix="/api", tags=["authentication", "users"])
 app.include_router(admin_router, prefix="/api", tags=["admin"])

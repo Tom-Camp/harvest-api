@@ -55,7 +55,9 @@ def get_password_hash(password: str) -> str:
     return ph.hash(password)
 
 
-async def create_access_token(data: dict, expires_delta: timedelta | None = None):
+async def create_access_token(
+    data: dict, expires_delta: timedelta | None = None
+) -> str:
     """
     Create an access token for an API request.
 
@@ -64,12 +66,12 @@ async def create_access_token(data: dict, expires_delta: timedelta | None = None
     :return: The access token string
     """
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc).replace(tzinfo=None) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=15)
+    now = datetime.now(timezone.utc)
+    expire = now + (
+        expires_delta if expires_delta is not None else timedelta(minutes=15)
+    )
 
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": int(expire.timestamp())})
     encoded_jwt = encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -79,7 +81,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     Get the current user from the database.
 
     :param token: The token
-    :param service: UserService; services.user_service.UserService
     :return: User object
     """
 

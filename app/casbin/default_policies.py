@@ -15,6 +15,7 @@ DEFAULT_POLICIES = [
     ("authenticated", "ga:*", "read", "allow"),
     ("authenticated", "pa:*", "read", "allow"),
     ("authenticated", "/api/users/*", "GET", "allow"),
+    ("authenticated", "/api/gardens/my", "GET", "allow"),
     ("anonymous", "/api/auth/register", "POST", "allow"),
     ("anonymous", "/api/auth/token", "POST", "allow"),
     ("anonymous", "/api/users/", "GET", "allow"),

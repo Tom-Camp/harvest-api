@@ -12,7 +12,6 @@ from app.core.auth import (
     failed_password_messages,
     verify_password,
 )
-from app.core.helpers.garden_helpers import add_default_garden
 from app.core.utils.database import AsyncSessionLocal
 from app.logging import get_logger, log_handler
 from app.models.user_models import User
@@ -142,9 +141,6 @@ async def register(
         )
 
     new_user = await service.create_user(user)
-
-    await enforcer.add_role_for_user(casbin_subject(new_user.id), "authenticated")
-
     log_handler.log_security_event(
         "user_register_success",
         severity="low",
@@ -159,6 +155,19 @@ async def register(
         },
     )
 
-    await add_default_garden(user=new_user)
+    await enforcer.add_role_for_user(casbin_subject(new_user.id), "authenticated")
+    log_handler.log_security_event(
+        "Roll added",
+        severity="medium",
+        context={
+            "actor_id": "startup",
+            "actor_username": "lifespan",
+            "username": new_user.username,
+            "user_id": new_user.id,
+            "action": "roll_added",
+            "roll": "authenticated",
+            "resource": "auth_routes",
+        },
+    )
 
     return new_user

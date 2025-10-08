@@ -16,9 +16,6 @@ def get_user_service() -> UserService:
 async def setup_initial_admin() -> UUID:
     """
     Sets up the initial admin user
-
-    :param session: The SQLAlchemy asyncio AsyncSession
-    :return: UUID
     """
 
     admin_data = {
@@ -48,7 +45,8 @@ async def setup_initial_admin() -> UUID:
             },
         )
 
-        return admin_user.id
+        user_id = admin_user.id
     else:
         logger.info("Admin user already exists")
-        return existing_admin.id
+        user_id = existing_admin.id
+    return user_id

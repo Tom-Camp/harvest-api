@@ -4,6 +4,7 @@ from starlette.responses import JSONResponse
 from starlette.status import HTTP_403_FORBIDDEN
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from app.casbin.casbin_helpers import casbin_subject
 from app.logging import get_logger
 
 logger = get_logger(__name__)
@@ -44,7 +45,8 @@ class CasbinMiddleware:
 
         assert isinstance(request.user, BaseUser)
         user = (
-            request.user.display_name if request.user.is_authenticated else "anonymous"
+            casbin_subject(request.user.display_name)
+            if request.user.is_authenticated
+            else "anonymous"
         )
-
         return enforcer.enforce(user, path, method)
