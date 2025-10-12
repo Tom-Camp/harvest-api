@@ -1,12 +1,9 @@
 from uuid import UUID
 
-from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
-from app.casbin.casbin_config import get_casbin_enforcer
-from app.helpers.plant_helpers import plant_note_check_access
 from app.logging import get_logger, log_handler
 from app.plants.plant_models import PlantNote
 from app.plants.plant_notes_crud import PlantNoteCRUD
@@ -29,7 +26,6 @@ async def create_plant_note(
     note: PlantNoteCreate,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> PlantNote:
     """
     Route for creating a plant note.
@@ -37,17 +33,8 @@ async def create_plant_note(
     :param note: PlantNoteCreate; plants.plant_note_schemas.PlantNoteCreate
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: PlantNote
     """
-
-    bed, garden = await plant_note_check_access(
-        plant_id=note.plant_id,
-        user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
-    )
 
     new_note = await PlantNoteCRUD.create_note(
         note=note,
@@ -58,8 +45,8 @@ async def create_plant_note(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "garden_id": garden.id,
-            "bed": bed.id,
+            # "garden_id": garden.id,
+            # "bed": bed.id,
             "plant_id": new_note.plant_id,
             "note_id": new_note.id,
             "action": "create_plant_note",
@@ -75,7 +62,6 @@ async def read_plant_note(
     note_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> PlantNote:
     """
     Route for getting a plant note.
@@ -83,21 +69,12 @@ async def read_plant_note(
     :param note_id: UUID
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: PlantNoteRead; plants.plant_note_schemas.PlantNoteRead
     """
 
     note = await PlantNoteCRUD.get_note(note_id=note_id, session=session)
     if not note:
         raise HTTPException(status_code=404, detail="Not found")
-
-    _, _ = await plant_note_check_access(
-        plant_id=note.plant_id,
-        user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="read",
-    )
 
     return note
 
@@ -109,7 +86,6 @@ async def read_plant_notes(
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> list[PlantNoteList]:
     """
     Route for getting a list of plant notes.
@@ -120,14 +96,6 @@ async def read_plant_notes(
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
     """
-
-    _, _ = await plant_note_check_access(
-        plant_id=plant_id,
-        user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="read",
-    )
 
     notes = await PlantNoteCRUD.get_notes(
         plant_id=plant_id,
@@ -144,7 +112,6 @@ async def update_plant_note(
     note_update: PlantNoteUpdate,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> PlantNote:
     """
     Route for updating a bed note.
@@ -153,21 +120,12 @@ async def update_plant_note(
     :param note_update: PlantNoteUpdate object; plants.plant_note_schemas.PlantNoteUpdate
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: PlantNote
     """
 
     note = await PlantNoteCRUD.get_note(note_id=note_id, session=session)
     if not note:
         raise HTTPException(status_code=404, detail="Not found")
-
-    bed, garden = await plant_note_check_access(
-        plant_id=note.plant_id,
-        user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
-    )
 
     updated_note = await PlantNoteCRUD.update_note(
         session=session,
@@ -180,8 +138,8 @@ async def update_plant_note(
             context={
                 "actor_id": current_user.id,
                 "actor_username": current_user.username,
-                "garden_id": garden.id,
-                "bed_id": bed.id,
+                # "garden_id": garden.id,
+                # "bed_id": bed.id,
                 "plant_id": updated_note.plant_id,
                 "note_id": updated_note.id,
                 "action": "update_plant_note",
@@ -196,7 +154,6 @@ async def delete_plant_note(
     note_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
     """
     Route to delete bed note.
@@ -204,21 +161,12 @@ async def delete_plant_note(
     :param note_id: UUID
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: dict
     """
 
     note = await PlantNoteCRUD.get_note(session=session, note_id=note_id)
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
-
-    bed, garden = await plant_note_check_access(
-        plant_id=note.plant_id,
-        user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
-    )
 
     if not await PlantNoteCRUD.delete_note(session, note_id):
         raise HTTPException(status_code=404, detail="Note not found")
@@ -228,8 +176,8 @@ async def delete_plant_note(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "garden_id": garden.id,
-            "bed_id": bed.id,
+            # "garden_id": garden.id,
+            # "bed_id": bed.id,
             "plant_id": note.plant_id,
             "note_id": note.id,
             "action": "delete_plant_note",

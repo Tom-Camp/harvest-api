@@ -1,6 +1,5 @@
 from uuid import UUID
 
-from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,8 +12,6 @@ from app.beds.bed_notes_schemas import (
     BedNoteRead,
     BedNoteUpdate,
 )
-from app.casbin.casbin_config import get_casbin_enforcer
-from app.helpers.bed_helpers import bed_note_check_access
 from app.logging import get_logger, log_handler
 from app.users.user_models import User
 from app.utils.database import get_db
@@ -29,7 +26,6 @@ async def create_bed_note(
     note: BedNoteCreate,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> BedNote:
     """
     Route for creating a bed note.
@@ -37,17 +33,8 @@ async def create_bed_note(
     :param note: BedNoteCreate; beds.bed_note_schemas.BedNoteCreate
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: BedNote
     """
-
-    bed, garden = await bed_note_check_access(
-        bed_id=note.bed_id,
-        current_user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
-    )
 
     new_note = await BedNoteCRUD.create_note(
         note=note,
@@ -58,7 +45,7 @@ async def create_bed_note(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "garden_id": garden.id,
+            # "garden_id": garden.id,
             "bed": new_note.bed_id,
             "note_id": new_note.id,
             "action": "create_bed_note",
@@ -74,7 +61,6 @@ async def read_bed_note(
     note_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> BedNote:
     """
     Route for getting a bed note.
@@ -82,21 +68,12 @@ async def read_bed_note(
     :param note_id: UUID
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: BedNoteRead; beds.bed_note_schemas.BedNoteRead
     """
 
     note = await BedNoteCRUD.get_note(note_id=note_id, session=session)
     if not note:
         raise HTTPException(status_code=404, detail="Not found")
-
-    _, _ = await bed_note_check_access(
-        bed_id=note.bed_id,
-        current_user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
-    )
 
     return note
 
@@ -108,7 +85,6 @@ async def read_bed_notes(
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> list[BedNoteList]:
     """
     Route for getting a list of bed notes.
@@ -119,14 +95,6 @@ async def read_bed_notes(
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
     """
-
-    _, _ = await bed_note_check_access(
-        bed_id=bed_id,
-        current_user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
-    )
 
     notes = await BedNoteCRUD.get_notes(
         bed_id=bed_id,
@@ -143,7 +111,6 @@ async def update_bed_note(
     note_update: BedNoteUpdate,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> BedNote:
     """
     Route for updating a bed note.
@@ -152,21 +119,12 @@ async def update_bed_note(
     :param note_update: BedNoteUpdate object; beds.bed_note_schemas.BedNoteUpdate
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: BedNote
     """
 
     note = await BedNoteCRUD.get_note(note_id=note_id, session=session)
     if not note:
         raise HTTPException(status_code=404, detail="Not found")
-
-    _, garden = await bed_note_check_access(
-        bed_id=note.bed_id,
-        current_user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
-    )
 
     updated_note = await BedNoteCRUD.update_note(
         session=session,
@@ -179,7 +137,7 @@ async def update_bed_note(
             context={
                 "actor_id": current_user.id,
                 "actor_username": current_user.username,
-                "garden_id": garden.id,
+                # "garden_id": garden.id,
                 "bed_id": updated_note.bed_id,
                 "note_id": updated_note.id,
                 "action": "update_bed_note",
@@ -194,7 +152,6 @@ async def delete_bed_note(
     note_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
     """
     Route to delete bed note.
@@ -202,21 +159,12 @@ async def delete_bed_note(
     :param note_id: UUID
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: dict
     """
 
     note = await BedNoteCRUD.get_note(session=session, note_id=note_id)
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
-
-    bed, _ = await bed_note_check_access(
-        bed_id=note.bed_id,
-        current_user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
-    )
 
     if not await BedNoteCRUD.delete_note(session, note_id):
         raise HTTPException(status_code=404, detail="Note not found")
@@ -226,8 +174,8 @@ async def delete_bed_note(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "garden_id": bed.garden_id,
-            "bed_id": bed.id,
+            # "garden_id": bed.garden_id,
+            # "bed_id": bed.id,
             "note_id": note.id,
             "action": "delete_bed_note",
             "resource": "bed_note_routes",

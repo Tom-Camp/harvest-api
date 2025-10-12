@@ -1,13 +1,13 @@
 from uuid import UUID
 
-from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.plant_info_agent import get_plant_info
 from app.auth.auth import get_current_active_user
-from app.casbin.casbin_config import get_casbin_enforcer
-from app.helpers.plant_helpers import map_ai_response_to_plant, plant_check_access
+from app.beds.bed_models import Bed
+from app.core.utils.plant_helpers import map_ai_response_to_plant
+from app.gardens.garden_models import Garden
 from app.logging import get_logger, log_handler
 from app.plants.plant_crud import PlantCRUD
 from app.plants.plant_models import Plant
@@ -25,7 +25,6 @@ async def create_plant(
     plant: PlantCreate,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Plant:
     """
     Create a Plant object
@@ -33,19 +32,12 @@ async def create_plant(
     :param plant: a PlantCreate object; plants.plant_schema.PlantCreate
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User object for the user accessing the route.
-    :param enforcer: Casbin AsyncEnforcer
     :return: Plant object; plants.plant_models.Plant
     """
 
-    bed, garden = await plant_check_access(
-        bed_id=plant.bed_id,
-        user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
-    )
-
     new_plant = await PlantCRUD.create_plant(plant=plant, session=session)
+    bed = await session.get(Bed, new_plant.bed_id)
+    garden = await session.get(Garden, bed.garden_id)
     location: str = garden.location
     check_plant: str = (
         f"{new_plant.variety} {new_plant.species}"
@@ -65,8 +57,8 @@ async def create_plant(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "garden_id": bed.garden_id,
-            "bed_id": bed.id,
+            # "garden_id": bed.garden_id,
+            # "bed_id": bed.id,
             "plant_name": new_plant.species,
             "plant_id": new_plant.id,
             "action": "create_plant",
@@ -82,7 +74,6 @@ async def read_plant(
     plant_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> PlantRead:
     """
     Return a PlantRead object by the Plant ID
@@ -90,21 +81,12 @@ async def read_plant(
     :param plant_id: Unique ID for the plant
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User object for the user accessing the route.
-    :param enforcer: Casbin AsyncEnforcer
     :return: PlantRead object; plants.plant_schemas.PlantRead
     """
 
     plant = await PlantCRUD.get_plant(session=session, plant_id=plant_id)
     if not plant:
         raise HTTPException(status_code=404, detail="Plant not found")
-
-    _, _ = await plant_check_access(
-        bed_id=plant.bed_id,
-        user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="read",
-    )
 
     return plant
 
@@ -115,7 +97,6 @@ async def update_plant(
     plant_update: PlantUpdate,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Plant | None:
     """
     A route for updating a Plant object
@@ -124,7 +105,6 @@ async def update_plant(
     :param plant_update: a PlantUpdate object; plants.plant_schemas.PlantUpdate
     :param session: SQLAlchemy asnycio AsyncSession
     :param current_user: the User making the request
-    :param enforcer: Casbin AsyncEnforcer
     :return: PlantRead object; plants.plant_schemas.PlantRead
     """
 
@@ -132,16 +112,12 @@ async def update_plant(
     if not plant:
         raise HTTPException(status_code=404, detail="Plant not found")
 
-    bed, garden = await plant_check_access(
-        bed_id=plant.bed_id,
-        user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="updated",
-    )
-
     updated_plant = await PlantCRUD.update_plant(
         session=session, plant_id=plant_id, plant_update=plant_update
+    )
+    bed = await session.get(Bed, plant.bed_id)
+    garden = await session.get(
+        Garden,
     )
     if (
         updated_plant
@@ -183,7 +159,6 @@ async def delete_bed(
     plant_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
     """
     Route to delete a Plant
@@ -191,21 +166,12 @@ async def delete_bed(
     :param plant_id: Plant UUID
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: dict
     """
 
     plant = await PlantCRUD.get_plant(session=session, plant_id=plant_id)
     if not plant:
         raise HTTPException(status_code=404, detail="Plant not found")
-
-    bed, _ = await plant_check_access(
-        bed_id=plant.bed_id,
-        user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="delete",
-    )
 
     if not await PlantCRUD.delete_plant(session, plant_id):
         raise HTTPException(status_code=404, detail="Plant not found")
@@ -215,8 +181,8 @@ async def delete_bed(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "garden_id": bed.garden_id,
-            "bed_id": bed.id,
+            # "garden_id": bed.garden_id,
+            # "bed_id": bed.id,
             "plant_id": plant.id,
             "action": "delete_plant",
             "resource": "plant_routes",

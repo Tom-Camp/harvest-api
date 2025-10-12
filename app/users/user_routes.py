@@ -1,13 +1,9 @@
 from uuid import UUID
 
-from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
-from app.casbin.casbin_config import get_casbin_enforcer
-from app.casbin.casbin_helpers import casbin_subject
-from app.helpers.user_helpers import user_check_access
 from app.logging import get_logger, log_handler
 from app.users.user_crud import UserCRUD
 from app.users.user_models import User
@@ -23,33 +19,19 @@ user_router = APIRouter(prefix="/users")
 async def read_users_me(
     current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> UserRead | None:
     """
     A route to return a User object for the current user
 
     :param current_user: The current user
     :param session: The SQLAlchemy asyncio AsyncSession
-    :param enforcer: The Casbin AsyncEnforcer
     :return: User or None
     """
-
-    _ = await user_check_access(
-        session=session,
-        user_id=current_user.id,
-        current_user=current_user,
-        enforcer=enforcer,
-        action="read",
-    )
 
     user = await UserCRUD.get_user(
         session=session,
         user_id=current_user.id,
     )
-    if user:
-        await enforcer.add_role_for_user(
-            user=casbin_subject(user.id), role="authenticated"
-        )
     return user
 
 
@@ -77,7 +59,6 @@ async def read_user(
     user_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> User:
     """
     A route to return a User object for the current user
@@ -85,17 +66,8 @@ async def read_user(
     :param user_id: The UUID of the user
     :param session: The SQLAlchemy asyncio AsyncSession
     :param current_user: The current user
-    :param enforcer: The Casbin AsyncEnforcer
     :return: UserRead or None
     """
-
-    _ = await user_check_access(
-        session=session,
-        user_id=user_id,
-        current_user=current_user,
-        enforcer=enforcer,
-        action="read",
-    )
 
     user = await UserCRUD.get_user(session, user_id)
     if not user:
@@ -111,7 +83,6 @@ async def update_user(
     user_update: UserUpdate,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> User:
     """
     A route to update a User object for the current user
@@ -124,14 +95,6 @@ async def update_user(
     :return: User or None
     """
 
-    existing_user = await user_check_access(
-        session=session,
-        user_id=user_id,
-        current_user=current_user,
-        enforcer=enforcer,
-        action="update",
-    )
-
     user = await UserCRUD.update_user(session, user_id, user_update)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -142,8 +105,8 @@ async def update_user(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "target_user_id": existing_user.id,
-            "target_username": existing_user.username,
+            # "target_user_id": existing_user.id,
+            # "target_username": existing_user.username,
             "action": "update_user",
             "resource": "user_routes",
         },
@@ -156,7 +119,6 @@ async def delete_user(
     user_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
     """
     A route to delete a User object
@@ -168,18 +130,8 @@ async def delete_user(
     :return: dict
     """
 
-    existing_user = await user_check_access(
-        session=session,
-        user_id=user_id,
-        current_user=current_user,
-        enforcer=enforcer,
-        action="delete",
-    )
-
     if not await UserCRUD.delete_user(session, user_id):
         raise HTTPException(status_code=404, detail="User not found")
-
-    await enforcer.delete_user(casbin_subject(user_id))
 
     log_handler.log_security_event(
         event="Delete user",
@@ -187,11 +139,11 @@ async def delete_user(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "target_user_id": existing_user.id,
-            "target_username": existing_user.username,
+            # "target_user_id": existing_user.id,
+            # "target_username": existing_user.username,
             "action": "delete_user",
             "resource": "user_routes",
         },
     )
 
-    return {"message": f"User {existing_user.username} deleted successfully"}
+    return {"message": f"User {user_id} deleted successfully"}

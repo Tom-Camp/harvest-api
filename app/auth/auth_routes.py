@@ -1,7 +1,6 @@
 from datetime import timedelta
 from uuid import UUID
 
-from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,8 +15,6 @@ from app.auth.auth import (
 from app.auth.auth_schemas import Token
 from app.beds.bed_crud import BedCRUD
 from app.beds.bed_schemas import BedCreate
-from app.casbin.casbin_config import get_casbin_enforcer
-from app.casbin.casbin_helpers import casbin_subject
 from app.gardens.garden_crud import GardenCRUD
 from app.gardens.garden_schemas import GardenCreate
 from app.logging import get_logger, log_handler
@@ -153,7 +150,6 @@ async def login_for_access_token(
 async def register(
     request: Request,
     user: UserCreate,
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
     session: AsyncSession = Depends(get_db),
 ) -> User:
     """
@@ -161,7 +157,6 @@ async def register(
 
     :param request: Request
     :param user: UserCreate object; users.user_schemas.UserCreate
-    :param enforcer: Casbin AsyncEnforcer
     :param session: SQLAlchemy asyncio AsyncSession
     """
 
@@ -204,8 +199,6 @@ async def register(
         )
 
     new_user = await UserCRUD.create_user(session, user)
-
-    await enforcer.add_role_for_user(casbin_subject(new_user.id), "authenticated")
 
     log_handler.log_security_event(
         "user_register_success",

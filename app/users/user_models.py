@@ -1,14 +1,21 @@
+from enum import Enum
 from typing import TYPE_CHECKING
 
 from pydantic import EmailStr
 from sqlalchemy import String
 from sqlmodel import Field, Relationship, SQLModel
 
-from app.helpers.model_base import ModelBase
+from app.models.model_base import ModelBase
 
 if TYPE_CHECKING:
     from app.gardens.garden_models import Garden  # noqa: F401
     from app.pages.page_models import Page  # noqa: F401
+
+
+class Role(str, Enum):
+    ADMIN = ("administrator",)
+    MODERATOR = ("moderator",)
+    AUTHENTICATED = ("authenticated",)
 
 
 class UserBase(SQLModel):
@@ -27,6 +34,7 @@ class UserBase(SQLModel):
 
 class User(ModelBase, UserBase, table=True):  # type: ignore
     hashed_password: str
+    role: Role
     pages: list["Page"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete"},

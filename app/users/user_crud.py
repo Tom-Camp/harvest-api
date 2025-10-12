@@ -157,7 +157,7 @@ class UserCRUD:
     @staticmethod
     async def update_user(
         session: AsyncSession, user_id: UUID, user_update: UserUpdate
-    ) -> User | None:
+    ) -> User:
         """
         Update a user
 

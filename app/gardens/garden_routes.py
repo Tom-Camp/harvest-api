@@ -1,12 +1,9 @@
 from uuid import UUID
 
-from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
-from app.casbin.casbin_config import get_casbin_enforcer
-from app.casbin.casbin_helpers import casbin_subject
 from app.gardens.garden_crud import GardenCRUD
 from app.gardens.garden_models import Garden
 from app.gardens.garden_schemas import (
@@ -15,7 +12,6 @@ from app.gardens.garden_schemas import (
     GardenRead,
     GardenUpdate,
 )
-from app.helpers.garden_helpers import garden_check_access
 from app.logging import get_logger, log_handler
 from app.users.user_crud import UserCRUD
 from app.users.user_models import User
@@ -31,7 +27,6 @@ async def create_garden(
     garden: GardenCreate,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Garden:
     """
     A route to create a Garden object
@@ -39,15 +34,8 @@ async def create_garden(
     :param garden: The GardenCreate object; gardens.garden_schemas.GardenCreate
     :param session: The SQLAlchemy asyncio AsyncSession
     :param current_user: The current user
-    :param enforcer: The Casbin AsyncEnforcer
     :return: Garden; garden.garden_models.Garden
     """
-
-    subject: str = casbin_subject(current_user.id)
-    allowed = enforcer.enforce(subject, "garden", "create")
-    if not allowed:
-        logger.debug(f"User: {current_user.username}: allowed {allowed}")
-        raise HTTPException(status_code=403, detail="Forbidden")
 
     new_garden = await GardenCRUD.create_garden(
         garden=garden, session=session, user=current_user
@@ -140,7 +128,6 @@ async def read_garden(
     garden_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Garden:
     """
     A route to get a Garden object by ID
@@ -151,14 +138,6 @@ async def read_garden(
     :param enforcer: The Casbin AsyncEnforcer
     :return: The GardenRead object; gardens.garden_schemas.GardenRead
     """
-
-    _ = await garden_check_access(
-        garden_id=garden_id,
-        session=session,
-        enforcer=enforcer,
-        current_user=current_user,
-        action="read",
-    )
 
     garden = await GardenCRUD.get_garden(session=session, garden_id=garden_id)
     if not garden:
@@ -173,7 +152,6 @@ async def update_garden(
     garden_update: GardenUpdate,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Garden | None:
     """
     A route to update a Garden object
@@ -185,14 +163,6 @@ async def update_garden(
     :param enforcer: The Casbin AsyncEnforcer
     :return: The updated Garden object; gardens.garden_models.Garden
     """
-
-    _ = await garden_check_access(
-        garden_id=garden_id,
-        session=session,
-        enforcer=enforcer,
-        current_user=current_user,
-        action="update",
-    )
 
     updated_garden = await GardenCRUD.update_garden(
         session=session,
@@ -219,7 +189,6 @@ async def delete_garden(
     garden_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
     """
     A route to delete a Garden object
@@ -227,17 +196,8 @@ async def delete_garden(
     :param garden_id: The ID of the Garden object
     :param session: The SQLAlchemy asyncio AsyncSession
     :param current_user: The current user
-    :param enforcer: The Casbin AsyncEnforcer
     :return: dict
     """
-
-    garden = await garden_check_access(
-        garden_id=garden_id,
-        session=session,
-        enforcer=enforcer,
-        current_user=current_user,
-        action="delete",
-    )
 
     if not await GardenCRUD.delete_garden(session, garden_id):
         raise HTTPException(status_code=404, detail="Garden not found")
@@ -247,8 +207,8 @@ async def delete_garden(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "garden_id": garden.id,
-            "garden_name": garden.name,
+            # "garden_id": garden.id,
+            # "garden_name": garden.name,
             "action": "delete_garden",
             "resource": "garden_routes",
         },

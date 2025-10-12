@@ -1,13 +1,9 @@
 from uuid import UUID
 
-from casbin import AsyncEnforcer
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_active_user
-from app.casbin.casbin_config import get_casbin_enforcer
-from app.casbin.casbin_helpers import casbin_subject
-from app.helpers.page_helpers import page_check_access
 from app.logging import get_logger, log_handler
 from app.pages.page_crud import PageCRUD
 from app.pages.page_models import Page
@@ -25,7 +21,6 @@ async def create_page(
     page: PageCreate,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Page:
     """
     A route to create a new page
@@ -33,14 +28,8 @@ async def create_page(
     :param session: The SQLAlchemy asyncio AsyncSession
     :param page: The PageCreate object; pages.page_schemas.PageCreate
     :param current_user: The current user
-    :param enforcer: The Casbin AsyncEnforcer
     :return: Page
     """
-
-    subject: str = casbin_subject(current_user.id)
-    allowed = enforcer.enforce(subject, "page", "create")
-    if not allowed:
-        raise HTTPException(status_code=403, detail="Forbidden")
 
     new_page = await PageCRUD.create_page(session, page, current_user.id)
     log_handler.log_business_event(
@@ -126,7 +115,6 @@ async def update_page(
     page_update: PageUpdate,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Page | None:
     """
     A route to update a single page
@@ -135,17 +123,8 @@ async def update_page(
     :param page_update: The PageUpdate object; pages.page_schemas.PageUpdate
     :param session: The SQLAlchemy asyncio AsyncSession
     :param current_user: The current user
-    :param enforcer: The Casbin AsyncEnforcer
     :return: Page or None
     """
-
-    _ = await page_check_access(
-        page_id=page_id,
-        session=session,
-        enforcer=enforcer,
-        current_user=current_user,
-        action="update",
-    )
 
     updated_page = await PageCRUD.update_page(session, page_id, page_update)
     if updated_page:
@@ -169,7 +148,6 @@ async def delete_page(
     page_id: UUID,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
     """
     A route to delete a single page
@@ -177,17 +155,8 @@ async def delete_page(
     :param page_id: The UUID of the page
     :param session: The SQLAlchemy asyncio AsyncSession
     :param current_user: The current user
-    :param enforcer: The Casbin AsyncEnforcer
     :return: dict
     """
-
-    page = await page_check_access(
-        page_id=page_id,
-        session=session,
-        enforcer=enforcer,
-        current_user=current_user,
-        action="delete",
-    )
 
     if not await PageCRUD.delete_page(session, page_id):
         raise HTTPException(status_code=404, detail="Page not found")
@@ -197,8 +166,8 @@ async def delete_page(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "page_id": page.id,
-            "page_title": page.title,
+            # "page_id": page.id,
+            # "page_title": page.title,
             "action": "delete_page",
             "resource": "page_routes",
         },
