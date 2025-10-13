@@ -1,6 +1,7 @@
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import get_current_user
@@ -19,7 +20,9 @@ user_router = APIRouter(prefix="/users")
 
 @user_router.get("/me", response_model=UserRead)
 async def read_users_me(
-    current_user: TokenData = Depends(get_current_user),
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["us:re", "us:re:own"])
+    ],
     session: AsyncSession = Depends(get_db),
 ) -> UserRead | None:
     """
@@ -34,6 +37,8 @@ async def read_users_me(
         session=session,
         user_id=current_user.id,
     )
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
     access_any = ScopesManager.has_scope(
         user_scopes=current_user.scopes, required_scope="us:re"
@@ -45,7 +50,8 @@ async def read_users_me(
         entity_owner=user.id,
     )
 
-    if not access_any or is_owner:
+    if not access_any and not is_owner:
+        logger.warning(f"ANY: {access_any} OWNER: {is_owner}")
         raise HTTPException(status_code=403, detail="Forbidden")
 
     return user
@@ -73,7 +79,9 @@ async def read_users(
 @user_router.get("/{user_id}", response_model=UserRead)
 async def read_user(
     user_id: UUID,
-    current_user: TokenData = Depends(get_current_user),
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["us:re", "us:re:own"])
+    ],
     session: AsyncSession = Depends(get_db),
 ) -> User:
     """
@@ -92,6 +100,8 @@ async def read_user(
     access_any = ScopesManager.has_scope(
         user_scopes=current_user.scopes, required_scope="us:re"
     )
+    logger.info(f"ANY: {access_any}")
+    logger.info(f"{current_user.scopes}")
     is_owner = ScopesManager.is_owner(
         user_scopes=current_user.scopes,
         required_scope="us:re:own",
@@ -99,7 +109,7 @@ async def read_user(
         entity_owner=user.id,
     )
 
-    if not access_any or is_owner:
+    if not access_any and not is_owner:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     logger.info("%s read user" % current_user.username)
@@ -110,7 +120,9 @@ async def read_user(
 async def update_user(
     user_id: UUID,
     user_update: UserUpdate,
-    current_user: TokenData = Depends(get_current_user),
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["us:up", "us:up:own"])
+    ],
     session: AsyncSession = Depends(get_db),
 ) -> User:
     """
@@ -133,7 +145,7 @@ async def update_user(
         entity_owner=user_id,
     )
 
-    if not access_any or is_owner:
+    if not access_any and not is_owner:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     user = await UserCRUD.update_user(session, user_id, user_update)
@@ -158,7 +170,9 @@ async def update_user(
 @user_router.delete("/{user_id}")
 async def delete_user(
     user_id: UUID,
-    current_user: TokenData = Depends(get_current_user),
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["us:de", "us:de:own"])
+    ],
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     """
@@ -180,7 +194,7 @@ async def delete_user(
         entity_owner=user_id,
     )
 
-    if not access_any or is_owner:
+    if not access_any or not is_owner:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     if not await UserCRUD.delete_user(session, user_id):

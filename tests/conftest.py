@@ -24,7 +24,7 @@ async def db_session():
     try:
         yield session
     finally:
-        session.close()
+        await session.close()
         async with engine.begin() as conn:
             await conn.run_sync(metadata.drop_all)
 
@@ -55,9 +55,9 @@ async def default_user(db_session):
     }
     for test_user, role in test_user_list.items():
         user_in = UserCreate(
-            username=f"{test_user}_user",
+            username=f"{test_user}",
             email=f"{test_user}@example.com",
-            password="UkeV3BNUIL7x/n0J",
+            password="UkeV3BNUIL7xn0J",
         )
         user: User = await UserCRUD.create_user(db_session, user_in)
         new_user = await UserCRUD.update_user_role(
@@ -65,7 +65,7 @@ async def default_user(db_session):
             user_id=user.id,
             role=UserUpdateRole(role=Role(role)),
         )
-        user_dict[role] = new_user
+        user_dict[f"{test_user}"] = new_user
     yield user_dict
 
 

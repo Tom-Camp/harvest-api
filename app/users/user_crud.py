@@ -213,7 +213,7 @@ class UserCRUD:
 
             duration_ms = (time.time() - start) * 1000
             log_handler.log_database_operation(
-                operation="update_user",
+                operation="update_user_role",
                 table="user",
                 duration_ms=duration_ms,
                 user_id=str(user.id),

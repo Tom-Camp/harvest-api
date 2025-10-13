@@ -101,7 +101,7 @@ async def login_for_access_token(
     Login route to obtain access token.
 
     :param request: Request
-    :param form_data: OAuth2PasswordRequestForm containing username and password
+    :param user_login: UserLogin; schemas.user_schemas.UserLogin
     :param session: SQLAlchemy asyncio AsyncSession
     """
 

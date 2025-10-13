@@ -14,9 +14,9 @@ class TestUserUpdateRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 403),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 403),
         ],
     )
     async def test_update_user(
@@ -30,7 +30,7 @@ class TestUserUpdateRoutes:
         username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
 
-        read_user = default_user["tester"]
+        read_user = default_user["test_user"]
         username = test_as.username if isinstance(test_as, User) else "Anonymous"
         payload: dict[str, str] = {
             "first_name": f"{read_user.username} updated by {username}",
@@ -52,7 +52,7 @@ class TestUserUpdateRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
@@ -68,9 +68,9 @@ class TestUserUpdateRoutes:
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 200),
         ],
     )
     async def test_update_user_self(

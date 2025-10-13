@@ -14,9 +14,9 @@ class TestAdminRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 403),
-            ("authenticated", 403),
+            ("test_admin", 200),
+            ("test_moderator", 403),
+            ("test_authenticated", 403),
         ],
     )
     async def test_assign_role(
@@ -29,7 +29,7 @@ class TestAdminRoutes:
         test_as = default_user.get(user_name, "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
-        user_user = default_user.get("authenticated")
+        user_user = default_user.get("test_user")
         if isinstance(user_user, User):
             response = await client.post(
                 url="/api/admin/assign-role",
@@ -50,7 +50,7 @@ class TestAdminRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
@@ -70,9 +70,9 @@ class TestAdminRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 403),
-            ("authenticated", 403),
+            ("test_admin", 200),
+            ("test_moderator", 403),
+            ("test_authenticated", 403),
         ],
     )
     async def test_remove_role(
@@ -106,7 +106,7 @@ class TestAdminRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
@@ -126,9 +126,9 @@ class TestAdminRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 403),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 403),
         ],
     )
     async def test_check_permissions(
@@ -141,7 +141,7 @@ class TestAdminRoutes:
         test_as = default_user.get(user_name, "")
         username = test_as.username if isinstance(test_as, User) else None
         headers = await get_auth_headers(client=client, user_name=username)
-        user_user = default_user.get("authenticated")
+        user_user = default_user.get("test_user")
         if isinstance(user_user, User):
             response = await client.post(
                 url="/api/admin/check-permission",
@@ -163,7 +163,7 @@ class TestAdminRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
@@ -215,7 +215,7 @@ class TestAdminRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
@@ -230,9 +230,9 @@ class TestAdminRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 403),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 403),
         ],
     )
     async def test_get_role_users(
@@ -256,9 +256,9 @@ class TestAdminRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 403),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 403),
         ],
     )
     async def test_debug_role_users(
