@@ -34,7 +34,7 @@ class UserBase(SQLModel):
 
 class User(ModelBase, UserBase, table=True):  # type: ignore
     hashed_password: str
-    role: Role
+    role: Role = Field(default_factory=lambda: Role.AUTHENTICATED)
     pages: list["Page"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete"},

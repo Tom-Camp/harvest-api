@@ -9,7 +9,7 @@ from sqlmodel import select
 from app.auth.auth import get_password_hash
 from app.logging import get_logger, log_handler
 from app.users.user_models import User
-from app.users.user_schemas import UserCreate, UserUpdate
+from app.users.user_schemas import UserCreate, UserUpdate, UserUpdateRole
 
 logger = get_logger(__name__)
 
@@ -172,6 +172,38 @@ class UserCRUD:
             user_data = user_update.model_dump(exclude_unset=True)
             for field, value in user_data.items():
                 setattr(user, field, value)
+
+            start = time.time()
+
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+
+            duration_ms = (time.time() - start) * 1000
+            log_handler.log_database_operation(
+                operation="update_user",
+                table="user",
+                duration_ms=duration_ms,
+                user_id=str(user.id),
+            )
+        return user
+
+    @staticmethod
+    async def update_user_role(
+        session: AsyncSession, user_id: UUID, role: UserUpdateRole
+    ) -> User:
+        """
+        Update a user
+
+        :param session: The SQLAlchemy asyncio AsyncSession
+        :param user_id: The UUID of the user
+        :param role: The UserUpdateRole object
+        :return: The User or None
+        """
+
+        user = await session.get(User, user_id)
+        if user:
+            user.role = role.role
 
             start = time.time()
 

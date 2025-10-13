@@ -6,7 +6,7 @@ from app.auth.auth import get_current_active_user
 from app.logging import get_logger, log_handler
 from app.users.user_crud import UserCRUD
 from app.users.user_models import Role, User
-from app.users.user_schemas import UserUpdate
+from app.users.user_schemas import UserUpdateRole
 from app.utils.database import get_db
 
 logger = get_logger(__name__)
@@ -28,10 +28,10 @@ async def assign_role(
     :param session: SQLAlchemy asyncio session
     """
 
-    user = await UserCRUD.update_user(
+    user = await UserCRUD.update_user_role(
         session=session,
         user_id=role_request.user_id,
-        user_update=UserUpdate(role=Role(role_request.role_name)),
+        role=UserUpdateRole(role=Role(role_request.role_name)),
     )
     log_handler.log_security_event(
         "Role assigned to user",
@@ -67,10 +67,10 @@ async def remove_role(
     :param session: SQLAlchemy asyncio session
     """
 
-    user = await UserCRUD.update_user(
+    user = await UserCRUD.update_user_role(
         session=session,
         user_id=role_request.user_id,
-        user_update=UserUpdate(role=Role.AUTHENTICATED),
+        role=UserUpdateRole(role=Role.AUTHENTICATED),
     )
 
     log_handler.log_security_event(

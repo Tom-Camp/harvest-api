@@ -1,92 +1,76 @@
-import os
-import sys
 from typing import Dict, List
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlmodel import SQLModel
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.auth.auth_routes import add_default_garden
+from app.gardens.garden_models import Garden
+from app.main import app
+from app.pages.page_models import Page
+from app.users.user_crud import UserCRUD
+from app.users.user_models import Role, User
+from app.users.user_schemas import UserCreate, UserUpdateRole
+from app.utils.database import get_db
+from tests.test_db import TestingSessionLocal, engine, metadata
 
-# Ensure Casbin uses the testing DB
-TEST_DB_PATH = "./test_auth.db"
-TEST_DB_URL = f"sqlite+aiosqlite:///{TEST_DB_PATH}"
-os.environ["DATABASE_URL"] = TEST_DB_URL
 
+@pytest_asyncio.fixture(loop_scope="function", scope="function")
+async def db_session():
+    """Create a fresh database session for each test."""
+    async with engine.begin() as conn:
+        await conn.run_sync(metadata.create_all)
 
-@pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=True)
-async def test_app():
-    if os.path.exists(TEST_DB_PATH):
-        os.remove(TEST_DB_PATH)
-
-    import app.main as main_module
-    from app.casbin.casbin_config import startup_casbin
-    from app.utils import database as db
-
-    test_engine = create_async_engine(TEST_DB_URL, echo=False, future=True)
-    db.engine = test_engine
-    db.AsyncSessionLocal = async_sessionmaker(bind=test_engine, expire_on_commit=False)
-    db.metadata = SQLModel.metadata
-
-    async with db.engine.begin() as conn:
-        await conn.run_sync(db.metadata.create_all)
-
-    application = main_module.app
-
-    await startup_casbin(application, TEST_DB_URL)
-
+    session = TestingSessionLocal()
     try:
-        yield application
+        yield session
     finally:
-        await db.engine.dispose()
+        session.close()
+        async with engine.begin() as conn:
+            await conn.run_sync(metadata.drop_all)
 
 
 @pytest_asyncio.fixture
-async def client(test_app):
-    transport = ASGITransport(app=test_app)
+async def client(db_session):
+    def override_get_db():
+        try:
+            yield db_session
+        finally:
+            pass
+
+    app.dependency_overrides[get_db] = override_get_db
+    transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as ac:
         yield ac
 
 
-@pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=False)
-async def default_user(test_app):
-    from app.casbin.casbin_helpers import casbin_subject
-    from app.users.user_crud import UserCRUD
-    from app.users.user_models import User
-    from app.users.user_schemas import UserCreate
-    from app.utils import database as db
+@pytest_asyncio.fixture(loop_scope="function", scope="function")
+async def default_user(db_session):
 
     user_dict: Dict[str, User] = dict()
     test_user_list: dict = {
-        "test_admin": "admin",
+        "test_admin": "administrator",
         "test_moderator": "moderator",
         "test_authenticated": "authenticated",
-        "test_user": "tester",
+        "test_user": "authenticated",
     }
-    async with db.AsyncSessionLocal() as session:
-        for test_user, role in test_user_list.items():
-            user_in = UserCreate(
-                username=f"{test_user}_user",
-                email=f"{test_user}@example.com",
-                password="UkeV3BNUIL7x/n0J",
-            )
-            user: User = await UserCRUD.create_user(session, user_in)
-            await test_app.state.casbin_enforcer.add_role_for_user(
-                user=casbin_subject(user.id), role="authenticated"
-            )
-            if role in ["admin", "moderator"]:
-                await test_app.state.casbin_enforcer.add_role_for_user(
-                    user=casbin_subject(user.id), role=role
-                )
-            user_dict[role] = user
+    for test_user, role in test_user_list.items():
+        user_in = UserCreate(
+            username=f"{test_user}_user",
+            email=f"{test_user}@example.com",
+            password="UkeV3BNUIL7x/n0J",
+        )
+        user: User = await UserCRUD.create_user(db_session, user_in)
+        new_user = await UserCRUD.update_user_role(
+            session=db_session,
+            user_id=user.id,
+            role=UserUpdateRole(role=Role(role)),
+        )
+        user_dict[role] = new_user
     yield user_dict
 
 
-@pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=False)
-async def default_pages(default_user):
-    from app.pages.page_models import Page
-    from app.utils import database as db
+@pytest_asyncio.fixture(loop_scope="function", scope="function")
+async def default_pages(default_user, db_session):
 
     pages_list: List[Page] = [
         Page(
@@ -100,21 +84,16 @@ async def default_pages(default_user):
             user_id=default_user["moderator"].id,
         ),
     ]
-    async with db.AsyncSessionLocal() as session:
-        session.add_all(pages_list)
-        await session.commit()
+
+    db_session.add_all(pages_list)
+    await db_session.commit()
 
     yield pages_list
 
 
 @pytest_asyncio.fixture(loop_scope="function", scope="function", autouse=False)
-async def default_gardens(default_user):
-    from app.auth.auth_routes import add_default_garden
-    from app.gardens.garden_models import Garden
-    from app.utils import database as db
-
+async def default_gardens(default_user, db_session):
     garden_dict: dict[str, Garden] = dict()
-    async with db.AsyncSessionLocal() as session:
-        for role, user in default_user.items():
-            garden_dict[role] = await add_default_garden(user=user, session=session)
+    for role, user in default_user.items():
+        garden_dict[role] = await add_default_garden(user=user, session=db_session)
     yield garden_dict
