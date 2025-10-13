@@ -2,7 +2,6 @@ from datetime import timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.auth import (
@@ -12,9 +11,10 @@ from app.auth.auth import (
     create_access_token,
     failed_password_messages,
 )
-from app.auth.auth_schemas import Token
+from app.auth.auth_schemas import Token, UserLogin
 from app.beds.bed_crud import BedCRUD
 from app.beds.bed_schemas import BedCreate
+from app.core.auth.scopes_manager import ScopesManager
 from app.gardens.garden_crud import GardenCRUD
 from app.gardens.garden_schemas import GardenCreate
 from app.logging import get_logger, log_handler
@@ -94,7 +94,7 @@ async def add_default_garden(user: User, session: AsyncSession):
 @auth_router.post("/token", response_model=Token)
 async def login_for_access_token(
     request: Request,
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    user_login: UserLogin,
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     """
@@ -105,14 +105,14 @@ async def login_for_access_token(
     :param session: SQLAlchemy asyncio AsyncSession
     """
 
-    user = await authenticate_user(session, form_data.username, form_data.password)
+    user = await authenticate_user(session, user_login.username, user_login.password)
     if not user:
         log_handler.log_security_event(
             "user_login_failure",
             severity="moderate",
             context={
                 "event_type": "authentication",
-                "username": form_data.username,
+                "username": user_login.username,
                 "client_ip": request.client.host,
                 "user_agent": request.headers.get("user-agent"),
                 "action": "login_for_access_token",
@@ -126,8 +126,10 @@ async def login_for_access_token(
         )
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = await create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+    user_scopes = ScopesManager.get_scopes_for_role(user.role)
+    token = await create_access_token(
+        data={"sub": user.username, "scope": " ".join(user_scopes)},
+        expires_delta=access_token_expires,
     )
 
     log_handler.log_security_event(
@@ -143,7 +145,7 @@ async def login_for_access_token(
             "resource": "auth_routes",
         },
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": token, "token_type": "bearer"}
 
 
 @auth_router.post("/register", response_model=UserRead)

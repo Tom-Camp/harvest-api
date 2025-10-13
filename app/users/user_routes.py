@@ -3,7 +3,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.auth import get_current_active_user
+from app.auth.auth import get_current_user
+from app.auth.auth_schemas import TokenData
+from app.core.auth.scopes_manager import ScopesManager
 from app.logging import get_logger, log_handler
 from app.users.user_crud import UserCRUD
 from app.users.user_models import User
@@ -17,7 +19,7 @@ user_router = APIRouter(prefix="/users")
 
 @user_router.get("/me", response_model=UserRead)
 async def read_users_me(
-    current_user: User = Depends(get_current_active_user),
+    current_user: TokenData = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> UserRead | None:
     """
@@ -32,6 +34,20 @@ async def read_users_me(
         session=session,
         user_id=current_user.id,
     )
+
+    access_any = ScopesManager.has_scope(
+        user_scopes=current_user.scopes, required_scope="us:re"
+    )
+    is_owner = ScopesManager.is_owner(
+        user_scopes=current_user.scopes,
+        required_scope="us:re:own",
+        user_id=current_user.id,
+        entity_owner=user.id,
+    )
+
+    if not access_any or is_owner:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     return user
 
 
@@ -57,8 +73,8 @@ async def read_users(
 @user_router.get("/{user_id}", response_model=UserRead)
 async def read_user(
     user_id: UUID,
+    current_user: TokenData = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ) -> User:
     """
     A route to return a User object for the current user
@@ -73,6 +89,19 @@ async def read_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    access_any = ScopesManager.has_scope(
+        user_scopes=current_user.scopes, required_scope="us:re"
+    )
+    is_owner = ScopesManager.is_owner(
+        user_scopes=current_user.scopes,
+        required_scope="us:re:own",
+        user_id=current_user.id,
+        entity_owner=user.id,
+    )
+
+    if not access_any or is_owner:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     logger.info("%s read user" % current_user.username)
     return user
 
@@ -81,8 +110,8 @@ async def read_user(
 async def update_user(
     user_id: UUID,
     user_update: UserUpdate,
+    current_user: TokenData = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ) -> User:
     """
     A route to update a User object for the current user
@@ -90,10 +119,22 @@ async def update_user(
     :param user_id: The UUID of the user
     :param user_update: The UserUpdate object; users.user_schemas.UserUpdate
     :param session: The SQLAlchemy asyncio AsyncSession
-    :param current_user: The current user
-    :param enforcer: The Casbin AsyncEnforcer
+    :param current_user: The User accessing the route
     :return: User or None
     """
+
+    access_any = ScopesManager.has_scope(
+        user_scopes=current_user.scopes, required_scope="us:up"
+    )
+    is_owner = ScopesManager.is_owner(
+        user_scopes=current_user.scopes,
+        required_scope="us:up:own",
+        user_id=current_user.id,
+        entity_owner=user_id,
+    )
+
+    if not access_any or is_owner:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     user = await UserCRUD.update_user(session, user_id, user_update)
     if not user:
@@ -105,8 +146,8 @@ async def update_user(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            # "target_user_id": existing_user.id,
-            # "target_username": existing_user.username,
+            "target_user_id": user_id,
+            "target_username": user.username,
             "action": "update_user",
             "resource": "user_routes",
         },
@@ -117,8 +158,8 @@ async def update_user(
 @user_router.delete("/{user_id}")
 async def delete_user(
     user_id: UUID,
+    current_user: TokenData = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ) -> dict:
     """
     A route to delete a User object
@@ -126,9 +167,21 @@ async def delete_user(
     :param user_id: The UUID of the user
     :param session: The SQLAlchemy asyncio AsyncSession
     :param current_user: The current user
-    :param enforcer: The Casbin AsyncEnforcer
     :return: dict
     """
+
+    access_any = ScopesManager.has_scope(
+        user_scopes=current_user.scopes, required_scope="us:de"
+    )
+    is_owner = ScopesManager.is_owner(
+        user_scopes=current_user.scopes,
+        required_scope="us:de:own",
+        user_id=current_user.id,
+        entity_owner=user_id,
+    )
+
+    if not access_any or is_owner:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     if not await UserCRUD.delete_user(session, user_id):
         raise HTTPException(status_code=404, detail="User not found")
@@ -139,8 +192,7 @@ async def delete_user(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            # "target_user_id": existing_user.id,
-            # "target_username": existing_user.username,
+            "target_user_id": user_id,
             "action": "delete_user",
             "resource": "user_routes",
         },

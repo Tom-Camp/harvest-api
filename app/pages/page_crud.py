@@ -97,10 +97,7 @@ class PageCRUD:
         """
 
         statement = (
-            select(Page)
-            .where(Page.__table__.c.user_id == user_id)
-            .offset(skip)
-            .limit(limit)
+            select(Page).where(Page.user_id == user_id).offset(skip).limit(limit)
         )
         start = time.time()
 

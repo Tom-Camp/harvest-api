@@ -42,3 +42,9 @@ class UserReadPublic(ModelBase, UserBase):
     last_name: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserScopes(BaseModel):
+    id: UUID
+    username: str
+    scopes: list[str]

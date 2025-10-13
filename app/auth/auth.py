@@ -1,16 +1,20 @@
 import hashlib
 from datetime import datetime, timedelta, timezone
+from typing import Annotated
 
 import httpx
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from jwt import InvalidTokenError, decode, encode
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from zxcvbn_rs_py import zxcvbn
 
+from app.auth.auth_schemas import TokenData
+from app.core.auth.scopes_manager import ScopesManager
 from app.logging import get_logger
 from app.users.user_models import User
 from app.utils.config import settings
@@ -68,7 +72,7 @@ async def authenticate_user(
     :return: User or None
     """
 
-    statement = select(User).where(User.__table__.c.username == username)
+    statement = select(User).where(User.username == username)
     result = await session.execute(statement)
     user = result.scalars().first()
 
@@ -101,15 +105,23 @@ async def create_access_token(data: dict, expires_delta: timedelta | None = None
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme), session: AsyncSession = Depends(get_db)
-) -> User:
+    security_scopes: SecurityScopes,
+    token: Annotated[str, Depends(oauth2_scheme)],
+    session: AsyncSession = Depends(get_db),
+) -> TokenData:
     """
     Get the current user from the database.
 
+    :param security_scopes: SecurityScopes;
     :param token: The token
     :param session: The SQLAlchemy asyncio session
     :return: User object
     """
+
+    if security_scopes.scopes:
+        authenticate_value = f'Bearer scope="{security_scopes.scope_str}"'
+    else:
+        authenticate_value = "Bearer"
 
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -122,16 +134,31 @@ async def get_current_user(
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-    except InvalidTokenError:
+        token_scopes: list[str] = payload.get("scope", "").split()
+    except (InvalidTokenError, ValidationError):
         raise credentials_exception
 
-    statement = select(User).where(User.__table__.c.username == username)
+    statement = select(User).where(User.username == username)
     result = await session.execute(statement)
     user = result.scalars().first()
 
     if user is None:
         raise credentials_exception
-    return user
+
+    if not ScopesManager.has_any_scope(
+        user_scopes=token_scopes, required_scopes=security_scopes.scopes
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions",
+            headers={"WWW-Authenticate": authenticate_value},
+        )
+
+    return TokenData(
+        id=user.id,
+        username=user.username,
+        scopes=token_scopes,
+    )
 
 
 async def get_current_active_user(
