@@ -179,10 +179,14 @@ async def delete_user(
     A route to delete a User object
 
     :param user_id: The UUID of the user
-    :param session: The SQLAlchemy asyncio AsyncSession
     :param current_user: The current user
+    :param session: The SQLAlchemy asyncio AsyncSession
     :return: dict
     """
+
+    user = await UserCRUD.get_user(session=session, user_id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
     access_any = ScopesManager.has_scope(
         user_scopes=current_user.scopes, required_scope="us:de"
@@ -194,7 +198,7 @@ async def delete_user(
         entity_owner=user_id,
     )
 
-    if not access_any or not is_owner:
+    if not access_any and not is_owner:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     if not await UserCRUD.delete_user(session, user_id):

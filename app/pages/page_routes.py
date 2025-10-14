@@ -1,14 +1,16 @@
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.auth import get_current_active_user
+from app.auth.auth import get_current_user
+from app.auth.auth_schemas import TokenData
+from app.core.auth.scopes_manager import ScopesManager
 from app.logging import get_logger, log_handler
 from app.pages.page_crud import PageCRUD
 from app.pages.page_models import Page
 from app.pages.page_schemas import PageCreate, PageList, PageRead, PageUpdate
-from app.users.user_models import User
 from app.utils.database import get_db
 
 logger = get_logger(__name__)
@@ -18,9 +20,9 @@ page_router = APIRouter(prefix="/pages")
 
 @page_router.post("/", response_model=Page)
 async def create_page(
+    current_user: Annotated[TokenData, Security(get_current_user, scopes=["pg:cr"])],
     page: PageCreate,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ) -> Page:
     """
     A route to create a new page
@@ -68,10 +70,12 @@ async def read_pages(
 
 @page_router.get("/my", response_model=list[PageList])
 async def read_my_pages(
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["pg:re", "pg:re:own"])
+    ],
     skip: int = 0,
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ) -> list[PageList]:
     """
     A route to get all pages
@@ -111,10 +115,12 @@ async def read_page(
 
 @page_router.put("/{page_id}", response_model=Page)
 async def update_page(
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["pg:up", "pg:up:own"])
+    ],
     page_id: UUID,
     page_update: PageUpdate,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ) -> Page | None:
     """
     A route to update a single page
@@ -125,6 +131,22 @@ async def update_page(
     :param current_user: The current user
     :return: Page or None
     """
+    page = await PageCRUD.get_page(session=session, page_id=page_id)
+    if not page:
+        raise HTTPException(status_code=404, detail="Page not found")
+
+    access_any = ScopesManager.has_scope(
+        user_scopes=current_user.scopes, required_scope="pg:up"
+    )
+    is_owner = ScopesManager.is_owner(
+        user_scopes=current_user.scopes,
+        required_scope="pg:up:own",
+        user_id=current_user.id,
+        entity_owner=page.user_id,
+    )
+
+    if not access_any and not is_owner:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     updated_page = await PageCRUD.update_page(session, page_id, page_update)
     if updated_page:
@@ -145,18 +167,36 @@ async def update_page(
 
 @page_router.delete("/{page_id}")
 async def delete_page(
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["pg:de", "pg:de:own"])
+    ],
     page_id: UUID,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ) -> dict:
     """
     A route to delete a single page
 
+    :param current_user: The current user
     :param page_id: The UUID of the page
     :param session: The SQLAlchemy asyncio AsyncSession
-    :param current_user: The current user
     :return: dict
     """
+    page = await PageCRUD.get_page(session=session, page_id=page_id)
+    if not page:
+        raise HTTPException(status_code=404, detail="Page not found")
+
+    access_any = ScopesManager.has_scope(
+        user_scopes=current_user.scopes, required_scope="pg:de"
+    )
+    is_owner = ScopesManager.is_owner(
+        user_scopes=current_user.scopes,
+        required_scope="pg:de:own",
+        user_id=current_user.id,
+        entity_owner=page.user_id,
+    )
+
+    if not access_any and not is_owner:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     if not await PageCRUD.delete_page(session, page_id):
         raise HTTPException(status_code=404, detail="Page not found")

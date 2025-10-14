@@ -11,9 +11,9 @@ class TestPageCreateRoutes:
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 403),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 403),
             ("", 401),
         ],
     )

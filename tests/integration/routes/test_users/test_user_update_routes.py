@@ -15,7 +15,7 @@ class TestUserUpdateRoutes:
         [
             ("", 401),
             ("test_admin", 200),
-            ("test_moderator", 200),
+            ("test_moderator", 403),
             ("test_authenticated", 403),
         ],
     )

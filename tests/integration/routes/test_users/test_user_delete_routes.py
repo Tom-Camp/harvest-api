@@ -14,7 +14,7 @@ class TestUserDeleteRoutes:
         "user_name,expected_status",
         [
             ("test_admin", 200),
-            ("test_moderator", 200),
+            ("test_moderator", 403),
             ("test_authenticated", 403),
         ],
     )
@@ -30,8 +30,8 @@ class TestUserDeleteRoutes:
         headers = await get_auth_headers(client=client, user_name=username)
 
         payload = {
-            "username": f"alice+{test_as}",
-            "email": f"{test_as}+alice@example.com",
+            "username": f"alice+{user_name}",
+            "email": f"{user_name}+alice@example.com",
             "password": "milk prairie island desert",
         }
         response = await client.post(

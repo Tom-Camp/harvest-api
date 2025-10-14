@@ -74,14 +74,14 @@ async def default_pages(default_user, db_session):
 
     pages_list: List[Page] = [
         Page(
-            title=f"{default_user['admin'].username}'s page",
-            body=f"{default_user['admin'].username} they have the role admin",
-            user_id=default_user["admin"].id,
+            title=f"{default_user['test_admin'].username}'s page",
+            body=f"{default_user['test_admin'].username} they have the role admin",
+            user_id=default_user["test_admin"].id,
         ),
         Page(
-            title=f"{default_user['moderator'].username}'s page",
-            body=f"{default_user['moderator'].username} they have the role moderator",
-            user_id=default_user["moderator"].id,
+            title=f"{default_user['test_moderator'].username}'s page",
+            body=f"{default_user['test_moderator'].username} they have the role moderator",
+            user_id=default_user["test_moderator"].id,
         ),
     ]
 

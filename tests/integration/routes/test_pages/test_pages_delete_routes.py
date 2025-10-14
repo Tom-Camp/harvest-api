@@ -14,9 +14,9 @@ class TestPageDeleteRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 403),
+            ("test_admin", 200),
+            ("test_moderator", 403),
+            ("test_authenticated", 403),
         ],
     )
     async def test_delete_page(
@@ -26,7 +26,7 @@ class TestPageDeleteRoutes:
         user_name: str,
         expected_status: int,
     ):
-        headers = await get_auth_headers(client=client, user_name="test_admin_user")
+        headers = await get_auth_headers(client=client, user_name="test_admin")
         new_page = await client.post(
             url="/api/pages/",
             json={
@@ -46,12 +46,12 @@ class TestPageDeleteRoutes:
         assert delete_page.status_code == expected_status
 
     @pytest.mark.asyncio
-    async def test_delete_page_id(
+    async def test_delete_page_bad_id(
         self,
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
