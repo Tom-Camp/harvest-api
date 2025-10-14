@@ -16,9 +16,9 @@ class TestBedNoteReadRoutes:
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 200),
         ],
     )
     async def test_read_bed_note(
@@ -59,9 +59,9 @@ class TestBedNoteReadRoutes:
         default_gardens: dict[str, Garden],
     ):
         headers = await get_auth_headers(client=client, user_name="")
-        garden = default_gardens.get("authenticated")
+        garden = default_gardens.get("test_authenticated")
         if isinstance(garden, Garden):
-            post_user = default_user.get("authenticated")
+            post_user = default_user.get("test_authenticated")
             username = post_user.username if isinstance(post_user, User) else ""
             post_headers = await get_auth_headers(client=client, user_name=username)
             self.note_json["bed_id"] = str(garden.beds[0].id)
@@ -77,7 +77,7 @@ class TestBedNoteReadRoutes:
             )
             assert response.status_code == 401
         else:
-            pytest.fail("No garden found for user tester")
+            pytest.fail("No garden found for user test_user")
 
     @pytest.mark.asyncio
     async def test_read_bed_note_bad_id(
@@ -85,7 +85,7 @@ class TestBedNoteReadRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
@@ -99,9 +99,9 @@ class TestBedNoteReadRoutes:
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 200),
         ],
     )
     async def test_read_bed_notes(
@@ -136,7 +136,7 @@ class TestBedNoteReadRoutes:
         default_gardens: dict[str, Garden],
     ):
         headers = await get_auth_headers(client=client, user_name="")
-        garden = default_gardens.get("authenticated")
+        garden = default_gardens.get("test_authenticated")
         if isinstance(garden, Garden):
             bed_id = garden.beds[0].id
             response = await client.get(
@@ -145,7 +145,7 @@ class TestBedNoteReadRoutes:
             )
             assert response.status_code == 401
         else:
-            pytest.fail("No garden found for user tester")
+            pytest.fail("No garden found for user test_user")
 
     @pytest.mark.asyncio
     async def test_read_bed_notes_bad_id(
@@ -153,7 +153,7 @@ class TestBedNoteReadRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()

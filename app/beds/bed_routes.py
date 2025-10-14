@@ -9,7 +9,7 @@ from app.auth.auth_schemas import TokenData
 from app.beds.bed_crud import BedCRUD
 from app.beds.bed_models import Bed
 from app.beds.bed_schemas import BedCreate, BedList, BedRead, BedUpdate
-from app.core.auth.scopes_manager import ScopesManager
+from app.core.utils.garden_access import check_garden_access
 from app.gardens.garden_crud import GardenCRUD
 from app.logging import get_logger, log_handler
 from app.utils.database import get_db
@@ -17,22 +17,6 @@ from app.utils.database import get_db
 logger = get_logger(__name__)
 
 bed_router = APIRouter(prefix="/beds")
-
-
-def check_access(current_user: TokenData, garden_user: UUID, scope: str):
-
-    access_any = ScopesManager.has_scope(
-        user_scopes=current_user.scopes, required_scope=scope
-    )
-    is_owner = ScopesManager.is_owner(
-        user_scopes=current_user.scopes,
-        required_scope=f"{scope}:own",
-        user_id=current_user.id,
-        entity_owner=garden_user,
-    )
-
-    if not access_any and not is_owner:
-        raise HTTPException(status_code=403, detail="Forbidden")
 
 
 @bed_router.post("", response_model=Bed)
@@ -101,7 +85,9 @@ async def read_beds(
     if not garden:
         raise HTTPException(status_code=404, detail="Garden not found")
 
-    check_access(current_user=current_user, garden_user=garden.user_id, scope="ga:re")
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:re"
+    )
 
     beds = await BedCRUD.get_beds(
         garden_id=garden_id,
@@ -137,7 +123,9 @@ async def read_bed(
     if not garden:
         raise HTTPException(status_code=404, detail="Garden not found")
 
-    check_access(current_user=current_user, garden_user=garden.user_id, scope="ga:re")
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:re"
+    )
 
     return bed
 
@@ -169,7 +157,9 @@ async def update_bed(
     if not garden:
         raise HTTPException(status_code=404, detail="Garden not found")
 
-    check_access(current_user=current_user, garden_user=garden.user_id, scope="ga:up")
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:up"
+    )
 
     updated_bed = await BedCRUD.update_bed(
         session=session,
@@ -217,7 +207,9 @@ async def delete_bed(
     if not garden:
         raise HTTPException(status_code=404, detail="Garden not found")
 
-    check_access(current_user=current_user, garden_user=garden.user_id, scope="ga:de")
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:de"
+    )
 
     if not await BedCRUD.delete_bed(session, bed_id):
         raise HTTPException(status_code=404, detail="Bed not found")
