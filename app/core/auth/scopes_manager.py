@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from app.core.auth.role_scopes import ROLE_SCOPES
+from app.core.auth.scopes import SCOPES
 from app.users.user_models import Role
 
 
@@ -37,3 +38,7 @@ class ScopesManager:
         return (
             True if required_scope in user_scopes and user_id == entity_owner else False
         )
+
+    @staticmethod
+    def get_role_permission(role: Role):
+        return [SCOPES.get(scope, "") for scope in ROLE_SCOPES.get(role, "")]

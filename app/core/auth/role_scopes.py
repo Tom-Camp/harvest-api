@@ -2,6 +2,10 @@ from app.users.user_models import Role
 
 ROLE_SCOPES = {
     Role.ADMIN: [
+        "ad:ar",
+        "ad:rr",
+        "ad:cp",
+        "ad:gr",
         "ga:cr",
         "ga:re",
         "ga:up",

@@ -1,4 +1,8 @@
 SCOPES = {
+    "ad:ar": "Admin assign role",
+    "ad:rr": "Admin remove role",
+    "ad:cp": "Admin check permissions",
+    "ad:gr": "Admin get role",
     "ga:cr": "Create new garden",
     "ga:re": "Read any garden",
     "ga:re:own": "Read own garden",
