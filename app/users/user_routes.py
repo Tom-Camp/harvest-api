@@ -51,7 +51,6 @@ async def read_users_me(
     )
 
     if not access_any and not is_owner:
-        logger.warning(f"ANY: {access_any} OWNER: {is_owner}")
         raise HTTPException(status_code=403, detail="Forbidden")
 
     return user

@@ -15,9 +15,9 @@ class TestGardenUpdateRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 403),
-            ("authenticated", 403),
+            ("test_admin", 200),
+            ("test_moderator", 403),
+            ("test_authenticated", 403),
         ],
     )
     async def test_update_garden(
@@ -29,7 +29,7 @@ class TestGardenUpdateRoutes:
         expected_status: int,
     ):
 
-        garden = default_gardens.get("tester")
+        garden = default_gardens.get("test_user")
         test_as = default_user.get(user_name, "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
@@ -46,15 +46,15 @@ class TestGardenUpdateRoutes:
             if response.status_code == 200:
                 assert response.json()["name"] == f"{username}'s updated garden"
         else:
-            pytest.fail("No garden found for user tester")
+            pytest.fail("No garden found for user test_user")
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 200),
         ],
     )
     async def test_update_garden_own(
@@ -90,7 +90,7 @@ class TestGardenUpdateRoutes:
         default_gardens: dict[str, Garden],
     ):
         headers = await get_auth_headers(client=client, user_name="")
-        garden = default_gardens.get("tester_user")
+        garden = default_gardens.get("test_user")
         if isinstance(garden, Garden):
             response = await client.put(
                 url=f"/api/gardens/{garden.id}",
@@ -108,7 +108,7 @@ class TestGardenUpdateRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()

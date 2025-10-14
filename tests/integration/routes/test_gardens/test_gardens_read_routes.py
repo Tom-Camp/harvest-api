@@ -15,9 +15,9 @@ class TestGardenReadRoutes:
         "user_name,expected_status",
         [
             ("", 200),
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 200),
         ],
     )
     async def test_read_gardens(
@@ -41,9 +41,9 @@ class TestGardenReadRoutes:
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 200),
         ],
     )
     async def test_read_user_gardens(
@@ -56,9 +56,10 @@ class TestGardenReadRoutes:
         test_as = default_user.get(user_name, "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
-        test_id = test_as.id if hasattr(test_as, "id") else None
+        get_user = default_user.get("test_user", "")
+        get_id = get_user.id if hasattr(get_user, "id") else None
         response = await client.get(
-            url=f"/api/gardens/user/{test_id}",
+            url=f"/api/gardens/user/{get_id}",
             headers=headers,
         )
         assert response.status_code == expected_status
@@ -84,7 +85,7 @@ class TestGardenReadRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
@@ -99,15 +100,16 @@ class TestGardenReadRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 200),
         ],
     )
     async def test_read_garden_my(
         self,
         client: AsyncClient,
         default_user: dict[str, User],
+        default_gardens: dict[str, Garden],
         user_name: str,
         expected_status: int,
     ):
@@ -127,9 +129,9 @@ class TestGardenReadRoutes:
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 200),
         ],
     )
     async def test_read_garden(
@@ -161,7 +163,7 @@ class TestGardenReadRoutes:
         default_gardens: dict[str, Garden],
     ):
         headers = await get_auth_headers(client=client, user_name="")
-        garden = default_gardens.get("tester_user")
+        garden = default_gardens.get("test_user")
         if isinstance(garden, Garden):
             response = await client.get(
                 url=f"/api/gardens/{garden.id}",
@@ -175,7 +177,7 @@ class TestGardenReadRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()

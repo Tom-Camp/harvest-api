@@ -59,7 +59,7 @@ async def add_default_garden(user: User, session: AsyncSession):
         is_private=False,
     )
     default_garden = await GardenCRUD.create_garden(
-        garden=garden, session=session, user=user
+        garden=garden, session=session, user_id=user.id
     )
     if default_garden:
         await add_default_bed(session=session, garden_id=default_garden.id)

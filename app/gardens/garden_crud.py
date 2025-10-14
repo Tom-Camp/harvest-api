@@ -9,7 +9,6 @@ from sqlmodel import select
 from app.gardens.garden_models import Garden
 from app.gardens.garden_schemas import GardenCreate, GardenUpdate
 from app.logging import get_logger, log_handler
-from app.users.user_models import User
 
 logger = get_logger(__name__)
 
@@ -18,20 +17,20 @@ class GardenCRUD:
 
     @staticmethod
     async def create_garden(
-        garden: GardenCreate, session: AsyncSession, user: User
+        garden: GardenCreate, session: AsyncSession, user_id: UUID
     ) -> Garden:
         """
         Create a new Garden
 
         :param garden: GardenCreate object; gardens.garden_schemas.GardenCreate
         :param session: SQLAlchemy asyncio AsyncSession
-        :param user: User object; users.user_models.User
+        :param user_id: User oject unique ID; users.user_models.User
         :return: Garden object; gardens.garden_models.Garden
         """
 
         start = time.time()
 
-        db_garden = Garden(**garden.model_dump(), user=user)
+        db_garden = Garden(**garden.model_dump(), user_id=user_id)
         session.add(db_garden)
         await session.commit()
         await session.refresh(db_garden)

@@ -95,5 +95,7 @@ async def default_pages(default_user, db_session):
 async def default_gardens(default_user, db_session):
     garden_dict: dict[str, Garden] = dict()
     for role, user in default_user.items():
-        garden_dict[role] = await add_default_garden(user=user, session=db_session)
+        garden_dict[user.username] = await add_default_garden(
+            user=user, session=db_session
+        )
     yield garden_dict
