@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 from app.models.model_base import ModelBase
 from app.users.user_models import Role, UserBase
@@ -9,7 +9,7 @@ from app.users.user_models import Role, UserBase
 class UserCreate(BaseModel):
     password: str
     username: str
-    email: str
+    email: EmailStr
     first_name: str | None = None
     last_name: str | None = None
 

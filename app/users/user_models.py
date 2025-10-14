@@ -21,7 +21,7 @@ class Role(str, Enum):
 class UserBase(SQLModel):
     username: str = Field(unique=True, index=True)
     email: EmailStr = Field(
-        sa_type=String(320),
+        sa_type=String,
         unique=True,
         index=True,
         nullable=False,
