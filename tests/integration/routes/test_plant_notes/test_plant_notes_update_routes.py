@@ -41,11 +41,11 @@ class TestPlantNotesUpdateRoutes:
         user_name: str,
         expected_status: int,
     ):
-        test_as = default_user.get("tester", "")
+        test_as = default_user.get("test_user", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
 
-        garden = default_gardens.get("tester")
+        garden = default_gardens.get("test_user")
         if isinstance(garden, Garden):
             bed = garden.beds[0]
             plant = await create_plant(
@@ -99,7 +99,7 @@ class TestPlantNotesUpdateRoutes:
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
 
-        garden = default_gardens.get("tester")
+        garden = default_gardens.get("test_user")
         if isinstance(garden, Garden):
             bed = garden.beds[0]
             plant = await create_plant(
@@ -129,7 +129,7 @@ class TestPlantNotesUpdateRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()

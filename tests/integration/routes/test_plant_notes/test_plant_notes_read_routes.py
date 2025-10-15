@@ -27,9 +27,9 @@ class TestPlantNotesReadRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 403),
-            ("authenticated", 403),
+            ("test_admin", 200),
+            ("test_moderator", 403),
+            ("test_authenticated", 403),
         ],
     )
     async def test_read_plant_note(
@@ -41,11 +41,11 @@ class TestPlantNotesReadRoutes:
         user_name: str,
         expected_status: int,
     ):
-        test_as = default_user.get("tester", "")
+        test_as = default_user.get("test_user", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
 
-        garden = default_gardens.get("tester")
+        garden = default_gardens.get("test_user")
         if isinstance(garden, Garden):
             bed = garden.beds[0]
             plant = await create_plant(
@@ -79,9 +79,9 @@ class TestPlantNotesReadRoutes:
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 200),
         ],
     )
     async def test_read_plant_note_own(
@@ -98,7 +98,7 @@ class TestPlantNotesReadRoutes:
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
 
-        garden = default_gardens.get("tester")
+        garden = default_gardens.get("test_user")
         if isinstance(garden, Garden):
             bed = garden.beds[0]
             plant = await create_plant(
@@ -127,7 +127,7 @@ class TestPlantNotesReadRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
@@ -145,9 +145,9 @@ class TestPlantNotesReadRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 403),
-            ("authenticated", 403),
+            ("test_admin", 200),
+            ("test_moderator", 403),
+            ("test_authenticated", 403),
         ],
     )
     async def test_read_plant_notes(
@@ -159,11 +159,11 @@ class TestPlantNotesReadRoutes:
         user_name: str,
         expected_status: int,
     ):
-        test_as = default_user.get("tester", "")
+        test_as = default_user.get("test_user", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
 
-        garden = default_gardens.get("tester")
+        garden = default_gardens.get("test_user")
         if isinstance(garden, Garden):
             bed = garden.beds[0]
             plant = await create_plant(
@@ -198,9 +198,9 @@ class TestPlantNotesReadRoutes:
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 200),
         ],
     )
     async def test_read_plant_notes_own(
@@ -217,7 +217,7 @@ class TestPlantNotesReadRoutes:
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
 
-        garden = default_gardens.get("tester")
+        garden = default_gardens.get("test_user")
         if isinstance(garden, Garden):
             bed = garden.beds[0]
             plant = await create_plant(
@@ -247,7 +247,7 @@ class TestPlantNotesReadRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
