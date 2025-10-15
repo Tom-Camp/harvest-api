@@ -26,9 +26,9 @@ class TestPlantNotesDeleteRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 403),
-            ("authenticated", 403),
+            ("test_admin", 200),
+            ("test_moderator", 403),
+            ("test_authenticated", 403),
         ],
     )
     async def test_delete_plant_note(
@@ -40,11 +40,11 @@ class TestPlantNotesDeleteRoutes:
         user_name: str,
         expected_status: int,
     ):
-        test_as = default_user.get("tester", "")
+        test_as = default_user.get("test_user", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
 
-        garden = default_gardens.get("tester")
+        garden = default_gardens.get("test_user")
         if isinstance(garden, Garden):
             bed = garden.beds[0]
             plant = await create_plant(

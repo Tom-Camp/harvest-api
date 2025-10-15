@@ -13,9 +13,9 @@ class TestBedCreateRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 200),
         ],
     )
     async def test_create_bed(

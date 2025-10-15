@@ -1,13 +1,12 @@
+from typing import Annotated
 from uuid import UUID
 
-from casbin import AsyncEnforcer
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.auth import get_current_active_user
-from app.casbin.casbin_config import get_casbin_enforcer
-from app.casbin.casbin_helpers import casbin_subject
-from app.helpers.user_helpers import user_check_access
+from app.auth.auth import get_current_user
+from app.auth.auth_schemas import TokenData
+from app.core.auth.scopes_manager import ScopesManager
 from app.logging import get_logger, log_handler
 from app.users.user_crud import UserCRUD
 from app.users.user_models import User
@@ -21,35 +20,39 @@ user_router = APIRouter(prefix="/users")
 
 @user_router.get("/me", response_model=UserRead)
 async def read_users_me(
-    current_user: User = Depends(get_current_active_user),
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["us:re", "us:re:own"])
+    ],
     session: AsyncSession = Depends(get_db),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> UserRead | None:
     """
     A route to return a User object for the current user
 
     :param current_user: The current user
     :param session: The SQLAlchemy asyncio AsyncSession
-    :param enforcer: The Casbin AsyncEnforcer
     :return: User or None
     """
-
-    _ = await user_check_access(
-        session=session,
-        user_id=current_user.id,
-        current_user=current_user,
-        enforcer=enforcer,
-        action="read",
-    )
 
     user = await UserCRUD.get_user(
         session=session,
         user_id=current_user.id,
     )
-    if user:
-        await enforcer.add_role_for_user(
-            user=casbin_subject(user.id), role="authenticated"
-        )
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    access_any = ScopesManager.has_scope(
+        user_scopes=current_user.scopes, required_scope="us:re"
+    )
+    is_owner = ScopesManager.is_owner(
+        user_scopes=current_user.scopes,
+        required_scope="us:re:own",
+        user_id=current_user.id,
+        entity_owner=user.id,
+    )
+
+    if not access_any and not is_owner:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     return user
 
 
@@ -75,9 +78,10 @@ async def read_users(
 @user_router.get("/{user_id}", response_model=UserRead)
 async def read_user(
     user_id: UUID,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["us:re", "us:re:own"])
+    ],
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> User:
     """
     A route to return a User object for the current user
@@ -85,21 +89,27 @@ async def read_user(
     :param user_id: The UUID of the user
     :param session: The SQLAlchemy asyncio AsyncSession
     :param current_user: The current user
-    :param enforcer: The Casbin AsyncEnforcer
     :return: UserRead or None
     """
-
-    _ = await user_check_access(
-        session=session,
-        user_id=user_id,
-        current_user=current_user,
-        enforcer=enforcer,
-        action="read",
-    )
 
     user = await UserCRUD.get_user(session, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    access_any = ScopesManager.has_scope(
+        user_scopes=current_user.scopes, required_scope="us:re"
+    )
+    logger.info(f"ANY: {access_any}")
+    logger.info(f"{current_user.scopes}")
+    is_owner = ScopesManager.is_owner(
+        user_scopes=current_user.scopes,
+        required_scope="us:re:own",
+        user_id=current_user.id,
+        entity_owner=user.id,
+    )
+
+    if not access_any and not is_owner:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     logger.info("%s read user" % current_user.username)
     return user
@@ -109,9 +119,10 @@ async def read_user(
 async def update_user(
     user_id: UUID,
     user_update: UserUpdate,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["us:up", "us:up:own"])
+    ],
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> User:
     """
     A route to update a User object for the current user
@@ -119,18 +130,22 @@ async def update_user(
     :param user_id: The UUID of the user
     :param user_update: The UserUpdate object; users.user_schemas.UserUpdate
     :param session: The SQLAlchemy asyncio AsyncSession
-    :param current_user: The current user
-    :param enforcer: The Casbin AsyncEnforcer
+    :param current_user: The User accessing the route
     :return: User or None
     """
 
-    existing_user = await user_check_access(
-        session=session,
-        user_id=user_id,
-        current_user=current_user,
-        enforcer=enforcer,
-        action="update",
+    access_any = ScopesManager.has_scope(
+        user_scopes=current_user.scopes, required_scope="us:up"
     )
+    is_owner = ScopesManager.is_owner(
+        user_scopes=current_user.scopes,
+        required_scope="us:up:own",
+        user_id=current_user.id,
+        entity_owner=user_id,
+    )
+
+    if not access_any and not is_owner:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     user = await UserCRUD.update_user(session, user_id, user_update)
     if not user:
@@ -142,8 +157,8 @@ async def update_user(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "target_user_id": existing_user.id,
-            "target_username": existing_user.username,
+            "target_user_id": user_id,
+            "target_username": user.username,
             "action": "update_user",
             "resource": "user_routes",
         },
@@ -154,32 +169,39 @@ async def update_user(
 @user_router.delete("/{user_id}")
 async def delete_user(
     user_id: UUID,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["us:de", "us:de:own"])
+    ],
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
     """
     A route to delete a User object
 
     :param user_id: The UUID of the user
-    :param session: The SQLAlchemy asyncio AsyncSession
     :param current_user: The current user
-    :param enforcer: The Casbin AsyncEnforcer
+    :param session: The SQLAlchemy asyncio AsyncSession
     :return: dict
     """
 
-    existing_user = await user_check_access(
-        session=session,
-        user_id=user_id,
-        current_user=current_user,
-        enforcer=enforcer,
-        action="delete",
+    user = await UserCRUD.get_user(session=session, user_id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    access_any = ScopesManager.has_scope(
+        user_scopes=current_user.scopes, required_scope="us:de"
     )
+    is_owner = ScopesManager.is_owner(
+        user_scopes=current_user.scopes,
+        required_scope="us:de:own",
+        user_id=current_user.id,
+        entity_owner=user_id,
+    )
+
+    if not access_any and not is_owner:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     if not await UserCRUD.delete_user(session, user_id):
         raise HTTPException(status_code=404, detail="User not found")
-
-    await enforcer.delete_user(casbin_subject(user_id))
 
     log_handler.log_security_event(
         event="Delete user",
@@ -187,11 +209,10 @@ async def delete_user(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "target_user_id": existing_user.id,
-            "target_username": existing_user.username,
+            "target_user_id": user_id,
             "action": "delete_user",
             "resource": "user_routes",
         },
     )
 
-    return {"message": f"User {existing_user.username} deleted successfully"}
+    return {"message": f"User {user_id} deleted successfully"}

@@ -1,9 +1,9 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlmodel import Field, Relationship
 
-from app.helpers.model_base import ModelBase
+from app.models.model_base import ModelBase
 
 if TYPE_CHECKING:
     from app.beds.bed_models import Bed  # noqa: F401
@@ -27,7 +27,5 @@ class Garden(ModelBase, table=True):  # type: ignore
     beds: list["Bed"] = Relationship(
         back_populates="garden", sa_relationship_kwargs={"cascade": "all, delete"}
     )
-    user_id: UUID | None = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE"
-    )
-    user: Optional["User"] = Relationship(back_populates="gardens")
+    user_id: UUID = Field(foreign_key="user.id", nullable=False, ondelete="CASCADE")
+    user: "User" = Relationship(back_populates="gardens")

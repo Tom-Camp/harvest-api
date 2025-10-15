@@ -17,12 +17,12 @@ class TestBedNoteDeleteRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 403),
-            ("authenticated", 403),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 403),
         ],
     )
-    async def test_delete_bed_note(
+    async def test_delete_bed_note_any(
         self,
         client: AsyncClient,
         default_user: dict[str, User],
@@ -30,10 +30,10 @@ class TestBedNoteDeleteRoutes:
         user_name: str,
         expected_status: int,
     ):
-        create_as = default_user.get("tester", "")
+        create_as = default_user.get("test_user", "")
         username = create_as.username if isinstance(create_as, User) else ""
         create_headers = await get_auth_headers(client=client, user_name=username)
-        garden = default_gardens.get("tester")
+        garden = default_gardens.get("test_user")
         if isinstance(garden, Garden):
             self.note_json["bed_id"] = str(garden.beds[0].id)
             note = await create_note(
@@ -53,15 +53,15 @@ class TestBedNoteDeleteRoutes:
             assert delete_note.status_code == expected_status
 
         else:
-            pytest.fail("No garden found for user tester")
+            pytest.fail("No garden found for user test_user")
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 200),
         ],
     )
     async def test_delete_bed_note_own(
@@ -91,7 +91,7 @@ class TestBedNoteDeleteRoutes:
             assert delete_note.status_code == expected_status
 
         else:
-            pytest.fail("No garden found for user tester")
+            pytest.fail("No garden found for user test_user")
 
     @pytest.mark.asyncio
     async def test_delete_bed_note_bad_id(
@@ -99,7 +99,7 @@ class TestBedNoteDeleteRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()

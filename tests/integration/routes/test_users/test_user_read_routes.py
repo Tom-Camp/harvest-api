@@ -14,9 +14,9 @@ class TestUserRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 200),
         ],
     )
     async def test_read_users_me(
@@ -47,9 +47,9 @@ class TestUserRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 403),
         ],
     )
     async def test_read_user(
@@ -63,7 +63,7 @@ class TestUserRoutes:
         username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
 
-        read_user = default_user["authenticated"]
+        read_user = default_user["test_user"]
         response = await client.get(url=f"/api/users/{read_user.id}", headers=headers)
 
         assert response.status_code == expected_status
@@ -76,8 +76,8 @@ class TestUserRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
-        username = test_as.username if isinstance(test_as, User) else ""
+        test_as = default_user.get("test_moderator", "")
+        username = test_as.username if hasattr(test_as, "username") else None
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
         response = await client.get(url=f"/api/users/{bad_id}", headers=headers)

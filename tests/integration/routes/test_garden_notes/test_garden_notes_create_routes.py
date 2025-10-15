@@ -14,9 +14,9 @@ class TestGardenNoteCreateRoutes:
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 200),
         ],
     )
     async def test_create_garden_note(
@@ -51,7 +51,7 @@ class TestGardenNoteCreateRoutes:
         default_gardens: dict[str, Garden],
     ):
         headers = await get_auth_headers(client=client, user_name="")
-        garden = default_gardens.get("tester")
+        garden = default_gardens.get("test_user")
         if isinstance(garden, Garden):
             response = await client.post(
                 url="/api/garden-notes/",
@@ -68,7 +68,7 @@ class TestGardenNoteCreateRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()

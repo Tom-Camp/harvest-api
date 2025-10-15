@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlmodel import Field, Relationship
 
-from app.helpers.model_base import ModelBase
+from app.models.model_base import ModelBase
 
 if TYPE_CHECKING:
     from app.plants.plant_models import Plant

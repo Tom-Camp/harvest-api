@@ -1,18 +1,16 @@
+from typing import Annotated
 from uuid import UUID
 
-from casbin import AsyncEnforcer
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.auth import get_current_active_user
-from app.casbin.casbin_config import get_casbin_enforcer
-from app.casbin.casbin_helpers import casbin_subject
-from app.helpers.page_helpers import page_check_access
+from app.auth.auth import get_current_user
+from app.auth.auth_schemas import TokenData
+from app.core.auth.scopes_manager import ScopesManager
 from app.logging import get_logger, log_handler
 from app.pages.page_crud import PageCRUD
 from app.pages.page_models import Page
 from app.pages.page_schemas import PageCreate, PageList, PageRead, PageUpdate
-from app.users.user_models import User
 from app.utils.database import get_db
 
 logger = get_logger(__name__)
@@ -22,10 +20,9 @@ page_router = APIRouter(prefix="/pages")
 
 @page_router.post("/", response_model=Page)
 async def create_page(
+    current_user: Annotated[TokenData, Security(get_current_user, scopes=["pg:cr"])],
     page: PageCreate,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Page:
     """
     A route to create a new page
@@ -33,14 +30,8 @@ async def create_page(
     :param session: The SQLAlchemy asyncio AsyncSession
     :param page: The PageCreate object; pages.page_schemas.PageCreate
     :param current_user: The current user
-    :param enforcer: The Casbin AsyncEnforcer
     :return: Page
     """
-
-    subject: str = casbin_subject(current_user.id)
-    allowed = enforcer.enforce(subject, "page", "create")
-    if not allowed:
-        raise HTTPException(status_code=403, detail="Forbidden")
 
     new_page = await PageCRUD.create_page(session, page, current_user.id)
     log_handler.log_business_event(
@@ -79,10 +70,12 @@ async def read_pages(
 
 @page_router.get("/my", response_model=list[PageList])
 async def read_my_pages(
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["pg:re", "pg:re:own"])
+    ],
     skip: int = 0,
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ) -> list[PageList]:
     """
     A route to get all pages
@@ -122,11 +115,12 @@ async def read_page(
 
 @page_router.put("/{page_id}", response_model=Page)
 async def update_page(
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["pg:up", "pg:up:own"])
+    ],
     page_id: UUID,
     page_update: PageUpdate,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> Page | None:
     """
     A route to update a single page
@@ -135,17 +129,24 @@ async def update_page(
     :param page_update: The PageUpdate object; pages.page_schemas.PageUpdate
     :param session: The SQLAlchemy asyncio AsyncSession
     :param current_user: The current user
-    :param enforcer: The Casbin AsyncEnforcer
     :return: Page or None
     """
+    page = await PageCRUD.get_page(session=session, page_id=page_id)
+    if not page:
+        raise HTTPException(status_code=404, detail="Page not found")
 
-    _ = await page_check_access(
-        page_id=page_id,
-        session=session,
-        enforcer=enforcer,
-        current_user=current_user,
-        action="update",
+    access_any = ScopesManager.has_scope(
+        user_scopes=current_user.scopes, required_scope="pg:up"
     )
+    is_owner = ScopesManager.is_owner(
+        user_scopes=current_user.scopes,
+        required_scope="pg:up:own",
+        user_id=current_user.id,
+        entity_owner=page.user_id,
+    )
+
+    if not access_any and not is_owner:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     updated_page = await PageCRUD.update_page(session, page_id, page_update)
     if updated_page:
@@ -166,28 +167,36 @@ async def update_page(
 
 @page_router.delete("/{page_id}")
 async def delete_page(
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["pg:de", "pg:de:own"])
+    ],
     page_id: UUID,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
     """
     A route to delete a single page
 
+    :param current_user: The current user
     :param page_id: The UUID of the page
     :param session: The SQLAlchemy asyncio AsyncSession
-    :param current_user: The current user
-    :param enforcer: The Casbin AsyncEnforcer
     :return: dict
     """
+    page = await PageCRUD.get_page(session=session, page_id=page_id)
+    if not page:
+        raise HTTPException(status_code=404, detail="Page not found")
 
-    page = await page_check_access(
-        page_id=page_id,
-        session=session,
-        enforcer=enforcer,
-        current_user=current_user,
-        action="delete",
+    access_any = ScopesManager.has_scope(
+        user_scopes=current_user.scopes, required_scope="pg:de"
     )
+    is_owner = ScopesManager.is_owner(
+        user_scopes=current_user.scopes,
+        required_scope="pg:de:own",
+        user_id=current_user.id,
+        entity_owner=page.user_id,
+    )
+
+    if not access_any and not is_owner:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     if not await PageCRUD.delete_page(session, page_id):
         raise HTTPException(status_code=404, detail="Page not found")
@@ -197,8 +206,8 @@ async def delete_page(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "page_id": page.id,
-            "page_title": page.title,
+            # "page_id": page.id,
+            # "page_title": page.title,
             "action": "delete_page",
             "resource": "page_routes",
         },

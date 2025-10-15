@@ -34,7 +34,7 @@ async def get_auth_headers(
     if user_name:
         get_token = await client.post(
             url="/api/auth/token",
-            data={"username": user_name, "password": "UkeV3BNUIL7x/n0J"},
+            json={"username": user_name, "password": "UkeV3BNUIL7xn0J"},
         )
         headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
     return headers

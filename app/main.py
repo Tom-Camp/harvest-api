@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-from uuid import UUID
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -10,7 +9,6 @@ from app.admin.admin_routes import admin_router
 from app.auth.auth_routes import auth_router
 from app.beds.bed_notes_routes import bed_note_router
 from app.beds.bed_routes import bed_router
-from app.casbin.casbin_config import startup_casbin
 from app.gardens.garden_note_routes import garden_note_router
 from app.gardens.garden_routes import garden_router
 from app.logging import get_logger
@@ -34,13 +32,8 @@ async def lifespan(app: FastAPI):
     async with db.engine.begin() as conn:
         await conn.run_sync(db.metadata.create_all)
 
-    admin_user_ids: list[UUID] = []
     async for session in db.get_db():
-        admin_user = await setup_initial_admin(session=session)
-        admin_user_ids.append(admin_user)
-        break
-
-    await startup_casbin(app, settings.async_database_url, admin_user_ids)
+        _ = await setup_initial_admin(session=session)
     yield
 
     await db.engine.dispose()

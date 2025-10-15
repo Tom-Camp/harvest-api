@@ -14,9 +14,9 @@ class TestBedUpdateRoutes:
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
-            ("admin", 200),
-            ("moderator", 403),
-            ("authenticated", 403),
+            ("test_admin", 200),
+            ("test_moderator", 403),
+            ("test_authenticated", 403),
         ],
     )
     async def test_update_bed(
@@ -30,7 +30,7 @@ class TestBedUpdateRoutes:
         test_as = default_user.get(user_name, "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
-        garden = default_gardens.get("tester")
+        garden = default_gardens.get("test_user")
         if isinstance(garden, Garden):
             bed_id = garden.beds[0].id
             response = await client.put(
@@ -53,7 +53,7 @@ class TestBedUpdateRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("admin", "")
+        test_as = default_user.get("test_admin", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
@@ -70,9 +70,9 @@ class TestBedUpdateRoutes:
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 200),
         ],
     )
     async def test_update_bed_own(
@@ -110,7 +110,7 @@ class TestBedUpdateRoutes:
         default_gardens: dict[str, Garden],
     ):
         headers = await get_auth_headers(client=client, user_name="")
-        garden = default_gardens.get("authenticated")
+        garden = default_gardens.get("test_authenticated")
         if isinstance(garden, Garden):
             bed_id = garden.beds[0].id
             response = await client.put(

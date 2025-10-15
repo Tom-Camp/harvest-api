@@ -1,10 +1,12 @@
+from typing import Annotated
 from uuid import UUID
 
-from casbin import AsyncEnforcer
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.auth import get_current_active_user
+from app.auth.auth import get_current_user
+from app.auth.auth_schemas import TokenData
+from app.beds.bed_crud import BedCRUD
 from app.beds.bed_models import BedNote
 from app.beds.bed_notes_crud import BedNoteCRUD
 from app.beds.bed_notes_schemas import (
@@ -13,10 +15,9 @@ from app.beds.bed_notes_schemas import (
     BedNoteRead,
     BedNoteUpdate,
 )
-from app.casbin.casbin_config import get_casbin_enforcer
-from app.helpers.bed_helpers import bed_note_check_access
+from app.core.utils.garden_access import check_garden_access
+from app.gardens.garden_crud import GardenCRUD
 from app.logging import get_logger, log_handler
-from app.users.user_models import User
 from app.utils.database import get_db
 
 logger = get_logger(__name__)
@@ -27,9 +28,10 @@ bed_note_router = APIRouter(prefix="/bed-notes")
 @bed_note_router.post("/", response_model=BedNote)
 async def create_bed_note(
     note: BedNoteCreate,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["ga:up", "ga:up:own"])
+    ],
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> BedNote:
     """
     Route for creating a bed note.
@@ -37,16 +39,19 @@ async def create_bed_note(
     :param note: BedNoteCreate; beds.bed_note_schemas.BedNoteCreate
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: BedNote
     """
 
-    bed, garden = await bed_note_check_access(
-        bed_id=note.bed_id,
-        current_user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
+    bed = await BedCRUD.get_bed(session=session, bed_id=note.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:up"
     )
 
     new_note = await BedNoteCRUD.create_note(
@@ -72,9 +77,10 @@ async def create_bed_note(
 @bed_note_router.get("/{note_id}", response_model=BedNoteRead)
 async def read_bed_note(
     note_id: UUID,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["ga:re", "ga:re:own"])
+    ],
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> BedNote:
     """
     Route for getting a bed note.
@@ -82,7 +88,6 @@ async def read_bed_note(
     :param note_id: UUID
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: BedNoteRead; beds.bed_note_schemas.BedNoteRead
     """
 
@@ -90,12 +95,16 @@ async def read_bed_note(
     if not note:
         raise HTTPException(status_code=404, detail="Not found")
 
-    _, _ = await bed_note_check_access(
-        bed_id=note.bed_id,
-        current_user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
+    bed = await BedCRUD.get_bed(session=session, bed_id=note.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:re"
     )
 
     return note
@@ -104,11 +113,12 @@ async def read_bed_note(
 @bed_note_router.get("/notes/{bed_id}", response_model=list[BedNoteList])
 async def read_bed_notes(
     bed_id: UUID,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["ga:re", "ga:re:own"])
+    ],
     skip: int = 0,
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> list[BedNoteList]:
     """
     Route for getting a list of bed notes.
@@ -120,12 +130,16 @@ async def read_bed_notes(
     :param current_user: User
     """
 
-    _, _ = await bed_note_check_access(
-        bed_id=bed_id,
-        current_user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
+    bed = await BedCRUD.get_bed(session=session, bed_id=bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:re"
     )
 
     notes = await BedNoteCRUD.get_notes(
@@ -141,9 +155,10 @@ async def read_bed_notes(
 async def update_bed_note(
     note_id: UUID,
     note_update: BedNoteUpdate,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["ga:up", "ga:up:own"])
+    ],
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> BedNote:
     """
     Route for updating a bed note.
@@ -152,7 +167,6 @@ async def update_bed_note(
     :param note_update: BedNoteUpdate object; beds.bed_note_schemas.BedNoteUpdate
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: BedNote
     """
 
@@ -160,12 +174,16 @@ async def update_bed_note(
     if not note:
         raise HTTPException(status_code=404, detail="Not found")
 
-    _, garden = await bed_note_check_access(
-        bed_id=note.bed_id,
-        current_user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
+    bed = await BedCRUD.get_bed(session=session, bed_id=note.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:re"
     )
 
     updated_note = await BedNoteCRUD.update_note(
@@ -192,9 +210,10 @@ async def update_bed_note(
 @bed_note_router.delete("/{note_id}")
 async def delete_bed_note(
     note_id: UUID,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["ga:de", "ga:de:own"])
+    ],
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
     """
     Route to delete bed note.
@@ -202,7 +221,6 @@ async def delete_bed_note(
     :param note_id: UUID
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: dict
     """
 
@@ -210,12 +228,16 @@ async def delete_bed_note(
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
 
-    bed, _ = await bed_note_check_access(
-        bed_id=note.bed_id,
-        current_user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
+    bed = await BedCRUD.get_bed(session=session, bed_id=note.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:re"
     )
 
     if not await BedNoteCRUD.delete_note(session, note_id):

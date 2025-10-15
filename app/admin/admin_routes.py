@@ -1,16 +1,17 @@
+from typing import Annotated
 from uuid import UUID
 
-from casbin import AsyncEnforcer
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin.permission_schemas import PermissionCheck, RoleRequest
-from app.auth.auth import get_current_active_user
-from app.casbin.casbin_config import get_casbin_enforcer
-from app.casbin.casbin_helpers import casbin_subject
-from app.helpers.user_helpers import admin_check_access
+from app.auth.auth import get_current_user
+from app.auth.auth_schemas import TokenData
+from app.core.auth.scopes_manager import ScopesManager
 from app.logging import get_logger, log_handler
-from app.users.user_models import User
+from app.users.user_crud import UserCRUD
+from app.users.user_models import Role
+from app.users.user_schemas import UserUpdateRole
 from app.utils.database import get_db
 
 logger = get_logger(__name__)
@@ -21,30 +22,25 @@ admin_router = APIRouter(prefix="/admin")
 @admin_router.post("/assign-role")
 async def assign_role(
     role_request: RoleRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: Annotated[TokenData, Security(get_current_user, scopes=["ad:ar"])],
     session: AsyncSession = Depends(get_db),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
     """
-    Casbin operation: Assign a role to user.
+    Scope operation: Assign a role to user.
 
     :param role_request: Role to assign
-    :param current_user: Current user User object
+    :param current_user: The user currently accessing the route
     :param session: SQLAlchemy asyncio session
-    :param enforcer: Casbin AsyncEnforcer object
     """
 
-    await admin_check_access(
-        session=session,
-        user_id=role_request.user_id,
-        current_user=current_user,
-        enforcer=enforcer,
-        subject="role",
-        action="add",
-    )
+    user = await UserCRUD.get_user(session=session, user_id=role_request.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-    await enforcer.add_role_for_user(
-        user=casbin_subject(role_request.user_id), role=role_request.role_name
+    user = await UserCRUD.update_user_role(
+        session=session,
+        user_id=user.id,
+        role=UserUpdateRole(role=Role(role_request.role_name)),
     )
     log_handler.log_security_event(
         "Role assigned to user",
@@ -54,7 +50,7 @@ async def assign_role(
             "actor_id": current_user.id,
             "actor_username": current_user.username,
             "target_user_id": role_request.user_id,
-            "target_username": role_request.username,
+            "target_username": user.username,
             "role_name": role_request.role_name,
             "action": "assign_role",
             "resource": "admin_routes",
@@ -69,30 +65,25 @@ async def assign_role(
 @admin_router.post("/remove-role")
 async def remove_role(
     role_request: RoleRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: Annotated[TokenData, Security(get_current_user, scopes=["ad:rr"])],
     session: AsyncSession = Depends(get_db),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
     """
-    Casbin operation: Remove a role from a user.
+    Scope operation: Remove a role from a user.
 
     :param role_request: Role to remove
-    :param current_user: Current user User object
+    :param current_user: The user currently accessing the route
     :param session: SQLAlchemy asyncio session
-    :param enforcer: Casbin AsyncEnforcer object
     """
 
-    await admin_check_access(
-        session=session,
-        user_id=role_request.user_id,
-        current_user=current_user,
-        enforcer=enforcer,
-        subject="role",
-        action="delete",
-    )
+    user = await UserCRUD.get_user(session=session, user_id=role_request.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-    await enforcer.delete_role_for_user(
-        user=casbin_subject(role_request.user_id), role=role_request.role_name
+    user = await UserCRUD.update_user_role(
+        session=session,
+        user_id=user.id,
+        role=UserUpdateRole(role=Role.AUTHENTICATED),
     )
 
     log_handler.log_security_event(
@@ -103,7 +94,7 @@ async def remove_role(
             "actor_id": current_user.id,
             "actor_username": current_user.username,
             "target_user_id": role_request.user_id,
-            "target_username": role_request.username,
+            "target_username": user.username,
             "role_name": role_request.role_name,
             "action": "remove_role",
             "resource": "admin_routes",
@@ -118,34 +109,23 @@ async def remove_role(
 @admin_router.post("/check-permission")
 async def check_permission(
     permission_request: PermissionCheck,
-    current_user: User = Depends(get_current_active_user),
+    current_user: Annotated[TokenData, Security(get_current_user, scopes=["ad:cp"])],
     session: AsyncSession = Depends(get_db),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
-) -> dict:
+) -> list:
     """
-    Casbin operation: Check user permissions.
+    Scope operation: Check user permissions.
 
     :param permission_request: PermissionCheck object containing the User ID, permission, and action
     :param current_user: Current user User object
     :param session: SQLAlchemy asyncio session
-    :param enforcer: Casbin AsyncEnforcer object
     :return: dict
     """
 
-    await admin_check_access(
-        session=session,
-        user_id=permission_request.user_id,
-        current_user=current_user,
-        enforcer=enforcer,
-        subject="policy",
-        action="read",
-    )
+    user = await UserCRUD.get_user(session=session, user_id=permission_request.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-    has_permission = enforcer.enforce(
-        casbin_subject(permission_request.user_id),
-        permission_request.resource,
-        permission_request.action,
-    )
+    permissions = ScopesManager.get_role_permission(role=user.role)
 
     log_handler.log_security_event(
         "Permission check",
@@ -163,41 +143,27 @@ async def check_permission(
         },
     )
 
-    return {
-        "user": permission_request.username,
-        "resource": permission_request.resource,
-        "action": permission_request.action,
-        "has_permission": has_permission,
-    }
+    return permissions
 
 
-@admin_router.get("/user-roles/{user_id}")
-async def get_user_roles(
+@admin_router.get("/user-role/{user_id}")
+async def get_user_role(
     user_id: UUID,
-    current_user: User = Depends(get_current_active_user),
+    current_user: Annotated[TokenData, Security(get_current_user, scopes=["ad:gr"])],
     session: AsyncSession = Depends(get_db),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
     """
-    Casbin operation: Get a user's roles.
+    Scopes operation: Get a user's roles.
 
     :param user_id: The UUID of the user whose roles to return
-    :param current_user: Current user User object
+    :param current_user: the User accessing the route
     :param session: SQLAlchemy asyncio session
-    :param enforcer: Casbin AsyncEnforcer object
     :return: dict
     """
 
-    await admin_check_access(
-        session=session,
-        user_id=user_id,
-        current_user=current_user,
-        enforcer=enforcer,
-        subject="role",
-        action="read",
-    )
-
-    roles = await enforcer.get_roles_for_user(casbin_subject(user_id))
+    user = await UserCRUD.get_user(session=session, user_id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
     log_handler.log_security_event(
         "List user roles",
@@ -211,39 +177,4 @@ async def get_user_roles(
             "resource": "admin_routes",
         },
     )
-    return {"user_id": user_id, "roles": roles}
-
-
-@admin_router.get("/role-users/{role_name}")
-async def get_role_users(
-    role_name: str,
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
-) -> dict:
-    """
-    Casbin operation: Return a list of users with the given role.
-
-    :param role_name: PermissionCheck object containing the User ID, permission, and action
-    :param current_user: Current user User object
-    :param enforcer: Casbin AsyncEnforcer object
-    :return: dict
-    """
-
-    allowed = enforcer.enforce(casbin_subject(current_user.id), "role", "read")
-    if not allowed:
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-    users = await enforcer.get_users_for_role(role_name)
-
-    log_handler.log_security_event(
-        "List user with role",
-        severity="low",
-        context={
-            "actor_id": current_user.id,
-            "actor_username": current_user.username,
-            "target_role": role_name,
-            "action": "get_role_users",
-            "resource": "admin_routes",
-        },
-    )
-    return {"role": role_name, "users": [user.replace("user:", "") for user in users]}
+    return {"user_id": user.id, "username": user.username, "role": user.role.value}

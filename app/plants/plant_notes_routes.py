@@ -1,13 +1,16 @@
+from typing import Annotated
 from uuid import UUID
 
-from casbin import AsyncEnforcer
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.auth import get_current_active_user
-from app.casbin.casbin_config import get_casbin_enforcer
-from app.helpers.plant_helpers import plant_note_check_access
+from app.auth.auth import get_current_user
+from app.auth.auth_schemas import TokenData
+from app.beds.bed_crud import BedCRUD
+from app.core.utils.garden_access import check_garden_access
+from app.gardens.garden_crud import GardenCRUD
 from app.logging import get_logger, log_handler
+from app.plants.plant_crud import PlantCRUD
 from app.plants.plant_models import PlantNote
 from app.plants.plant_notes_crud import PlantNoteCRUD
 from app.plants.plant_notes_schemas import (
@@ -16,7 +19,6 @@ from app.plants.plant_notes_schemas import (
     PlantNoteRead,
     PlantNoteUpdate,
 )
-from app.users.user_models import User
 from app.utils.database import get_db
 
 logger = get_logger(__name__)
@@ -27,9 +29,10 @@ plant_note_router = APIRouter(prefix="/plant-notes")
 @plant_note_router.post("/", response_model=PlantNote)
 async def create_plant_note(
     note: PlantNoteCreate,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["ga:up", "ga:up:own"])
+    ],
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> PlantNote:
     """
     Route for creating a plant note.
@@ -37,16 +40,23 @@ async def create_plant_note(
     :param note: PlantNoteCreate; plants.plant_note_schemas.PlantNoteCreate
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: PlantNote
     """
 
-    bed, garden = await plant_note_check_access(
-        plant_id=note.plant_id,
-        user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
+    plant = await PlantCRUD.get_plant(session=session, plant_id=note.plant_id)
+    if not plant:
+        raise HTTPException(status_code=404, detail="Plant not found")
+
+    bed = await BedCRUD.get_bed(session=session, bed_id=plant.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:up"
     )
 
     new_note = await PlantNoteCRUD.create_note(
@@ -73,9 +83,10 @@ async def create_plant_note(
 @plant_note_router.get("/{note_id}", response_model=PlantNoteRead)
 async def read_plant_note(
     note_id: UUID,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["ga:re", "ga:re:own"])
+    ],
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> PlantNote:
     """
     Route for getting a plant note.
@@ -83,7 +94,6 @@ async def read_plant_note(
     :param note_id: UUID
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: PlantNoteRead; plants.plant_note_schemas.PlantNoteRead
     """
 
@@ -91,12 +101,20 @@ async def read_plant_note(
     if not note:
         raise HTTPException(status_code=404, detail="Not found")
 
-    _, _ = await plant_note_check_access(
-        plant_id=note.plant_id,
-        user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="read",
+    plant = await PlantCRUD.get_plant(session=session, plant_id=note.plant_id)
+    if not plant:
+        raise HTTPException(status_code=404, detail="Plant not found")
+
+    bed = await BedCRUD.get_bed(session=session, bed_id=plant.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:re"
     )
 
     return note
@@ -105,11 +123,12 @@ async def read_plant_note(
 @plant_note_router.get("/notes/{plant_id}", response_model=list[PlantNoteList])
 async def read_plant_notes(
     plant_id: UUID,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["ga:re", "ga:re:own"])
+    ],
     skip: int = 0,
     limit: int = 100,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> list[PlantNoteList]:
     """
     Route for getting a list of plant notes.
@@ -121,12 +140,20 @@ async def read_plant_notes(
     :param current_user: User
     """
 
-    _, _ = await plant_note_check_access(
-        plant_id=plant_id,
-        user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="read",
+    plant = await PlantCRUD.get_plant(session=session, plant_id=plant_id)
+    if not plant:
+        raise HTTPException(status_code=404, detail="Plant not found")
+
+    bed = await BedCRUD.get_bed(session=session, bed_id=plant.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:re"
     )
 
     notes = await PlantNoteCRUD.get_notes(
@@ -142,9 +169,10 @@ async def read_plant_notes(
 async def update_plant_note(
     note_id: UUID,
     note_update: PlantNoteUpdate,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["ga:up", "ga:up:own"])
+    ],
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> PlantNote:
     """
     Route for updating a bed note.
@@ -153,7 +181,6 @@ async def update_plant_note(
     :param note_update: PlantNoteUpdate object; plants.plant_note_schemas.PlantNoteUpdate
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: PlantNote
     """
 
@@ -161,12 +188,20 @@ async def update_plant_note(
     if not note:
         raise HTTPException(status_code=404, detail="Not found")
 
-    bed, garden = await plant_note_check_access(
-        plant_id=note.plant_id,
-        user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
+    plant = await PlantCRUD.get_plant(session=session, plant_id=note.plant_id)
+    if not plant:
+        raise HTTPException(status_code=404, detail="Plant not found")
+
+    bed = await BedCRUD.get_bed(session=session, bed_id=plant.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:up"
     )
 
     updated_note = await PlantNoteCRUD.update_note(
@@ -194,9 +229,10 @@ async def update_plant_note(
 @plant_note_router.delete("/{plant_id}")
 async def delete_plant_note(
     note_id: UUID,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["ga:de", "ga: de:own"])
+    ],
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    enforcer: AsyncEnforcer = Depends(get_casbin_enforcer),
 ) -> dict:
     """
     Route to delete bed note.
@@ -204,7 +240,6 @@ async def delete_plant_note(
     :param note_id: UUID
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
-    :param enforcer: Casbin AsyncEnforcer
     :return: dict
     """
 
@@ -212,12 +247,20 @@ async def delete_plant_note(
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
 
-    bed, garden = await plant_note_check_access(
-        plant_id=note.plant_id,
-        user=current_user,
-        session=session,
-        enforcer=enforcer,
-        action="create",
+    plant = await PlantCRUD.get_plant(session=session, plant_id=note.plant_id)
+    if not plant:
+        raise HTTPException(status_code=404, detail="Plant not found")
+
+    bed = await BedCRUD.get_bed(session=session, bed_id=plant.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:de"
     )
 
     if not await PlantNoteCRUD.delete_note(session, note_id):
