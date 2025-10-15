@@ -1,18 +1,22 @@
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.plant_info_agent import get_plant_info
-from app.auth.auth import get_current_active_user
+from app.auth.auth import get_current_user
+from app.auth.auth_schemas import TokenData
+from app.beds.bed_crud import BedCRUD
 from app.beds.bed_models import Bed
+from app.core.utils.garden_access import check_garden_access
 from app.core.utils.plant_helpers import map_ai_response_to_plant
+from app.gardens.garden_crud import GardenCRUD
 from app.gardens.garden_models import Garden
 from app.logging import get_logger, log_handler
 from app.plants.plant_crud import PlantCRUD
 from app.plants.plant_models import Plant
 from app.plants.plant_schemas import PlantCreate, PlantRead, PlantUpdate
-from app.users.user_models import User
 from app.utils.database import get_db
 
 logger = get_logger(__name__)
@@ -23,8 +27,10 @@ plant_router = APIRouter(prefix="/plants")
 @plant_router.post("/", response_model=Plant)
 async def create_plant(
     plant: PlantCreate,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["ga:up", "ga:up:own"])
+    ],
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ) -> Plant:
     """
     Create a Plant object
@@ -34,6 +40,18 @@ async def create_plant(
     :param current_user: User object for the user accessing the route.
     :return: Plant object; plants.plant_models.Plant
     """
+
+    bed = await BedCRUD.get_bed(session=session, bed_id=plant.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:up"
+    )
 
     new_plant = await PlantCRUD.create_plant(plant=plant, session=session)
     bed = await session.get(Bed, new_plant.bed_id)
@@ -57,8 +75,8 @@ async def create_plant(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            # "garden_id": bed.garden_id,
-            # "bed_id": bed.id,
+            "garden_id": bed.garden_id,
+            "bed_id": bed.id,
             "plant_name": new_plant.species,
             "plant_id": new_plant.id,
             "action": "create_plant",
@@ -72,8 +90,10 @@ async def create_plant(
 @plant_router.get("/{plant_id}", response_model=PlantRead)
 async def read_plant(
     plant_id: UUID,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["ga:re", "ga:re:own"])
+    ],
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ) -> PlantRead:
     """
     Return a PlantRead object by the Plant ID
@@ -88,6 +108,18 @@ async def read_plant(
     if not plant:
         raise HTTPException(status_code=404, detail="Plant not found")
 
+    bed = await BedCRUD.get_bed(session=session, bed_id=plant.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:re"
+    )
+
     return plant
 
 
@@ -95,8 +127,10 @@ async def read_plant(
 async def update_plant(
     plant_id: UUID,
     plant_update: PlantUpdate,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["ga:up", "ga:up:own"])
+    ],
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ) -> Plant | None:
     """
     A route for updating a Plant object
@@ -112,13 +146,22 @@ async def update_plant(
     if not plant:
         raise HTTPException(status_code=404, detail="Plant not found")
 
+    bed = await BedCRUD.get_bed(session=session, bed_id=plant.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:up"
+    )
+
     updated_plant = await PlantCRUD.update_plant(
         session=session, plant_id=plant_id, plant_update=plant_update
     )
-    bed = await session.get(Bed, plant.bed_id)
-    garden = await session.get(
-        Garden,
-    )
+
     if (
         updated_plant
         and hasattr(updated_plant, "variety")
@@ -157,8 +200,10 @@ async def update_plant(
 @plant_router.delete("/{plant_id}")
 async def delete_bed(
     plant_id: UUID,
+    current_user: Annotated[
+        TokenData, Security(get_current_user, scopes=["ga:de", "ga:de:own"])
+    ],
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ) -> dict:
     """
     Route to delete a Plant
@@ -173,6 +218,18 @@ async def delete_bed(
     if not plant:
         raise HTTPException(status_code=404, detail="Plant not found")
 
+    bed = await BedCRUD.get_bed(session=session, bed_id=plant.bed_id)
+    if not bed:
+        raise HTTPException(status_code=404, detail="Bed not found")
+
+    garden = await GardenCRUD.get_garden(session=session, garden_id=bed.garden_id)
+    if not garden:
+        raise HTTPException(status_code=404, detail="Garden not found")
+
+    check_garden_access(
+        current_user=current_user, garden_user=garden.user_id, scope="ga:de"
+    )
+
     if not await PlantCRUD.delete_plant(session, plant_id):
         raise HTTPException(status_code=404, detail="Plant not found")
 
@@ -181,8 +238,8 @@ async def delete_bed(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            # "garden_id": bed.garden_id,
-            # "bed_id": bed.id,
+            "garden_id": bed.garden_id,
+            "bed_id": bed.id,
             "plant_id": plant.id,
             "action": "delete_plant",
             "resource": "plant_routes",

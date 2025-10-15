@@ -25,12 +25,12 @@ class TestPlantUpdateRoutes:
         "user_name,expected_status",
         [
             ("", 401),
-            ("admin", 200),
-            ("moderator", 403),
-            ("authenticated", 403),
+            ("test_admin", 200),
+            ("test_moderator", 403),
+            ("test_authenticated", 403),
         ],
     )
-    async def test_update_plant(
+    async def test_update_plant_any(
         self,
         mock_get_plant_info: AIRecommendations,
         client: AsyncClient,
@@ -39,11 +39,9 @@ class TestPlantUpdateRoutes:
         user_name: str,
         expected_status: int,
     ):
-        create_headers = await get_auth_headers(
-            client=client, user_name="test_admin_user"
-        )
+        create_headers = await get_auth_headers(client=client, user_name="test_user")
 
-        garden = default_gardens.get("admin")
+        garden = default_gardens.get("test_user")
         if isinstance(garden, Garden):
             bed = garden.beds[0]
             plant = await create_plant(
@@ -69,9 +67,9 @@ class TestPlantUpdateRoutes:
     @pytest.mark.parametrize(
         "user_name,expected_status",
         [
-            ("admin", 200),
-            ("moderator", 200),
-            ("authenticated", 200),
+            ("test_admin", 200),
+            ("test_moderator", 200),
+            ("test_authenticated", 200),
         ],
     )
     async def test_update_plant_own(
@@ -112,7 +110,7 @@ class TestPlantUpdateRoutes:
         client: AsyncClient,
         default_user: dict[str, User],
     ):
-        test_as = default_user.get("authenticated", "")
+        test_as = default_user.get("test_authenticated", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
 
@@ -136,11 +134,11 @@ class TestPlantUpdateRoutes:
         default_user: dict[str, User],
         default_gardens: dict[str, Garden],
     ):
-        test_as = default_user.get("tester", "")
+        test_as = default_user.get("test_user", "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
 
-        garden = default_gardens.get("tester")
+        garden = default_gardens.get("test_user")
         if isinstance(garden, Garden):
             bed = garden.beds[0]
             plant = await create_plant(
@@ -157,4 +155,4 @@ class TestPlantUpdateRoutes:
 
             assert new_response.status_code == 401
         else:
-            pytest.fail("No garden found for user tester")
+            pytest.fail("No garden found for user test_user")

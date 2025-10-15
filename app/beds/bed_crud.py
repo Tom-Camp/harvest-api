@@ -46,7 +46,7 @@ class BedCRUD:
         return db_bed
 
     @staticmethod
-    async def get_bed(session: AsyncSession, bed_id: UUID) -> BedRead | None:
+    async def get_bed(session: AsyncSession, bed_id: UUID) -> BedRead:
         """
         Get a Bed object given a bed_id
 
