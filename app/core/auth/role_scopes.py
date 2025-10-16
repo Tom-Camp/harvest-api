@@ -1,4 +1,4 @@
-from app.users.user_models import Role
+from app.models.user_models import Role
 
 ROLE_SCOPES = {
     Role.ADMIN: [

@@ -3,7 +3,7 @@ from typing import Any
 
 import structlog
 
-from app.utils.config import settings
+from app.core.utils.config import settings
 
 
 def get_log_level() -> str:
