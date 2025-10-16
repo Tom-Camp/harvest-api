@@ -117,6 +117,35 @@ class PlantService:
             )
         return plant
 
+    async def add_recommendations(
+        self, plant_id: UUID, recommendations: Recommendations
+    ):
+        """
+        Add the AI generated plant recommendations
+
+        :param plant_id: The plant unique ID
+        :param recommendations: Recommendations; models.recommendation_model.Recommendations
+        """
+
+        plant: Plant | None = await self._db.get(Plant, plant_id)
+        if plant:
+            plant.recommendations = recommendations
+
+            start = time.time()
+
+            self._db.add(plant)
+            await self._db.commit()
+            await self._db.refresh(plant)
+
+            duration_ms = (time.time() - start) * 1000
+            log_handler.log_database_operation(
+                operation="update_plant",
+                table="plant",
+                duration_ms=duration_ms,
+                plant_id=str(plant.id),
+            )
+        return plant
+
     async def delete_plant(self, plant_id: UUID) -> bool:
         """
         Delete plant object by plant_id

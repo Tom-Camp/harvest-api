@@ -3,6 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 
 from app.core.auth.auth import get_current_user
 from app.core.utils.database import AsyncSessionLocal, get_db
@@ -40,23 +41,23 @@ async def create_bed_note(
     """
     Route for creating a bed note.
 
-    :param note: BedNoteCreate; beds.bed_note_schemas.BedNoteCreate
+    :param note: BedNoteCreate; schemas.bed_note_schemas.BedNoteCreate
     :param current_user: User
     :param service: services.bed_note_service.BedNoteService
     :param session: SQLAlchemy AsyncSession
     :return: BedNote
     """
 
-    bed = await session.get(Bed, note.bed_id)
-    if not bed:
-        raise HTTPException(status_code=404, detail="Bed not found")
-
-    garden = await session.get(Garden, bed.garden_id)
-    if not garden:
-        raise HTTPException(status_code=404, detail="Garden not found")
+    statement = (
+        select(Garden.user_id, Garden.id, Bed.id)
+        .join(Bed, Garden.id == Bed.garden_id)
+        .where(Bed.id == note.bed_id)
+    )
+    result = await session.execute(statement)
+    garden_user, garden_id, bed_id = result.first()
 
     check_garden_access(
-        current_user=current_user, garden_user=garden.user_id, scope="ga:up"
+        current_user=current_user, garden_user=garden_user, scope="ga:up"
     )
 
     new_note = await service.create_note(note=note)
@@ -65,7 +66,7 @@ async def create_bed_note(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "garden_id": garden.id,
+            "garden_id": garden_id,
             "bed": new_note.bed_id,
             "note_id": new_note.id,
             "action": "create_bed_note",
@@ -92,23 +93,23 @@ async def read_bed_note(
     :param current_user: User
     :param service: services.bed_note_service.BedNoteService
     :param session: SQLAlchemy AsyncSession
-    :return: BedNoteRead; beds.bed_note_schemas.BedNoteRead
+    :return: BedNoteRead; schems.bed_note_schemas.BedNoteRead
     """
 
     note = await service.get_note(note_id=note_id)
     if not note:
         raise HTTPException(status_code=404, detail="Not found")
 
-    bed = await session.get(Bed, note.bed_id)
-    if not bed:
-        raise HTTPException(status_code=404, detail="Bed not found")
-
-    garden = await session.get(Garden, bed.garden_id)
-    if not garden:
-        raise HTTPException(status_code=404, detail="Garden not found")
+    statement = (
+        select(Garden.user_id, Garden.id, Bed.id)
+        .join(Bed, Garden.id == Bed.garden_id)
+        .where(Bed.id == note.bed_id)
+    )
+    result = await session.execute(statement)
+    garden_user, garden_id, bed_id = result.first()
 
     check_garden_access(
-        current_user=current_user, garden_user=garden.user_id, scope="ga:re"
+        current_user=current_user, garden_user=garden_user, scope="ga:re"
     )
 
     return note
@@ -136,16 +137,16 @@ async def read_bed_notes(
     :param current_user: User
     """
 
-    bed = await session.get(Bed, bed_id)
-    if not bed:
-        raise HTTPException(status_code=404, detail="Bed not found")
-
-    garden = await session.get(Garden, bed.garden_id)
-    if not garden:
-        raise HTTPException(status_code=404, detail="Garden not found")
+    statement = (
+        select(Garden.user_id, Garden.id, Bed.id)
+        .join(Bed, Garden.id == Bed.garden_id)
+        .where(Bed.id == bed_id)
+    )
+    result = await session.execute(statement)
+    garden_user, garden_id, bed_id = result.first()
 
     check_garden_access(
-        current_user=current_user, garden_user=garden.user_id, scope="ga:re"
+        current_user=current_user, garden_user=garden_user, scope="ga:re"
     )
 
     notes = await service.get_notes(
@@ -170,7 +171,7 @@ async def update_bed_note(
     Route for updating a bed note.
 
     :param note_id: UUID
-    :param note_update: BedNoteUpdate object; beds.bed_note_schemas.BedNoteUpdate
+    :param note_update: BedNoteUpdate object; schemas.bed_note_schemas.BedNoteUpdate
     :param service: services.bed_note_service.BedNoteService
     :param session: SQLAlchemy asyncio AsyncSession
     :param current_user: User
@@ -181,16 +182,16 @@ async def update_bed_note(
     if not note:
         raise HTTPException(status_code=404, detail="Not found")
 
-    bed = await session.get(Bed, note.bed_id)
-    if not bed:
-        raise HTTPException(status_code=404, detail="Bed not found")
-
-    garden = await session.get(Garden, bed.garden_id)
-    if not garden:
-        raise HTTPException(status_code=404, detail="Garden not found")
+    statement = (
+        select(Garden.user_id, Garden.id, Bed.id)
+        .join(Bed, Garden.id == Bed.garden_id)
+        .where(Bed.id == note.bed_id)
+    )
+    result = await session.execute(statement)
+    garden_user, garden_id, bed_id = result.first()
 
     check_garden_access(
-        current_user=current_user, garden_user=garden.user_id, scope="ga:re"
+        current_user=current_user, garden_user=garden_user, scope="ga:up"
     )
 
     updated_note = await service.update_note(
@@ -203,7 +204,7 @@ async def update_bed_note(
             context={
                 "actor_id": current_user.id,
                 "actor_username": current_user.username,
-                "garden_id": garden.id,
+                "garden_id": garden_id,
                 "bed_id": updated_note.bed_id,
                 "note_id": updated_note.id,
                 "action": "update_bed_note",
@@ -217,7 +218,7 @@ async def update_bed_note(
 async def delete_bed_note(
     note_id: UUID,
     current_user: Annotated[
-        TokenData, Security(get_current_user, scopes=["ga:de", "ga:de:own"])
+        TokenData, Security(get_current_user, scopes=["ga:up", "ga:up:own"])
     ],
     service: BedNoteService = Depends(get_bed_note_service),
     session: AsyncSession = Depends(get_db),
@@ -236,16 +237,16 @@ async def delete_bed_note(
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
 
-    bed = await session.get(Bed, note.bed_id)
-    if not bed:
-        raise HTTPException(status_code=404, detail="Bed not found")
-
-    garden = await session.get(Garden, bed.garden_id)
-    if not garden:
-        raise HTTPException(status_code=404, detail="Garden not found")
+    statement = (
+        select(Garden.user_id, Garden.id, Bed.id)
+        .join(Bed, Garden.id == Bed.garden_id)
+        .where(Bed.id == note.bed_id)
+    )
+    result = await session.execute(statement)
+    garden_user, garden_id, bed_id = result.first()
 
     check_garden_access(
-        current_user=current_user, garden_user=garden.user_id, scope="ga:re"
+        current_user=current_user, garden_user=garden_user, scope="ga:up"
     )
 
     if not await service.delete_note(note_id=note_id):
@@ -256,8 +257,8 @@ async def delete_bed_note(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "garden_id": bed.garden_id,
-            "bed_id": bed.id,
+            "garden_id": garden_id,
+            "bed_id": bed_id,
             "note_id": note.id,
             "action": "delete_bed_note",
             "resource": "bed_note_routes",

@@ -51,7 +51,8 @@ async def create_plant(
         .join(Bed, Garden.id == Bed.garden_id)
         .where(Bed.id == plant.bed_id)
     )
-    garden_user, garden_id, location, bed_id = session.execute(statement).first()
+    result = await session.execute(statement)
+    garden_user, garden_id, location, bed_id = result.first()
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:up"
@@ -67,9 +68,10 @@ async def create_plant(
     plant_info_mapped = await map_ai_response_to_plant(
         plant_id=new_plant.id, ai_recommendations=plant_info
     )
-    session.add(plant_info_mapped)
-    await session.commit()
-    await session.refresh(new_plant)
+    plant_update = await service.add_recommendations(
+        plant_id=new_plant.id,
+        recommendations=plant_info_mapped,
+    )
 
     log_handler.log_garden_event(
         event="Plant create",
@@ -85,7 +87,7 @@ async def create_plant(
         },
     )
 
-    return new_plant
+    return plant_update
 
 
 @plant_router.get("/{plant_id}", response_model=PlantRead)
@@ -112,11 +114,12 @@ async def read_plant(
         raise HTTPException(status_code=404, detail="Plant not found")
 
     statement = (
-        select(Garden.user_id)
+        select(Garden.user_id, Garden.name)
         .join(Bed, Garden.id == Bed.garden_id)
         .where(Bed.id == plant.bed_id)
     )
-    garden_user = session.execute(statement).first()
+    result = await session.execute(statement)
+    garden_user, _ = result.first()
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:re"
@@ -155,7 +158,8 @@ async def update_plant(
         .join(Bed, Garden.id == Bed.garden_id)
         .where(Bed.id == plant.bed_id)
     )
-    garden_id, garden_user, location, bed_id = session.execute(statement).first()
+    result = await session.execute(statement)
+    garden_id, garden_user, location, bed_id = result.first()
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:up"
@@ -179,9 +183,10 @@ async def update_plant(
         plant_info_mapped = await map_ai_response_to_plant(
             plant_id=updated_plant.id, ai_recommendations=plant_info
         )
-        session.add(plant_info_mapped)
-        await session.commit()
-        await session.refresh(updated_plant)
+        updated_plant = await service.add_recommendations(
+            plant_id=plant_id,
+            recommendations=plant_info_mapped,
+        )
 
     if updated_plant:
         log_handler.log_garden_event(
@@ -223,11 +228,12 @@ async def delete_bed(
         raise HTTPException(status_code=404, detail="Plant not found")
 
     statement = (
-        select(Garden.id, Garden.user_id, Garden.location, Bed.id)
+        select(Garden.id, Garden.user_id, Bed.id)
         .join(Bed, Garden.id == Bed.garden_id)
         .where(Bed.id == plant.bed_id)
     )
-    garden_id, garden_user, location, bed_id = session.execute(statement).first()
+    result = await session.execute(statement)
+    garden_id, garden_user, bed_id = result.first()
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:de"

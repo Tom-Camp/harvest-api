@@ -3,6 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 
 from app.core.auth.auth import get_current_user
 from app.core.utils.database import AsyncSessionLocal, get_db
@@ -33,9 +34,9 @@ async def create_bed(
     session: AsyncSession = Depends(get_db),
 ) -> Bed:
     """
-    Route to create a new bed in casbin.
+    Route to create a new bed.
 
-    :param bed: BedCreate object; beds.bed_schemas.BedCreate
+    :param bed: BedCreate object; schemas.bed_schemas.BedCreate
     :param current_user: The User accessing the route
     :param service: BedService; services.bed_service.BedService
     :param session: SQLAlchemy asyncio AsyncSession
@@ -83,7 +84,7 @@ async def read_beds(
     :param current_user: The User accessing the route
     :param service: BedService; services.bed_service.BedService
     :param session: SQLAlchemy asyncio AsyncSession
-    :return: list[BedList]; beds.bed_schema.BedList
+    :return: list[BedList]; schemas.bed_schemas.BedList
     """
 
     garden = await session.get(Garden, garden_id)
@@ -114,7 +115,7 @@ async def read_bed(
     :param current_user: User
     :param service: BedService; services.bed_service.BedService
     :param session: SQLAlchemy asyncio AsyncSession
-    :return: BedRead; beds.bed_schema.BedRead
+    :return: BedRead; schemas.bed_schema.BedRead
     """
 
     bed = await service.get_bed(bed_id=bed_id)
@@ -146,23 +147,23 @@ async def update_bed(
     Route to update a bed
 
     :param bed_id: Bed UUID
-    :param bed_update: BedUpdate object; beds.bed_schemas.BedUpdate
+    :param bed_update: BedUpdate object; schemas.bed_schemas.BedUpdate
     :param current_user: User
     :param service: BedService; services.bed_service.BedService
     :param session: SQLAlchemy asyncio AsyncSession
-    :return: Bed; beds.bed_models.Bed
+    :return: Bed; models.bed_models.Bed
     """
 
-    bed = await service.get_bed(bed_id=bed_id)
-    if not bed:
-        raise HTTPException(status_code=404, detail="Bed not found")
-
-    garden = await session.get(Garden, bed.garden_id)
-    if not garden:
-        raise HTTPException(status_code=404, detail="Garden not found")
+    statement = (
+        select(Garden.user_id, Garden.id, Bed.id)
+        .join(Bed, Garden.id == Bed.garden_id)
+        .where(Bed.id == bed_id)
+    )
+    result = await session.execute(statement)
+    garden_user, garden_id, bed_id = result.first()
 
     check_garden_access(
-        current_user=current_user, garden_user=garden.user_id, scope="ga:up"
+        current_user=current_user, garden_user=garden_user, scope="ga:up"
     )
 
     updated_bed = await service.update_bed(bed_id=bed_id, bed_update=bed_update)
@@ -201,16 +202,16 @@ async def delete_bed(
     :return: dict
     """
 
-    bed = await service.get_bed(bed_id=bed_id)
-    if not bed:
-        raise HTTPException(status_code=404, detail="Bed not found")
-
-    garden = await session.get(Garden, bed.garden_id)
-    if not garden:
-        raise HTTPException(status_code=404, detail="Garden not found")
+    statement = (
+        select(Garden.user_id, Garden.id, Bed.id, Bed.name)
+        .join(Bed, Garden.id == Bed.garden_id)
+        .where(Bed.id == bed_id)
+    )
+    result = await session.execute(statement)
+    garden_user, garden_id, bed_id, bed_name = result.first()
 
     check_garden_access(
-        current_user=current_user, garden_user=garden.user_id, scope="ga:de"
+        current_user=current_user, garden_user=garden_user, scope="ga:up"
     )
 
     if not await service.delete_bed(bed_id=bed_id):
@@ -221,9 +222,9 @@ async def delete_bed(
         context={
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "garden_id": bed.garden_id,
-            "bed_id": bed.id,
-            "bed_name": bed.name,
+            "garden_id": garden_id,
+            "bed_id": bed_id,
+            "bed_name": bed_name,
             "action": "delete_bed",
             "resource": "bed_routes",
         },
