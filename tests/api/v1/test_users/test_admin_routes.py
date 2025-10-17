@@ -3,7 +3,7 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
-from app.users.user_models import User
+from app.models.user_models import User
 from tests.helpers.test_helpers import get_auth_headers
 
 
@@ -91,13 +91,13 @@ class TestAdminRoutes:
         test_as = default_user.get(user_name, "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
-        user_user = default_user.get("test_authenticated")
-        if isinstance(user_user, User):
+        auth_user = default_user.get("test_user")
+        if isinstance(auth_user, User):
             response = await client.post(
                 url="/api/admin/remove-role",
                 json={
-                    "user_id": str(user_user.id),
-                    "username": user_user.username,
+                    "user_id": str(auth_user.id),
+                    "username": auth_user.username,
                     "role_name": "moderator",
                 },
                 headers=headers,
@@ -147,13 +147,13 @@ class TestAdminRoutes:
         test_as = default_user.get(user_name, "")
         username = test_as.username if isinstance(test_as, User) else None
         headers = await get_auth_headers(client=client, user_name=username)
-        user_user = default_user.get("test_user")
-        if isinstance(user_user, User):
+        auth_user = default_user.get("test_user")
+        if isinstance(auth_user, User):
             response = await client.post(
                 url="/api/admin/check-permission",
                 json={
-                    "user_id": str(user_user.id),
-                    "username": user_user.username,
+                    "user_id": str(auth_user.id),
+                    "username": auth_user.username,
                     "resource": "policy",
                     "action": "read",
                 },

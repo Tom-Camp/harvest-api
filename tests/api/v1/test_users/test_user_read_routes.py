@@ -3,7 +3,7 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
-from app.users.user_models import User
+from app.models.user_models import User
 from tests.helpers.test_helpers import get_auth_headers
 
 

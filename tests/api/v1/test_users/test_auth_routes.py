@@ -1,7 +1,7 @@
 import pytest
 from httpx import AsyncClient
 
-from app.users.user_models import User
+from app.models.user_models import User
 
 
 class TestAuthRoutes:

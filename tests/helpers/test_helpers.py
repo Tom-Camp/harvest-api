@@ -2,7 +2,7 @@ from typing import Dict
 
 from httpx import AsyncClient
 
-from app.ai.models.ai_recommendation_model import (
+from app.models.ai_recommendation_model import (
     AIRecommendations,
     CareInstructions,
     LifeCycle,
