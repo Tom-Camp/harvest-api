@@ -8,6 +8,10 @@ from app.services.user_service import UserService
 logger = get_logger(__name__)
 
 
+def get_init_service() -> UserService:
+    return UserService(session=AsyncSessionLocal)
+
+
 async def setup_initial_admin():
     """Sets up the initial admin user"""
 
@@ -19,7 +23,7 @@ async def setup_initial_admin():
         role=Role.ADMIN,
     )
 
-    service = UserService(session=AsyncSessionLocal())
+    service = get_init_service()
     existing_admin = await service.get_user_by_username(username=admin_data.username)
     if not existing_admin:
         admin_user = await service.create_user(user=admin_data)

@@ -92,20 +92,20 @@ class GardenService:
         start = time.time()
 
         result = await self._db.execute(statement)
-        garden = result.scalars().all()
+        gardens = result.scalars().all()
 
         duration_ms = (time.time() - start) * 1000
         log_handler.log_database_operation(
             operation="get_gardens",
             table="garden",
             duration_ms=duration_ms,
-            list_length=len(garden),
+            list_length=len(gardens),
         )
-        return garden
+        return gardens
 
     async def get_user_gardens(
         self, user_id: UUID, skip: int = 0, limit: int = 100
-    ) -> Sequence[Garden | None]:
+    ) -> Sequence[Garden] | None:
         """
         Get all Gardens for a given user
 

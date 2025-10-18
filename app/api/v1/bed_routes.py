@@ -160,7 +160,11 @@ async def update_bed(
         .where(Bed.id == bed_id)
     )
     result = await session.execute(statement)
-    garden_user, garden_id, bed_id = result.first()
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    garden_user, garden_id, bed_id = row
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:up"
@@ -208,7 +212,10 @@ async def delete_bed(
         .where(Bed.id == bed_id)
     )
     result = await session.execute(statement)
-    garden_user, garden_id, bed_id, bed_name = result.first()
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    garden_user, garden_id, bed_id, bed_name = row
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:up"

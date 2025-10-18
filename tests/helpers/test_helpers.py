@@ -40,6 +40,19 @@ async def get_auth_headers(
     return headers
 
 
+async def create_bed(client: AsyncClient, garden_id: str, headers: dict):
+    response = await client.post(
+        url="/api/beds",
+        json={
+            "name": "Test Bed",
+            "description": "Bed for testing",
+            "garden_id": garden_id,
+        },
+        headers=headers,
+    )
+    return response.json()
+
+
 async def create_plant(client: AsyncClient, bed_id: str, headers: dict):
     response = await client.post(
         url="/api/plants/",

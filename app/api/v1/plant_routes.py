@@ -52,7 +52,10 @@ async def create_plant(
         .where(Bed.id == plant.bed_id)
     )
     result = await session.execute(statement)
-    garden_user, garden_id, location, bed_id = result.first()
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    garden_user, garden_id, location, bed_id = row
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:up"
@@ -119,7 +122,10 @@ async def read_plant(
         .where(Bed.id == plant.bed_id)
     )
     result = await session.execute(statement)
-    garden_user, _ = result.first()
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    garden_user = row[0]
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:re"
@@ -159,7 +165,10 @@ async def update_plant(
         .where(Bed.id == plant.bed_id)
     )
     result = await session.execute(statement)
-    garden_id, garden_user, location, bed_id = result.first()
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    garden_id, garden_user, location, bed_id = row
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:up"
@@ -233,7 +242,10 @@ async def delete_bed(
         .where(Bed.id == plant.bed_id)
     )
     result = await session.execute(statement)
-    garden_id, garden_user, bed_id = result.first()
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    garden_id, garden_user, bed_id = row
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:de"

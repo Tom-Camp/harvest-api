@@ -55,7 +55,11 @@ async def create_plant_note(
         .join(Plant, Bed.id == Plant.bed_id)
         .where(Plant.id == note.plant_id)
     )
-    garden_user, garden_id = session.execute(statement).first()
+    results = await session.execute(statement)
+    row = results.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    garden_user, garden_id = row
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:up"
@@ -107,11 +111,12 @@ async def read_plant_note(
         .join(Plant, Bed.id == Plant.bed_id)
         .where(Plant.id == note.plant_id)
     )
-    garden_user = session.execute(statement).first()
+    results = await session.execute(statement)
+    row = results.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
 
-    check_garden_access(
-        current_user=current_user, garden_user=garden_user, scope="ga:re"
-    )
+    check_garden_access(current_user=current_user, garden_user=row[0], scope="ga:re")
 
     return note
 
@@ -144,11 +149,12 @@ async def read_plant_notes(
         .join(Plant, Bed.id == Plant.bed_id)
         .where(Plant.id == plant_id)
     )
-    garden_user = session.execute(statement).first()
+    result = await session.execute(statement)
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
 
-    check_garden_access(
-        current_user=current_user, garden_user=garden_user, scope="ga:re"
-    )
+    check_garden_access(current_user=current_user, garden_user=row[0], scope="ga:re")
 
     notes = await service.get_notes(plant_id=plant_id, skip=skip, limit=limit)
     return [PlantNoteList.model_validate(note) for note in notes]
@@ -185,7 +191,11 @@ async def update_plant_note(
         .join(Plant, Bed.id == Plant.bed_id)
         .where(Plant.id == note.plant_id)
     )
-    garden_user, garden_id = session.execute(statement).first()
+    results = await session.execute(statement)
+    row = results.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    garden_user, garden_id = row
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:up"
@@ -237,7 +247,11 @@ async def delete_plant_note(
         .join(Plant, Bed.id == Plant.bed_id)
         .where(Plant.id == note.plant_id)
     )
-    garden_user, garden_id = session.execute(statement).first()
+    results = await session.execute(statement)
+    row = results.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    garden_user, garden_id = row
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:de"

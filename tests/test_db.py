@@ -19,7 +19,7 @@ engine: AsyncEngine = create_async_engine(
 TestingSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_test_db() -> AsyncGenerator[AsyncSession, None]:
     async with TestingSessionLocal() as session:
         yield session
 

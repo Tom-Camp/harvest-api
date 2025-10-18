@@ -54,7 +54,10 @@ async def create_bed_note(
         .where(Bed.id == note.bed_id)
     )
     result = await session.execute(statement)
-    garden_user, garden_id, bed_id = result.first()
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    garden_user, garden_id, bed_id = row
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:up"
@@ -106,7 +109,10 @@ async def read_bed_note(
         .where(Bed.id == note.bed_id)
     )
     result = await session.execute(statement)
-    garden_user, garden_id, bed_id = result.first()
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    garden_user, garden_id, bed_id = row
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:re"
@@ -143,7 +149,10 @@ async def read_bed_notes(
         .where(Bed.id == bed_id)
     )
     result = await session.execute(statement)
-    garden_user, garden_id, bed_id = result.first()
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    garden_user, garden_id, bed_id = row
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:re"
@@ -188,7 +197,10 @@ async def update_bed_note(
         .where(Bed.id == note.bed_id)
     )
     result = await session.execute(statement)
-    garden_user, garden_id, bed_id = result.first()
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    garden_user, garden_id, bed_id = row
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:up"
@@ -243,7 +255,10 @@ async def delete_bed_note(
         .where(Bed.id == note.bed_id)
     )
     result = await session.execute(statement)
-    garden_user, garden_id, bed_id = result.first()
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    garden_user, garden_id, bed_id = row
 
     check_garden_access(
         current_user=current_user, garden_user=garden_user, scope="ga:up"

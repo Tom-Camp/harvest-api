@@ -100,7 +100,9 @@ async def read_user_gardens(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    gardens = await service.get_user_gardens(user_id=user_id, skip=skip, limit=limit)
+    gardens = (
+        await service.get_user_gardens(user_id=user_id, skip=skip, limit=limit) or []
+    )
     return [GardenList.model_validate(garden) for garden in gardens]
 
 
@@ -123,8 +125,9 @@ async def read_my_gardens(
     :return: The list of GardenList objects; gardens.garden_schemas.GardenList
     """
 
-    gardens = await service.get_user_gardens(current_user.id, skip=skip, limit=limit)
-
+    gardens = (
+        await service.get_user_gardens(current_user.id, skip=skip, limit=limit) or []
+    )
     return [GardenList.model_validate(garden) for garden in gardens]
 
 
