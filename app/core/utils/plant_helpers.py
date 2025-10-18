@@ -1,7 +1,7 @@
 from uuid import UUID
 
-from app.ai.models.ai_recommendation_model import AIRecommendations
-from app.plants.recommendation_model import (
+from app.models.ai_recommendation_model import AIRecommendations
+from app.models.recommendation_model import (
     CareInstructions,
     GrowingTips,
     Pest,
@@ -17,8 +17,8 @@ async def map_ai_response_to_plant(
     Map the AIRecommendation object to the Plant Recommendations model.
 
     :param plant_id: The unique ID for the plant
-    :param ai_recommendations: The AIRecommendations object; ai.modes.ai_recommendations.AIRecommendations
-    :return: Recommendations object; plants.recommendations_model.Recommendations
+    :param ai_recommendations: The AIRecommendations object; app.models.ai_recommendations.AIRecommendations
+    :return: Recommendations object; models.recommendations_model.Recommendations
     """
     growing_tips = [
         GrowingTips(tips=tip.tips) for tip in ai_recommendations.growing_tips

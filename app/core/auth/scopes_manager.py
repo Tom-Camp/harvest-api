@@ -2,7 +2,7 @@ from uuid import UUID
 
 from app.core.auth.role_scopes import ROLE_SCOPES
 from app.core.auth.scopes import SCOPES
-from app.users.user_models import Role
+from app.models.user_models import Role
 
 
 class ScopesManager:

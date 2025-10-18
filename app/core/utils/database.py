@@ -8,19 +8,19 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlmodel import SQLModel
 
-SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+from app.core.utils.config import settings
 
 engine: AsyncEngine = create_async_engine(
-    SQLALCHEMY_DATABASE_URL,
+    settings.async_database_url,
     echo=False,
     future=True,
 )
 
-TestingSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
+AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 
-async def get_test_db() -> AsyncGenerator[AsyncSession, None]:
-    async with TestingSessionLocal() as session:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSessionLocal() as session:
         yield session
 
 

@@ -4,10 +4,10 @@ from pydantic_ai import Agent
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.providers.google import GoogleProvider
 
-from app.ai.models.ai_recommendation_model import AIRecommendations
 from app.ai.prompts.new_plant import new_plant_prompt
+from app.core.utils.config import settings
 from app.logging import get_logger, log_handler
-from app.utils.config import settings
+from app.models.ai_recommendation_model import AIRecommendations
 
 logger = get_logger(__name__)
 

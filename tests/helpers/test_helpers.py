@@ -2,7 +2,7 @@ from typing import Dict
 
 from httpx import AsyncClient
 
-from app.ai.models.ai_recommendation_model import (
+from app.models.ai_recommendation_model import (
     AIRecommendations,
     CareInstructions,
     LifeCycle,
@@ -38,6 +38,19 @@ async def get_auth_headers(
         )
         headers["Authorization"] = f"Bearer {get_token.json().get('access_token')}"
     return headers
+
+
+async def create_bed(client: AsyncClient, garden_id: str, headers: dict):
+    response = await client.post(
+        url="/api/beds",
+        json={
+            "name": "Test Bed",
+            "description": "Bed for testing",
+            "garden_id": garden_id,
+        },
+        headers=headers,
+    )
+    return response.json()
 
 
 async def create_plant(client: AsyncClient, bed_id: str, headers: dict):
