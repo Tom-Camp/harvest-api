@@ -79,6 +79,33 @@ class UserService:
 
         return user
 
+    async def get_user_with_roles(self, user_id: UUID) -> User | None:
+        """
+        Get a user by username
+
+        :param user_id: The user's unique ID
+        :return: The User or None
+        """
+
+        statement = (
+            select(User).options(selectinload(User.roles)).where(User.id == user_id)
+        )
+
+        start = time.time()
+
+        result = await self._db.execute(statement)
+        user = result.scalars().first()
+        uid = str(user.id) if isinstance(user, User) else "none"
+
+        duration_ms = (time.time() - start) * 1000
+        log_handler.log_database_operation(
+            operation="get_user_by_username",
+            table="user",
+            duration_ms=duration_ms,
+            user_id=uid,
+        )
+        return user
+
     async def get_user_by_username(self, username: str) -> User | None:
         """
         Get a user by username

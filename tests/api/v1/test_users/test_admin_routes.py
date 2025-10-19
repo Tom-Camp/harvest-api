@@ -32,10 +32,9 @@ class TestAdminRoutes:
         user_user = default_user.get("test_user")
         if isinstance(user_user, User):
             response = await client.post(
-                url="/api/admin/assign-role",
+                url="/api/admin/role/assign",
                 json={
                     "user_id": str(user_user.id),
-                    "username": user_user.username,
                     "role_name": "moderator",
                 },
                 headers=headers,
@@ -61,10 +60,9 @@ class TestAdminRoutes:
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
         response = await client.post(
-            url="/api/admin/assign-role",
+            url="/api/admin/role/assign",
             json={
                 "user_id": str(bad_id),
-                "username": "bad_id",
                 "role_name": "moderator",
             },
             headers=headers,
@@ -91,13 +89,12 @@ class TestAdminRoutes:
         test_as = default_user.get(user_name, "")
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
-        auth_user = default_user.get("test_user")
+        auth_user = default_user.get("test_moderator")
         if isinstance(auth_user, User):
             response = await client.post(
-                url="/api/admin/remove-role",
+                url="/api/admin/role/remove",
                 json={
                     "user_id": str(auth_user.id),
-                    "username": auth_user.username,
                     "role_name": "moderator",
                 },
                 headers=headers,
@@ -117,10 +114,9 @@ class TestAdminRoutes:
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
         response = await client.post(
-            url="/api/admin/remove-role",
+            url="/api/admin/role/remove",
             json={
                 "user_id": str(bad_id),
-                "username": "bad_id",
                 "role_name": "moderator",
             },
             headers=headers,
@@ -149,14 +145,8 @@ class TestAdminRoutes:
         headers = await get_auth_headers(client=client, user_name=username)
         auth_user = default_user.get("test_user")
         if isinstance(auth_user, User):
-            response = await client.post(
-                url="/api/admin/check-permission",
-                json={
-                    "user_id": str(auth_user.id),
-                    "username": auth_user.username,
-                    "resource": "policy",
-                    "action": "read",
-                },
+            response = await client.get(
+                url=f"/api/admin/role/permissions/{auth_user.id}",
                 headers=headers,
             )
             assert response.status_code == expected_status
@@ -177,14 +167,8 @@ class TestAdminRoutes:
         username = test_as.username if isinstance(test_as, User) else ""
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
-        response = await client.post(
-            url="/api/admin/check-permission",
-            json={
-                "user_id": str(bad_id),
-                "username": "bad_id",
-                "resource": "policy",
-                "action": "read",
-            },
+        response = await client.get(
+            url=f"/api/admin/role/permissions/{bad_id}",
             headers=headers,
         )
         assert response.status_code == 404
@@ -209,16 +193,16 @@ class TestAdminRoutes:
         test_as = default_user.get(user_name, "")
         username = test_as.username if isinstance(test_as, User) else None
         headers = await get_auth_headers(client=client, user_name=username)
-        moderator_user = default_user.get("test_moderator")
+        moderator_user = default_user.get("test_user")
         if isinstance(moderator_user, User):
             response = await client.get(
-                url=f"/api/admin/user-role/{moderator_user.id}",
+                url=f"/api/admin/roles/{moderator_user.id}",
                 headers=headers,
             )
             assert response.status_code == expected_status
             if response.status_code == 200:
-                role = response.json()
-                assert role.get("role", "") == "moderator"
+                roles = response.json()
+                assert "authenticated" in roles
         else:
             pytest.fail("No User found for user moderator")
 
@@ -233,7 +217,7 @@ class TestAdminRoutes:
         headers = await get_auth_headers(client=client, user_name=username)
         bad_id = uuid.uuid4()
         response = await client.get(
-            url=f"/api/admin/user-roles/{bad_id}",
+            url=f"/api/admin/roles/{bad_id}",
             headers=headers,
         )
         assert response.status_code == 404

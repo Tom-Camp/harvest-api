@@ -12,13 +12,13 @@ from app.api.v1.plant_notes_routes import get_plant_note_service
 from app.api.v1.plant_routes import get_plant_service
 from app.api.v1.user_routes import get_user_service
 from app.core.auth.auth import get_current_user_service
+from app.core.auth.auth_helpers import get_password_hash
 from app.core.utils.database import get_db
 from app.main import app
 from app.models.garden_models import Garden
 from app.models.page_models import Page
+from app.models.role_models import Role
 from app.models.user_models import User
-from app.schemas.garden_schemas import GardenCreate
-from app.schemas.user_schemas import UserCreate
 from app.services.bed_note_service import BedNoteService
 from app.services.bed_service import BedService
 from app.services.garden_note_service import GardenNoteService
@@ -26,7 +26,6 @@ from app.services.garden_service import GardenService
 from app.services.page_service import PageService
 from app.services.plant_note_service import PlantNoteService
 from app.services.plant_service import PlantService
-from app.services.role_service import RoleService
 from app.services.user_service import UserService
 from tests.test_db import TestingSessionLocal, engine, metadata
 
@@ -111,10 +110,31 @@ async def client(db_session):
 
 
 @pytest_asyncio.fixture(loop_scope="function", scope="function")
-async def default_user(db_session):
-    service = UserService(session=db_session)
-    role_service = RoleService(session=db_session)
-    user_dict: dict[str, User] = dict()
+async def default_roles(db_session):
+    roles: list = [
+        Role(
+            name="administrator",
+            description="Administrator with full access",
+        ),
+        Role(
+            name="moderator",
+            description="Can edit some content",
+        ),
+        Role(
+            name="authenticated",
+            description="Can create gardens",
+        ),
+    ]
+
+    db_session.add_all(roles),
+    await db_session.commit()
+    yield {role.name: role for role in roles}
+
+
+@pytest_asyncio.fixture(loop_scope="function", scope="function")
+async def default_user(db_session, default_roles):
+    user_list: list[User] = []
+    hashed_password = get_password_hash(password="UkeV3BNUIL7xn0J")
     test_user_list: dict = {
         "test_admin": "administrator",
         "test_moderator": "moderator",
@@ -122,19 +142,21 @@ async def default_user(db_session):
         "test_user": "authenticated",
     }
     for test_user, role in test_user_list.items():
-        user_in = UserCreate(
-            username=f"{test_user}",
-            email=f"{test_user}@example.com",
-            password="UkeV3BNUIL7xn0J",
+        roles = [default_roles.get("authenticated")]
+        if role != "authenticated":
+            roles.append(default_roles.get(role))
+        user_list.append(
+            User(
+                username=f"{test_user}",
+                email=f"{test_user}@example.com",
+                hashed_password=hashed_password,
+                roles=roles,
+            )
         )
-        user: User = await service.create_user(user=user_in)
-        db_role = await role_service.get_role_by_name(role_name=role)
-        new_user = await service.add_user_role(
-            user_id=user.id,
-            role=db_role,
-        )
-        user_dict[f"{test_user}"] = new_user
-    yield user_dict
+    db_session.add_all(user_list)
+    await db_session.commit()
+
+    yield {user.username: user for user in user_list}
 
 
 @pytest_asyncio.fixture(loop_scope="function", scope="function")
@@ -160,16 +182,18 @@ async def default_pages(default_user, db_session):
 
 @pytest_asyncio.fixture(loop_scope="function", scope="function")
 async def default_gardens(default_user, db_session):
-    service = GardenService(session=TestingSessionLocal())
-    garden_dict: dict[str, Garden] = dict()
+    garden_list: list[Garden] = []
     for role, user in default_user.items():
-        garden_dict[user.username] = await service.create_garden(
-            garden=GardenCreate(
+        garden_list.append(
+            Garden(
                 name="Default garden",
                 description="Garden added when user created",
                 location="Lebanon, Kansas",
                 is_private=False,
+                user_id=user.id,
             ),
-            user_id=user.id,
         )
-    yield garden_dict
+    db_session.add_all(garden_list)
+    await db_session.commit()
+    user_lookup = {user.id: user.username for _, user in default_user.items()}
+    yield {user_lookup.get(garden.user_id): garden for garden in garden_list}
