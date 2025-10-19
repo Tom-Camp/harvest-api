@@ -11,6 +11,8 @@ class PlantCreate(BaseModel):
     species: str
     variety: str | None = None
     germination_date: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
     planted_date: datetime | None = None
     bed_id: UUID
 
