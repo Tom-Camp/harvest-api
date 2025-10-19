@@ -3,17 +3,15 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 from app.models.model_base import ModelBase
-from app.models.user_models import Role, UserBase
+from app.models.user_models import UserBase
 
 
 class UserCreate(BaseModel):
     password: str
     username: str
     email: EmailStr
-    location: str | None = None
     first_name: str | None = None
     last_name: str | None = None
-    role: Role | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -25,10 +23,6 @@ class UserUpdate(BaseModel):
     last_name: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class UserUpdateRole(BaseModel):
-    role: Role
 
 
 class UserRead(ModelBase, UserBase):
