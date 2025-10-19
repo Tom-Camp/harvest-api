@@ -13,13 +13,12 @@ from app.api.v1.plant_routes import get_plant_service
 from app.api.v1.user_routes import get_user_service
 from app.core.auth.auth import get_current_user_service
 from app.core.utils.database import get_db
-from app.core.utils.initialize import get_init_service
 from app.main import app
 from app.models.garden_models import Garden
 from app.models.page_models import Page
-from app.models.user_models import Role, User
+from app.models.user_models import User
 from app.schemas.garden_schemas import GardenCreate
-from app.schemas.user_schemas import UserCreate, UserUpdateRole
+from app.schemas.user_schemas import UserCreate
 from app.services.bed_note_service import BedNoteService
 from app.services.bed_service import BedService
 from app.services.garden_note_service import GardenNoteService
@@ -27,6 +26,7 @@ from app.services.garden_service import GardenService
 from app.services.page_service import PageService
 from app.services.plant_note_service import PlantNoteService
 from app.services.plant_service import PlantService
+from app.services.role_service import RoleService
 from app.services.user_service import UserService
 from tests.test_db import TestingSessionLocal, engine, metadata
 
@@ -75,9 +75,6 @@ async def client(db_session):
     def override_get_garden_service():
         yield GardenService(session=db_session)
 
-    def override_get_init_service():
-        yield UserService(session=db_session)
-
     def override_get_plant_note_service():
         yield PlantNoteService(session=db_session)
 
@@ -100,7 +97,6 @@ async def client(db_session):
     app.dependency_overrides[get_bed_service] = override_get_bed_service
     app.dependency_overrides[get_garden_note_service] = override_get_garden_note_service
     app.dependency_overrides[get_garden_service] = override_get_garden_service
-    app.dependency_overrides[get_init_service] = override_get_init_service
     app.dependency_overrides[get_plant_note_service] = override_get_plant_note_service
     app.dependency_overrides[get_plant_service] = override_get_plant_service
     app.dependency_overrides[get_page_service] = override_get_page_service
@@ -117,6 +113,7 @@ async def client(db_session):
 @pytest_asyncio.fixture(loop_scope="function", scope="function")
 async def default_user(db_session):
     service = UserService(session=db_session)
+    role_service = RoleService(session=db_session)
     user_dict: dict[str, User] = dict()
     test_user_list: dict = {
         "test_admin": "administrator",
@@ -131,9 +128,10 @@ async def default_user(db_session):
             password="UkeV3BNUIL7xn0J",
         )
         user: User = await service.create_user(user=user_in)
-        new_user = await service.update_user_role(
+        db_role = await role_service.get_role_by_name(role_name=role)
+        new_user = await service.add_user_role(
             user_id=user.id,
-            role=UserUpdateRole(role=Role(role)),
+            role=db_role,
         )
         user_dict[f"{test_user}"] = new_user
     yield user_dict

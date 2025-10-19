@@ -4,12 +4,14 @@ from uuid import UUID
 
 from pydantic import EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from app.core.auth.auth_helpers import get_password_hash
 from app.logging import get_logger, log_handler
+from app.models.role_models import Role
 from app.models.user_models import User
-from app.schemas.user_schemas import UserCreate, UserUpdate, UserUpdateRole
+from app.schemas.user_schemas import UserCreate, UserUpdate
 
 logger = get_logger(__name__)
 
@@ -33,6 +35,12 @@ class UserService:
             email=user.email,
             hashed_password=hashed_password,
         )
+
+        statement = select(Role).where(Role.name == "authenticated")
+        result = await self._db.execute(statement)
+        auth_role = result.scalars().first()
+        if auth_role:
+            db_user.roles.append(auth_role)
 
         start = time.time()
 
@@ -79,7 +87,11 @@ class UserService:
         :return: The User or None
         """
 
-        statement = select(User).where(User.username == username)
+        statement = (
+            select(User)
+            .options(selectinload(User.roles))
+            .where(User.username == username)
+        )
 
         start = time.time()
 
@@ -176,7 +188,40 @@ class UserService:
             )
         return user
 
-    async def update_user_role(self, user_id: UUID, role: UserUpdateRole) -> User:
+    async def add_user_role(self, user_id: UUID, role: Role) -> User:
+        """
+        Update a user
+
+        :param user_id: The UUID of the user
+        :param role: The UserUpdateRole object
+        :return: The User or None
+        """
+
+        start = time.time()
+        logger.info(f"ROLE: {role.name}")
+        statement = (
+            select(User).options(selectinload(User.roles)).where(User.id == user_id)
+        )
+
+        result = await self._db.execute(statement)
+        user = result.scalars().first()
+        if user:
+            user.roles.append(role)
+
+            self._db.add(user)
+            await self._db.commit()
+            await self._db.refresh(user)
+
+            duration_ms = (time.time() - start) * 1000
+            log_handler.log_database_operation(
+                operation="add_user_role",
+                table="user",
+                duration_ms=duration_ms,
+                user_id=str(user.id),
+            )
+        return user
+
+    async def remove_user_role(self, user_id: UUID, role: Role) -> User:
         """
         Update a user
 
@@ -187,7 +232,7 @@ class UserService:
 
         user = await self._db.get(User, user_id)
         if user:
-            user.role = role.role
+            user.roles.remove(role)
 
             start = time.time()
 
@@ -197,7 +242,7 @@ class UserService:
 
             duration_ms = (time.time() - start) * 1000
             log_handler.log_database_operation(
-                operation="update_user_role",
+                operation="remove_user_role",
                 table="user",
                 duration_ms=duration_ms,
                 user_id=str(user.id),

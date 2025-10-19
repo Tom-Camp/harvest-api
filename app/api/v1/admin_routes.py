@@ -2,6 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Security
+from sqlmodel import select
 
 from app.core.auth.auth import get_current_user
 from app.core.auth.scopes_manager import ScopesManager
@@ -9,8 +10,7 @@ from app.core.utils.database import AsyncSessionLocal
 from app.logging import get_logger, log_handler
 from app.models.user_models import Role
 from app.schemas.auth_schemas import TokenData
-from app.schemas.permission_schemas import PermissionCheck, RoleRequest
-from app.schemas.user_schemas import UserUpdateRole
+from app.schemas.permission_schemas import RoleRequest
 from app.services.user_service import UserService
 
 logger = get_logger(__name__)
@@ -22,7 +22,7 @@ def get_admin_service() -> UserService:
     return UserService(session=AsyncSessionLocal())
 
 
-@admin_router.post("/assign-role")
+@admin_router.post("/role/assign")
 async def assign_role(
     role_request: RoleRequest,
     current_user: Annotated[TokenData, Security(get_current_user, scopes=["ad:ar"])],
@@ -41,9 +41,16 @@ async def assign_role(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    user = await service.update_user_role(
+    session = AsyncSessionLocal()
+    statement = select(Role).where(Role.name == role_request.role_name)
+    result = await session.execute(statement)
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    user = await service.add_user_role(
         user_id=user.id,
-        role=UserUpdateRole(role=Role(role_request.role_name)),
+        role=row[0],
     )
     log_handler.log_security_event(
         "Role assigned to user",
@@ -65,7 +72,7 @@ async def assign_role(
     }
 
 
-@admin_router.post("/remove-role")
+@admin_router.post("/role/remove")
 async def remove_role(
     role_request: RoleRequest,
     current_user: Annotated[TokenData, Security(get_current_user, scopes=["ad:rr"])],
@@ -83,9 +90,16 @@ async def remove_role(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    user = await service.update_user_role(
+    session = AsyncSessionLocal()
+    statement = select(Role).where(Role.name == role_request.role_name)
+    result = await session.execute(statement)
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    user = await service.remove_user_role(
         user_id=user.id,
-        role=UserUpdateRole(role=Role.AUTHENTICATED),
+        role=row[0],
     )
 
     log_handler.log_security_event(
@@ -104,30 +118,31 @@ async def remove_role(
     )
 
     return {
-        "message": f"Role '{role_request.role_name}' removed from user '{role_request.username}'"
+        "message": f"Role '{role_request.role_name}' removed from user '{user.username}'"
     }
 
 
-@admin_router.post("/check-permission")
+@admin_router.post("/role/permissions/{user_id}")
 async def check_permission(
-    permission_request: PermissionCheck,
+    user_id: UUID,
     current_user: Annotated[TokenData, Security(get_current_user, scopes=["ad:cp"])],
     service: UserService = Depends(get_admin_service),
 ) -> list:
     """
     Scope operation: Check user permissions.
 
-    :param permission_request: PermissionCheck; schemas.permission_schemas.PermissionCheck
+    :param user_id: user's unique ID
     :param current_user: The user accessing the route
     :param service: services.user_service.UserService
     :return: dict
     """
 
-    user = await service.get_user(user_id=permission_request.user_id)
+    user = await service.get_user(user_id=user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    permissions = ScopesManager.get_role_permission(role=user.role)
+    scopes = ScopesManager.get_scopes_for_roles(roles=user.roles)
+    permissions = ScopesManager.get_role_permission(scopes=scopes)
 
     log_handler.log_security_event(
         "Permission check",
@@ -136,10 +151,8 @@ async def check_permission(
             "event_type": "security",
             "actor_id": current_user.id,
             "actor_username": current_user.username,
-            "target_user_id": permission_request.user_id,
-            "target_username": permission_request.username,
-            "check_resource": permission_request.resource,
-            "role_name": permission_request.action,
+            "target_user_id": user_id,
+            "target_username": user.username,
             "action": "check_permission",
             "resource": "admin_routes",
         },
@@ -148,8 +161,8 @@ async def check_permission(
     return permissions
 
 
-@admin_router.get("/user-role/{user_id}")
-async def get_user_role(
+@admin_router.get("/roles/{user_id}")
+async def get_user_roles(
     user_id: UUID,
     current_user: Annotated[TokenData, Security(get_current_user, scopes=["ad:gr"])],
     service: UserService = Depends(get_admin_service),
@@ -179,4 +192,4 @@ async def get_user_role(
             "resource": "admin_routes",
         },
     )
-    return {"user_id": user.id, "username": user.username, "role": user.role.value}
+    return {"user_id": user.id, "username": user.username, "role": user.roles}

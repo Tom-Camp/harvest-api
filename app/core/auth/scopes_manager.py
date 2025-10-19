@@ -2,19 +2,18 @@ from uuid import UUID
 
 from app.core.auth.role_scopes import ROLE_SCOPES
 from app.core.auth.scopes import SCOPES
-from app.models.user_models import Role
+from app.models.role_models import Role
 
 
 class ScopesManager:
 
     @staticmethod
-    def get_scopes_for_role(role: str) -> list[str]:
+    def get_scopes_for_roles(roles: list[Role]) -> list[str]:
         """Get all scopes assigned to a role"""
-        try:
-            role_enum = Role(role)
-            return ROLE_SCOPES[role_enum].copy()
-        except (ValueError, KeyError):
-            return []
+        scopes = set()
+        for role in roles:
+            scopes.update(ROLE_SCOPES.get(role.name, []))
+        return list(scopes)
 
     @staticmethod
     def has_scope(user_scopes: list[str], required_scope: str) -> bool:
@@ -40,5 +39,5 @@ class ScopesManager:
         )
 
     @staticmethod
-    def get_role_permission(role: Role):
-        return [SCOPES.get(scope, "") for scope in ROLE_SCOPES.get(role, "")]
+    def get_role_permission(scopes: list[str]):
+        return [SCOPES.get(scope, "") for scope in scopes]

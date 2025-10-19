@@ -1,7 +1,5 @@
-from app.models.user_models import Role
-
 ROLE_SCOPES = {
-    Role.ADMIN: [
+    "administrator": [
         "ad:ar",
         "ad:rr",
         "ad:cp",
@@ -19,7 +17,7 @@ ROLE_SCOPES = {
         "us:up",
         "us:de",
     ],
-    Role.MODERATOR: [
+    "moderator": [
         "ga:cr",
         "ga:re",
         "ga:up:own",
@@ -33,7 +31,7 @@ ROLE_SCOPES = {
         "us:up:own",
         "us:de:own",
     ],
-    Role.AUTHENTICATED: [
+    "authenticated": [
         "ga:cr",
         "ga:re:own",
         "ga:up:own",
