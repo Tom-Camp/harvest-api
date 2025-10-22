@@ -1,6 +1,14 @@
 name: security
 on: [push, pull_request]
 
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+  actions: read
+  checks: write
+  id-token: write
+
 jobs:
   hardening:
     uses: huntridge-labs/hardening-workflows/.github/workflows/reusable-security-hardening.yml@2.4.0
@@ -8,7 +16,3 @@ jobs:
       scanners: all
       python_version: '3.12'
       post_pr_comment: true
-    permissions:
-      contents: read
-      security-events: write
-      pull-requests: write
