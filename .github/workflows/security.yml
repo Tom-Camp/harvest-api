@@ -13,4 +13,4 @@ jobs:
       security-events: write
       pull-requests: write
     secrets:
-      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }} # optional
+#      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }} # optional
