@@ -12,5 +12,3 @@ jobs:
       contents: read
       security-events: write
       pull-requests: write
-    secrets:
-#      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }} # optional
