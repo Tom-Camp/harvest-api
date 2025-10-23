@@ -38,7 +38,7 @@ jobs:
           path: sbom.spdx.json
 
       - name: Upload Grype SARIF report
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: ${{ steps.scan.outputs.sarif }}
