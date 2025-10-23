@@ -1,9 +1,6 @@
-name: SBOM and Vulnerability Scan
+name: Container Security Scan
 
-on:
-  pull_request:
-    branches:
-      - '**'
+on: [push, pull_request]
 
 jobs:
   sbom-and-scan:
@@ -11,21 +8,34 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: actions/checkout@v3
 
       - name: Build Docker image
         run: docker build -t myapp:latest .
 
-      - name: Run Syft to generate SBOM
-        uses: anchore/syft-action@v0.15.7
+      - name: Generate SBOM with Syft
+        uses: anchore/sbom-action@v0
         with:
           image: myapp:latest
-          output: syft-sbom.json
+          format: spdx-json
+          output-file: sbom.spdx.json
 
-      - name: Run Grype to scan for vulnerabilities
-        uses: anchore/grype-action@v0.15.0
+      - name: Scan for vulnerabilities with Grype
+        uses: anchore/scan-action@v3
+        id: scan
         with:
-          sbom: syft-sbom.json
+          image: myapp:latest
+          fail-build: false
+          severity-cutoff: critical
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: sbom
+          path: sbom.spdx.json
+
+      - name: Upload Grype SARIF report
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: ${{ steps.scan.outputs.sarif }}
