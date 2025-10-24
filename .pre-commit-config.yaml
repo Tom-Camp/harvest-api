@@ -32,4 +32,4 @@ repos:
     rev: 1.7.10
     hooks:
     - id: bandit
-      args: [--config, bandit.yaml, --recursive]
+      args: [--config, .bandit, --recursive]
