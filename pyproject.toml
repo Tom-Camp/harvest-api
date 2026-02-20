@@ -2,7 +2,7 @@
 name = "Harvesting.Food"
 version = "0.1.0"
 description = "API for the https://harvesting.food website"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 dependencies = [
     "fastapi[standard]==0.116.1",
     "httpx>=0.28.1",

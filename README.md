@@ -1,6 +1,6 @@
 # 🥬🥒🍅 Harvesting.Food API 🥬🥦🥒🥕🫑🌶️
 
-The harvest.food API is a FastAPI backend for a site to create and track your garden. The site is
+The `harvest.food` API is a FastAPI backend for a site to create and track your garden. The site is
 designed that you can create a garden, add a bed, and add plants. You can track their progress over
 time and track your harvest when it all comes to fruition. The site incorporates AI suggestions and
 advice for novice gardeners and for experts that might want a little help.
@@ -36,11 +36,6 @@ repo which you can use to run the site. This is probably the easiest method:
 $ docker compose up --build
 ```
 
-## 🔐 Casbin
-
-The site uses [Casbin](https://casbin.org/) for access control. You can read more about that in the
-[README](app/casbin/README.md) file.
-
 ## 🧪 Testing
 
 We are using [pytest](https://docs.pytest.org/en/stable/) and
@@ -54,4 +49,4 @@ We are using [pytest](https://docs.pytest.org/en/stable/) and
 
 ## 📝 License
 
-[Affero GPL](https://www.gnu.org/licenses/agpl-3.0.en.html)
+[GNU Affero GPL](https://www.gnu.org/licenses/agpl-3.0.en.html)

@@ -1,0 +1,25 @@
+name: Python Security Scan
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly Monday at 2 AM
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  security:
+    uses: huntridge-labs/argus/.github/workflows/security-scan.yml@0.2.2
+    with:
+      scanners: codeql,bandit,opengrep,gitleaks
+      codeql_languages: python
+      enable_code_security: true
+      post_pr_comment: true
+      fail_on_severity: high
+    secrets: inherit
