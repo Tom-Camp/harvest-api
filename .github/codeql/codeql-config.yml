@@ -1,0 +1,10 @@
+name: "CodeQL Configuration"
+paths:
+  - app
+paths-ignore:
+  - tests
+  - "**/test_*.py"
+queries:
+  - uses: security-and-quality
+disable-default-queries: false
+
