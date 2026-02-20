@@ -18,7 +18,7 @@ jobs:
     uses: huntridge-labs/argus/.github/workflows/security-scan.yml@0.2.2
     with:
       scanners: codeql,bandit,opengrep,gitleaks
-      codeql_languages: "python"
+      codeql_languages: python
       enable_code_security: true
       post_pr_comment: true
       fail_on_severity: high
